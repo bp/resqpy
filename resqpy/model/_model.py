@@ -184,6 +184,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               sort_by = None):
         """Returns a list of parts matching all of the arguments passed.
@@ -206,6 +207,8 @@ class Model():
               their extra metadata all the items in this argument, are included in the filtered list
            related_uuid (uuid.UUID, optional): if present, only parts which are related to this uuid
               are included in the filtered list
+           related_mode (Optional[int]): if provided, filters by the type of relationship. 0 is parts
+              referenced by related_uuid, 1 is parts that reference related_uuid, 2 is other soft related parts.
            epc_subdir (string, optional): if present, only parts which reside within the specified
               subdirectory path of the epc are included in the filtered list
            sort_by (string, optional): one of 'newest', 'oldest', 'title', 'uuid', 'type'
@@ -243,6 +246,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
 
@@ -261,6 +265,7 @@ class Model():
              metadata = {},
              extra = {},
              related_uuid = None,
+             related_mode = None,
              epc_subdir = None,
              multiple_handling = 'exception'):
         """Returns the name of a part matching all of the arguments passed.
@@ -292,6 +297,7 @@ class Model():
                          metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
+                         related_mode = related_mode,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
 
@@ -305,6 +311,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               sort_by = None):
         """Returns a list of uuids of parts matching all of the arguments passed.
@@ -328,6 +335,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
 
@@ -341,6 +349,7 @@ class Model():
              metadata = {},
              extra = {},
              related_uuid = None,
+             related_mode = None,
              epc_subdir = None,
              multiple_handling = 'exception'):
         """Returns the uuid of a part matching all of the arguments passed.
@@ -364,6 +373,7 @@ class Model():
                          metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
+                         related_mode = related_mode,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
 
@@ -377,6 +387,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               sort_by = None):
         """Returns a list of xml root nodes of parts matching all of the arguments passed.
@@ -400,6 +411,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
 
@@ -413,6 +425,7 @@ class Model():
              metadata = {},
              extra = {},
              related_uuid = None,
+             related_mode = None,
              epc_subdir = None,
              multiple_handling = 'exception'):
         """Returns the xml root node of a part matching all of the arguments passed.
@@ -436,6 +449,7 @@ class Model():
                          metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
+                         related_mode = related_mode,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
 
@@ -449,6 +463,7 @@ class Model():
                metadata = {},
                extra = {},
                related_uuid = None,
+               related_mode = None,
                epc_subdir = None,
                sort_by = None):
         """Returns a list of citation titles of parts matching all of the arguments passed.
@@ -472,6 +487,7 @@ class Model():
                            metadata = metadata,
                            extra = extra,
                            related_uuid = related_uuid,
+                           related_mode = related_mode,
                            epc_subdir = epc_subdir,
                            sort_by = sort_by)
 
@@ -485,6 +501,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               multiple_handling = 'exception'):
         """Returns the citation title of a part matching all of the arguments passed.
@@ -508,6 +525,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           multiple_handling = multiple_handling)
 
@@ -734,7 +752,7 @@ class Model():
 
         return m_c._parts_count_by_type(self, type_of_interest = type_of_interest)
 
-    def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None):
+    def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None, related_mode = None):
         """From a list of parts, returns a list of those parts which have a relationship with the given uuid.
 
         arguments:
@@ -743,6 +761,8 @@ class Model():
            uuid_is_source (boolean, default None): if None, relationships in either direction qualify;
               if True, only those where uuid is sourceObject qualify; if False, only those where
               uuid is destinationObject qualify
+           related_mode (Optional[int]): if provided, filters by the type of relationship. 0 is parts
+              referenced by this uuid, 1 is parts that reference this uuid, 2 is other soft related parts.
 
         returns:
            list of strings being the subset of parts_list which are related to the object with the
@@ -753,7 +773,7 @@ class Model():
            this method scans the relationship info for every present part, looking for uuid in rels
         """
 
-        return m_c._parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = uuid_is_source)
+        return m_c._parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = uuid_is_source, related_mode = None)
 
     def supporting_representation_for_part(self, part):
         """Returns the uuid of the supporting representation for the part, if found, otherwise None."""
