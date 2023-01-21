@@ -451,7 +451,7 @@ def uuid_for_part_root(root):
 
     if root is None:
         return None
-    uuid_str = root.attrib.get('uuid'):
+    uuid_str = root.attrib.get('uuid')
     if not uuid_str:
         return None
     return bu.uuid_from_string(uuid_str)
