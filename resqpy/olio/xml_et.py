@@ -451,9 +451,10 @@ def uuid_for_part_root(root):
 
     if root is None:
         return None
-    if 'uuid' not in root.attrib.keys():
+    uuid_str = root.attrib.get('uuid'):
+    if not uuid_str:
         return None
-    return bu.uuid_from_string(root.attrib['uuid'])
+    return bu.uuid_from_string(uuid_str)
 
 
 def patch_uuid_in_part_root(root, uuid):
