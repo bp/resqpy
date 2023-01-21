@@ -804,6 +804,7 @@ def test_parts_list_filtered_by_related_uuid(example_model_with_properties):
 
     # Assert
     assert len(filtered_list) == 11
+    assert len(related_list) == 11
     assert len(referred_to_by_grid_list) == 1
     assert len(referring_to_grid_list) == 9
     assert len(soft_grid_relations_list) == 1
