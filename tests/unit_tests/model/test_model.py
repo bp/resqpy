@@ -10,6 +10,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+import resqpy.organize as rqo
 import resqpy.time_series as rqts
 import resqpy.well as rqw
 
@@ -785,11 +786,24 @@ def test_model_uuid_rels_dict(example_model_with_properties):
 
 def test_parts_list_filtered_by_related_uuid(example_model_with_properties):
     # Arrange
+    emf = rqo.OrganizationFeature(example_model_with_properties,
+                                  feature_name = 'profoundly muddy',
+                                  organization_kind = 'earth model')
+    emf.create_xml()
     grid_uuid = example_model_with_properties.grid().uuid
+    example_model_with_properties.create_reciprocal_relationship_uuids(grid_uuid, 'sourceObject', emf.uuid,
+                                                                       'destinationObject')
     parts_list = example_model_with_properties.parts()
 
     # Act
     filtered_list = example_model_with_properties.parts_list_filtered_by_related_uuid(parts_list, grid_uuid)
+    related_list = example_model_with_properties.uuids(related_uuid = grid_uuid)
+    referred_to_by_grid_list = example_model_with_properties.uuids(related_uuid = grid_uuid, related_mode = 0)
+    referring_to_grid_list = example_model_with_properties.parts(related_uuid = grid_uuid, related_mode = 1)
+    soft_grid_relations_list = example_model_with_properties.roots(related_uuid = grid_uuid, related_mode = 2)
 
     # Assert
-    assert len(filtered_list) == 10
+    assert len(filtered_list) == 11
+    assert len(referred_to_by_grid_list) == 1
+    assert len(referring_to_grid_list) == 9
+    assert len(soft_grid_relations_list) == 1
