@@ -22,8 +22,7 @@ def _parts(model,
            related_uuid = None,
            related_mode = None,
            epc_subdir = None,
-           sort_by = None,
-           ):
+           sort_by = None):
     """Returns a list of parts matching all of the arguments passed."""
 
     if not parts_list:
@@ -233,7 +232,7 @@ def _root(model,
                  metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
-                 related_mode = related_mode, 
+                 related_mode = related_mode,
                  epc_subdir = epc_subdir,
                  multiple_handling = multiple_handling)
     if part is None:
