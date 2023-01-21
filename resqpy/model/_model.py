@@ -162,7 +162,8 @@ class Model():
         self.time_series = None  # extracted as speed optimization (single time series only for now)
         self.parts_forest = {}  # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
         self.uuid_part_dict = {}  # dictionary keyed on uuid.int; mapping to part_name
-        self.uuid_rels_dict = {}  # dictionary keyed on uuid.int; mapping to (uuid.int that are depended on, uuid.int that depend on, uuid.int soft relationships)
+        self.uuid_rels_dict = {
+        }  # dictionary keyed on uuid.int; mapping to (uuid.int that are depended on, uuid.int that depend on, uuid.int soft relationships)
         self.rels_present = False
         self.rels_forest = {}  # dictionary keyed on part_name; mapping to (uuid, xml_tree)
         self.other_forest = {}  # dictionary keyed on part_name; mapping to (content_type, xml_tree); used for docProps
@@ -773,7 +774,11 @@ class Model():
            this method scans the relationship info for every present part, looking for uuid in rels
         """
 
-        return m_c._parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = uuid_is_source, related_mode = None)
+        return m_c._parts_list_filtered_by_related_uuid(self,
+                                                        parts_list,
+                                                        uuid,
+                                                        uuid_is_source = uuid_is_source,
+                                                        related_mode = None)
 
     def supporting_representation_for_part(self, part):
         """Returns the uuid of the supporting representation for the part, if found, otherwise None."""
@@ -1427,7 +1432,12 @@ class Model():
         return m_x._new_obj_node(flavour, name_space = name_space, is_top_lvl_obj = is_top_lvl_obj)
 
     def referenced_node(self, ref_node, consolidate = False):
-        """For a given xml reference node, returns the node for the object referred to, if present."""
+        """For a given xml reference node, returns the node for the object referred to, if present.
+
+        note:
+            if consolidating and an equivalent referenced object exists, the uuid in the ref_node
+            is modified by this method; it does not update entries in the uuid_rels_dict
+        """
 
         # note: the RESQML standard allows referenced objects to be missing from the package (model)
 

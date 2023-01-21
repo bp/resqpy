@@ -33,7 +33,7 @@ def _change_uuid_in_supporting_representation_reference(model, node, old_uuid, n
     """Look for supporting representation reference using the old_uuid and replace with the new_uuid."""
 
     if isinstance(old_uuid, str):
-        old_uuid = bu.uuid_from_string(old_uuid)    
+        old_uuid = bu.uuid_from_string(old_uuid)
     if isinstance(new_uuid, str):
         new_uuid = bu.uuid_from_string(new_uuid)
 
@@ -106,10 +106,11 @@ def _referenced_node(model, ref_node, consolidate = False):
     if uuid is None:
         return None
     # return model.root_for_part(model.parts_list_of_type(type_of_interest = content_type, uuid = uuid))
-    if consolidate and model.consolidation is not None and uuid in model.consolidation.map:
-        resident_uuid = model.consolidation.map[uuid]
-        if resident_uuid is None:
+    if consolidate and model.consolidation is not None and uuid.int in model.consolidation.map:
+        resident_uuid_int = model.consolidation.map[uuid.int]
+        if resident_uuid_int is None:
             return None
+        resident_uuid = bu.uuid_for_int(resident_uuid_int)
         node = model.root_for_part(model.part_for_uuid(resident_uuid))
         if node is not None:
             # patch resident uuid and title into ref node!

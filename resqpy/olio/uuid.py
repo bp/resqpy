@@ -111,6 +111,11 @@ def uuid_from_string(uuid_str):
         return None
 
 
+def uuid_from_int(uuid_int):
+    """Returns a uuid object for the given uuid int."""
+    return None if uuid_int is None else uuid.UUID(int = uuid_int)
+
+
 def uuid_as_bytes(uuid_obj):
     """Returns the uuid as a 16 byte bytes sequence; same as uuid_obj.bytes.
 

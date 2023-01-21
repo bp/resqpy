@@ -1311,17 +1311,9 @@ def test_gather_ensemble(tmp_path):
     rqdm.gather_ensemble(epc_list, combined_epc)
     # open combined model and check realisations
     model = rq.Model(combined_epc)
-    for part in model.parts():
-        print(part)
-        print(model.title_for_part(part))
     grid = model.grid()
     assert grid is not None
     pc = grid.property_collection
-    print("pc")
-    for part in pc.parts():
-        print(part)
-        print(pc.citation_title_for_part(part))
-    print(pc.realization_list(sort_list = True))
 
     ntg_pc = rqp.selective_version_of_collection(pc, property_kind = 'net to gross ratio')
     assert ntg_pc.number_of_parts() == 3
