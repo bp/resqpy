@@ -89,6 +89,7 @@ def mesh_from_regular_grid_column_property_batch(
     cluster,
     n_workers: int,
     require_success: bool = False,
+    tmp_dir_path: Union[Path, str] = '.'
 ) -> List[bool]:
     """Creates Mesh objects from a list of property uuids in parallel.
 
@@ -104,6 +105,7 @@ def mesh_from_regular_grid_column_property_batch(
             such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
         n_workers (int): the number of workers on the cluster.
         require_success (bool, default False): if True an exception is raised if any failures
+        tmp_dir_path (str or Path, default '.'): the directory within which temporary directories will reside
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
@@ -124,6 +126,7 @@ def mesh_from_regular_grid_column_property_batch(
                                             kwargs_list,
                                             recombined_epc,
                                             cluster,
-                                            require_success = require_success)
+                                            require_success = require_success,
+                                            tmp_dir_path = tmp_dir_path)
 
     return success_list

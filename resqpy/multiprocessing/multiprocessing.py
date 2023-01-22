@@ -82,6 +82,8 @@ def function_multiprocessing(function: Callable,
     """
     log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))
 
+    if tmp_dir_path is None:
+        tmp_dir_path = '.'
     tmp_dir = Path(tmp_dir_path) / f'tmp_{uuid.uuid4()}'
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i

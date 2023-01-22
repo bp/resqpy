@@ -76,16 +76,15 @@ def blocked_well_from_trajectory_wrapper(
     return index, success, epc_file, uuid_list
 
 
-def blocked_well_from_trajectory_batch(
-    grid_epc: str,
-    grid_uuid: Union[UUID, str],
-    trajectory_epc: str,
-    trajectory_uuids: List[Union[UUID, str]],
-    recombined_epc: str,
-    cluster,
-    n_workers: int,
-    require_success: bool = False,
-) -> List[bool]:
+def blocked_well_from_trajectory_batch(grid_epc: str,
+                                       grid_uuid: Union[UUID, str],
+                                       trajectory_epc: str,
+                                       trajectory_uuids: List[Union[UUID, str]],
+                                       recombined_epc: str,
+                                       cluster,
+                                       n_workers: int,
+                                       require_success: bool = False,
+                                       tmp_dir_path: Union[Path, str] = '.') -> List[bool]:
     """Creates BlockedWell objects from a common grid and a list of trajectories uuids in parallel.
 
     Args:
@@ -101,6 +100,7 @@ def blocked_well_from_trajectory_batch(
             such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
         n_workers (int): the number of workers on the cluster.
         require_success (bool, default False): if True an exception is raised if any failures
+        tmp_dir_path (str or Path, default '.'): the directory within which temporary directories will reside
 
     Returns:
         success_list (List[bool]): A boolean list of successful function calls.
@@ -128,6 +128,7 @@ def blocked_well_from_trajectory_batch(
                                                  kwargs_list,
                                                  recombined_epc,
                                                  cluster,
-                                                 require_success = require_success)
+                                                 require_success = require_success,
+                                                 tmp_dir_path = tmp_dir_path)
 
     return success_list
