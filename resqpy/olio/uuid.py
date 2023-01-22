@@ -128,7 +128,9 @@ def uuid_as_bytes(uuid_obj):
 
     if uuid_obj is None:
         return None
-    if isinstance(uuid_obj, str):
+    if isinstance(uuid_obj, int):
+        uuid_obj = uuid_from_int(uuid_obj)
+    elif isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
     assert isinstance(uuid_obj, uuid.UUID)
     return uuid_obj.bytes
@@ -146,6 +148,8 @@ def uuid_as_int(uuid_obj):
 
     if uuid_obj is None:
         return None
+    if isinstance(uuid_obj, int):
+        return uuid_obj
     if isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
     if not isinstance(uuid_obj, uuid.UUID):
