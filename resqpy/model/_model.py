@@ -778,7 +778,7 @@ class Model():
                                                         parts_list,
                                                         uuid,
                                                         uuid_is_source = uuid_is_source,
-                                                        related_mode = None)
+                                                        related_mode = related_mode)
 
     def supporting_representation_for_part(self, part):
         """Returns the uuid of the supporting representation for the part, if found, otherwise None."""

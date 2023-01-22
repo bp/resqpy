@@ -9,6 +9,8 @@ import os
 import shutil
 import zipfile as zf
 
+import resqpy.model._catalogue as m_c
+import resqpy.model._xml as m_x
 import resqpy.olio.consolidation as cons
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as whdf5
@@ -192,7 +194,7 @@ def _add_uuid_soft_relations(model, uuid_int, part):
         return
     value = model.rels_forest.get(rqet.rels_part_name_for_part(part))
     if value is not None:
-        rels_root = model.root_for_part(rqet.rels_part_name_for_part(part), is_rels = True)
+        rels_root = m_c._root_for_part(model, rqet.rels_part_name_for_part(part), is_rels = True)
         if rels_root is not None:
             for relation_node in rels_root:
                 if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
@@ -460,8 +462,8 @@ def _remove_part(model, part_name, remove_relationship_part):
         if 'docProps' in part_name:
             rels_part_name = '_rels/.rels'
         else:
-            related_parts = model.parts_list_filtered_by_related_uuid(model.list_of_parts(),
-                                                                      rqet.uuid_in_part_name(part_name))
+            related_parts = m_c._parts_list_filtered_by_related_uuid(model, m_c._list_of_parts(model),
+                                                                     rqet.uuid_in_part_name(part_name))
             for relative in related_parts:
                 (rel_uuid, rel_tree) = model.rels_forest[rqet.rels_part_name_for_part(relative)]
                 rel_root = rel_tree.getroot()
@@ -501,7 +503,7 @@ def _duplicate_node(model, existing_node, add_as_part = True, add_to_rels_dict =
     new_node = copy.deepcopy(existing_node)
     if add_as_part:
         uuid = rqet.uuid_for_part_root(new_node)
-        if model.part_for_uuid(uuid) is None:
+        if m_c._part_for_uuid(model, uuid) is None:
             _add_part(model, rqet.node_type(new_node), uuid, new_node, add_to_rels_dict = add_to_rels_dict)
     return new_node
 
@@ -547,15 +549,15 @@ def _copy_part_from_other_model(model,
     if part in model.parts_forest.keys():
         return part
 
-    if other_model.type_of_part(part) == 'obj_EpcExternalPartReference':
+    if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
         return None
 
     uuid = rqet.uuid_in_part_name(part)
     if not force:
-        assert model.part_for_uuid(uuid) is None, 'part copying failure: uuid exists for different part!'
+        assert m_c._part_for_uuid(model, uuid) is None, 'part copying failure: uuid exists for different part!'
 
     # duplicate xml tree and add as a part
-    other_root = other_model.root_for_part(part, is_rels = False)
+    other_root = m_c._root_for_part(other_model, part, is_rels = False)
     if other_root is None:
         log.error(f'failed to copy part (missing in source model?): {str(part)}')
         return None
@@ -598,12 +600,12 @@ def _copy_part_from_other_model(model,
 
     else:
 
-        root_node = model.root_for_uuid(resident_uuid)
+        root_node = m_c._root_for_uuid(model, resident_uuid)
 
     # copy relationships where target part is present in this model – this part is source, then destination
     _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node)
 
-    return model.part_for_uuid(resident_uuid)
+    return m_c._part_for_uuid(model, resident_uuid)
 
 
 def _unforced_consolidation(model, other_model, consolidate, force, part):
@@ -635,12 +637,13 @@ def _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node):
             h5_uuid = model.h5_uuid()
         model.change_hdf5_uuid_in_hdf5_references(root_node, None, h5_uuid)
         ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', h5_uuid, prefixed = False)
-        ext_node = model.root_for_part(ext_part)
-        model.create_reciprocal_relationship(root_node,
-                                             'mlToExternalPartProxy',
-                                             ext_node,
-                                             'externalPartProxyToMl',
-                                             avoid_duplicates = False)
+        ext_node = m_c._root_for_part(model, ext_part)
+        m_x._create_reciprocal_relationship(model,
+                                            root_node,
+                                            'mlToExternalPartProxy',
+                                            ext_node,
+                                            'externalPartProxyToMl',
+                                            avoid_duplicates = False)
 
 
 def _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
@@ -665,10 +668,10 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
         elif force:
             continue
         else:
-            referred_part = other_model.part_for_uuid(bu.uuid_from_int(ref_uuid_int))
-            if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference':
+            referred_part = m_c._part_for_uuid(other_model, bu.uuid_from_int(ref_uuid_int))
+            if m_c._type_of_part(other_model, referred_part) == 'obj_EpcExternalPartReference':
                 continue
-            if referred_part in model.list_of_parts():
+            if referred_part in m_c._list_of_parts(model):
                 continue
             _copy_part_from_other_model(model,
                                         other_model,
@@ -685,9 +688,10 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
 
 def _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node):
     for source_flag in [True, False]:
-        other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
-                                                                              resident_uuid,
-                                                                              uuid_is_source = source_flag)
+        other_related_parts = m_c._parts_list_filtered_by_related_uuid(other_model,
+                                                                       m_c._list_of_parts(other_model),
+                                                                       resident_uuid,
+                                                                       uuid_is_source = source_flag)
         for related_part in other_related_parts:
             if not force and (related_part in model.parts_forest):
                 resident_related_part = related_part
@@ -697,23 +701,23 @@ def _copy_relationships_for_present_targets(model, other_model, consolidate, for
                                                                                          immigrant_model = other_model)
                     if resident_related_uuid is None:
                         continue
-                    resident_related_part = rqet.part_name_for_object(other_model.type_of_part(related_part),
+                    resident_related_part = rqet.part_name_for_object(m_c._type_of_part(other_model, related_part),
                                                                       resident_related_uuid)
                     if resident_related_part is None:
                         continue
                 else:
                     continue
-            if not force and resident_related_part in model.parts_list_filtered_by_related_uuid(
-                    model.list_of_parts(), resident_uuid):
+            if not force and resident_related_part in m_c._parts_list_filtered_by_related_uuid(
+                    model, m_c._list_of_parts(model), resident_uuid):
                 continue
-            related_node = model.root_for_part(resident_related_part)
+            related_node = m_c._root_for_part(model, resident_related_part)
             assert related_node is not None
 
             if source_flag:
                 sd_a, sd_b = 'sourceObject', 'destinationObject'
             else:
                 sd_b, sd_a = 'sourceObject', 'destinationObject'
-            model.create_reciprocal_relationship(root_node, sd_a, related_node, sd_b)
+            m_x._create_reciprocal_relationship(model, root_node, sd_a, related_node, sd_b)
 
 
 def _copy_all_parts_from_other_model(model, other_model, realization = None, consolidate = True):
@@ -721,7 +725,7 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
 
     assert other_model is not None and other_model is not model
 
-    other_parts_list = other_model.parts()
+    other_parts_list = m_c._parts(other_model)
     if not other_parts_list:
         log.warning('no parts found in other model for merging')
         return
