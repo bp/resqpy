@@ -163,7 +163,7 @@ def matching_uuids(uuid_a, uuid_b):
        boolean: True if the two uuids are the same; False otherwise
 
     note:
-       this function is resilient to uuids being passed in hexadecimal string format
+       this function is resilient to uuids being passed in hexadecimal string format, or int
     """
 
     if isinstance(uuid_a, str):
@@ -172,7 +172,11 @@ def matching_uuids(uuid_a, uuid_b):
         uuid_b = uuid_from_string(uuid_b)
     if uuid_a is None or uuid_b is None:
         return False
-    return uuid_a.int == uuid_b.int
+    if not isinstance(uuid_a, int):
+        uuid_a = uuid_a.int
+    if not isinstance(uuid_b, int):
+        uuid_b = uuid_b.int
+    return uuid_a == uuid_b
 
 
 def version_string(uuid_obj):
