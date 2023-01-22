@@ -808,3 +808,32 @@ def test_parts_list_filtered_by_related_uuid(example_model_with_properties):
     assert len(referred_to_by_grid_list) == 1
     assert len(referring_to_grid_list) == 9
     assert len(soft_grid_relations_list) == 1
+
+
+def test_related_uuids_as_int_methods(example_model_with_properties):
+
+    model = example_model_with_properties
+
+    # Arrange
+    emf = rqo.OrganizationFeature(model, feature_name = 'profoundly muddy', organization_kind = 'earth model')
+    emf.create_xml()
+    grid_uuid = model.grid().uuid
+    model.create_reciprocal_relationship_uuids(grid_uuid, 'sourceObject', emf.uuid, 'destinationObject')
+    crs = rqc.Crs(model, uuid = model.uuid(obj_type = 'LocalDepth3dCrs'))
+
+    # Act
+    all_relatives = model.uuids_as_int_related_to_uuid(grid_uuid)
+    referred_to_by_grid = model.uuids_as_int_referenced_by_uuid(grid_uuid)
+    referring_to_grid = model.uuids_as_int_referencing_uuid(grid_uuid)
+    soft_grid_relations = model.uuids_as_int_softly_related_to_uuid(grid_uuid)
+
+    # Assert
+    assert len(all_relatives) == 11
+    assert len(referred_to_by_grid) == 1
+    assert len(referring_to_grid) == 9
+    assert len(soft_grid_relations) == 1
+    assert all([x in all_relatives for x in referred_to_by_grid])
+    assert all([x in all_relatives for x in referring_to_grid])
+    assert all([x in all_relatives for x in soft_grid_relations])
+    assert all_relatives == referred_to_by_grid | referring_to_grid | soft_grid_relations
+    assert crs.uuid.int in referred_to_by_grid

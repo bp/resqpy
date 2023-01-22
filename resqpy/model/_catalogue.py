@@ -807,3 +807,43 @@ def _sorted_parts_list(model, parts_list, sort_by):
         for _, index in sort_list:
             sorted_list.append(parts_list[index])
     return sorted_list
+
+
+def _uuids_as_int_related_to_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[0] | relatives[1] | relatives[2]
+
+
+def _uuids_as_int_referenced_by_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[0]
+
+
+def _uuids_as_int_referencing_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[1]
+
+
+def _uuids_as_int_softly_related_to_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[2]

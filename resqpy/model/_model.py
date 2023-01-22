@@ -540,6 +540,46 @@ class Model():
 
         self.modified = True
 
+    def uuids_as_int_related_to_uuid(self, uuid):
+        """Returns set of ints being uuids of objects related to uuid by any category of relationship.
+
+        note:
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_related_to_uuid(self, uuid)
+
+    def uuids_as_int_referenced_by_uuid(self, uuid):
+        """Returns set of ints being uuids of objects which uuid has a reference to.
+
+        note:
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_referenced_by_uuid(self, uuid)
+
+    def uuids_as_int_referencing_uuid(self, uuid):
+        """Returns set of ints being uuids of objects which have a reference to uuid.
+
+        note:
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_referencing_uuid(self, uuid)
+
+    def uuids_as_int_softly_related_to_uuid(self, uuid):
+        """Returns set of ints being uuids of objects related to uuid by only a soft relationship.
+
+        note:
+            resqpy uses the term 'soft relationship' for those relationships held in the _rels xml area
+            but not as reference nodes in the main xml of either part involved in the relationship;
+            the Model.create_reciprocal_relationship() and create_reciprocal_relationship_uuid()
+            methods can be used by application code to create such soft relationships;
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_softly_related_to_uuid(self, uuid)
+
     @property
     def crs_root(self):
         """XML node corresponding to self.crs_uuid, the 'main' crs for the model."""
