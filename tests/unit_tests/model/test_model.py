@@ -6,6 +6,7 @@ import pytest
 import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
+import resqpy.olio.consolidation as cons
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
@@ -837,3 +838,42 @@ def test_related_uuids_as_int_methods(example_model_with_properties):
     assert all([x in all_relatives for x in soft_grid_relations])
     assert all_relatives == referred_to_by_grid | referring_to_grid | soft_grid_relations
     assert crs.uuid.int in referred_to_by_grid
+
+
+def test_uuid_consolidation(tmp_path):
+    # Arrange
+    combined_model = rq.new_model(f"{tmp_path}/combined_model.epc")
+    for i in range(3):
+        model = rq.new_model(f"{tmp_path}/model_{i}.epc")
+        crs = rqc.Crs(model)
+        crs.create_xml()
+        grid = grr.RegularGrid(model, extent_kji=(2, 2, 2), crs_uuid=crs.uuid, title=f"test grid {i}")
+        grid.create_xml()
+        array = np.random.random((2, 2, 2))
+        rqp.Property.from_array(model, array, "test", "offset", grid.uuid, property_kind="offset", uom="m")
+        model.store_epc()
+
+    # Act
+    for i in range(3):
+        model = rq.Model(f"{tmp_path}/model_{i}.epc")
+        uuids = cons.sort_uuids_list(model, model.uuids())
+        for uuid in uuids:
+            combined_model.copy_uuid_from_other_model(model, uuid, consolidate=True)
+    combined_model.store_epc()
+    combined_model = rq.Model(f"{tmp_path}/combined_model.epc")
+
+    # Assert
+    assert len(combined_model.uuids(obj_type = 'LocalDepth3dCrs')) == 1
+    assert len(combined_model.uuids(obj_type = 'IjkGridRepresentation')) == 3
+    assert len(combined_model.uuids(obj_type = 'ContinuousProperty')) == 12
+    assert len(combined_model.uuids(obj_type = 'PropertyKind', title = "offset")) == 1
+
+    uuid_expected = combined_model.uuid(obj_type = 'PropertyKind', title = "offset")
+    for uuid in combined_model.uuids(obj_type = 'ContinuousProperty'):
+        node = combined_model.root_for_uuid(uuid)
+        reference_node = rqet.find_nested_tags(node, ["PropertyKind", "LocalPropertyKind"])
+        if reference_node is not None:
+            title = rqet.find_tag_text(reference_node, "Title")
+            if title == "offset":
+                offset_uuid = rqet.find_tag_text(reference_node, "UUID")
+                assert bu.matching_uuids(offset_uuid, uuid_expected)

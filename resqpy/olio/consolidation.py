@@ -164,21 +164,30 @@ class Consolidation:
             assert resident not in self.map.keys()
 
 
+def _ordering(obj_type):
+    if obj_type in consolidatable_list:
+        return consolidatable_list.index(obj_type)
+    seq = len(consolidatable_list)
+    if obj_type.endswith('Interpretation'):
+        seq += 1
+    elif obj_type.endswith('Representation'):
+        seq += 2
+    elif obj_type.endswith('Property'):
+        seq += 3
+    return seq
+
+
 def sort_parts_list(model, parts_list):
     """Returns a copy of the parts list sorted into the preferred order for consolidating."""
 
-    def ordering(obj_type):
-        if obj_type in consolidatable_list:
-            return consolidatable_list.index(obj_type)
-        seq = len(consolidatable_list)
-        if obj_type.endswith('Interpretation'):
-            seq += 1
-        elif obj_type.endswith('Representation'):
-            seq += 2
-        elif obj_type.endswith('Property'):
-            seq += 3
-        return seq
-
-    pair_list = [(ordering(model.type_of_part(part, strip_obj = True)), part) for part in parts_list]
+    pair_list = [(_ordering(model.type_of_part(part, strip_obj = True)), part) for part in parts_list]
     pair_list.sort()
     return [part for _, part in pair_list]
+
+
+def sort_uuids_list(model, uuids_list):
+    """Returns a copy of the uuids list sorted into the preferred order for consolidating."""
+
+    pair_list = [(_ordering(model.type_of_part(model.part_for_uuid(uuid), strip_obj = True)), uuid) for uuid in uuids_list]
+    pair_list.sort()
+    return [uuid for _, uuid in pair_list]
