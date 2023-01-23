@@ -592,7 +592,7 @@ def _copy_part_from_other_model(model,
 
         # recursively copy in referenced parts where they don't already exist in this model
         _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
-                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node, other_root)
+                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid)
 
         _add_uuid_relations(model, uuid.int, part)
 
@@ -647,10 +647,29 @@ def _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node):
 
 
 def _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
-                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node, other_root):
-    uuid = rqet.uuid_for_part_root(root_node)
+                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid):
+    # uuid = rqet.uuid_for_part_root(root_node)
     reference_node_dict = None
     for ref_uuid_int in other_model.uuid_rels_dict[uuid.int][0]:  # using dict in other model instead of duplicated xml
+        if not force:
+            referred_part = m_c._part_for_uuid(other_model, bu.uuid_from_int(ref_uuid_int))
+            if m_c._type_of_part(other_model, referred_part) == 'obj_EpcExternalPartReference':
+                continue
+            if referred_part in m_c._list_of_parts(model):
+                continue
+            resident_part = _copy_part_from_other_model(model,
+                                                        other_model,
+                                                        referred_part,
+                                                        realization = realization,
+                                                        consolidate = consolidate,
+                                                        force = force,
+                                                        cut_refs_to_uuids = cut_refs_to_uuids,
+                                                        cut_node_types = cut_node_types,
+                                                        self_h5_file_name = self_h5_file_name,
+                                                        h5_uuid = h5_uuid,
+                                                        other_h5_file_name = other_h5_file_name)
+            if resident_part == referred_part:
+                continue
         if consolidate and model.consolidation is not None and ref_uuid_int in model.consolidation.map:
             resident_uuid_int = model.consolidation.map[ref_uuid_int]
             assert resident_uuid_int is not None
@@ -664,26 +683,8 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
                     reference_node_dict[uuid_int] = uuid_node
             uuid_node = reference_node_dict[ref_uuid_int]
             uuid_node.text = str(bu.uuid_from_int(resident_uuid_int))
+            reference_node_dict.pop(ref_uuid_int)
             reference_node_dict[resident_uuid_int] = uuid_node
-        elif force:
-            continue
-        else:
-            referred_part = m_c._part_for_uuid(other_model, bu.uuid_from_int(ref_uuid_int))
-            if m_c._type_of_part(other_model, referred_part) == 'obj_EpcExternalPartReference':
-                continue
-            if referred_part in m_c._list_of_parts(model):
-                continue
-            _copy_part_from_other_model(model,
-                                        other_model,
-                                        referred_part,
-                                        realization = realization,
-                                        consolidate = consolidate,
-                                        force = force,
-                                        cut_refs_to_uuids = cut_refs_to_uuids,
-                                        cut_node_types = cut_node_types,
-                                        self_h5_file_name = self_h5_file_name,
-                                        h5_uuid = h5_uuid,
-                                        other_h5_file_name = other_h5_file_name)
 
 
 def _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node):
