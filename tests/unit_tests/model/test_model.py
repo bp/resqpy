@@ -847,10 +847,10 @@ def test_uuid_consolidation(tmp_path):
         model = rq.new_model(f"{tmp_path}/model_{i}.epc")
         crs = rqc.Crs(model)
         crs.create_xml()
-        grid = grr.RegularGrid(model, extent_kji=(2, 2, 2), crs_uuid=crs.uuid, title=f"test grid {i}")
+        grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), crs_uuid = crs.uuid, title = f"test grid {i}")
         grid.create_xml()
         array = np.random.random((2, 2, 2))
-        rqp.Property.from_array(model, array, "test", "offset", grid.uuid, property_kind="offset", uom="m")
+        rqp.Property.from_array(model, array, "test", "offset", grid.uuid, property_kind = "offset", uom = "m")
         model.store_epc()
 
     # Act
@@ -858,7 +858,7 @@ def test_uuid_consolidation(tmp_path):
         model = rq.Model(f"{tmp_path}/model_{i}.epc")
         uuids = cons.sort_uuids_list(model, model.uuids())
         for uuid in uuids:
-            combined_model.copy_uuid_from_other_model(model, uuid, consolidate=True)
+            combined_model.copy_uuid_from_other_model(model, uuid, consolidate = True)
     combined_model.store_epc()
     combined_model = rq.Model(f"{tmp_path}/combined_model.epc")
 

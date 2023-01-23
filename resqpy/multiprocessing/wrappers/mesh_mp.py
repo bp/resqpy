@@ -81,16 +81,14 @@ def mesh_from_regular_grid_column_property_wrapper(
     return index, success, epc_file, uuid_list
 
 
-def mesh_from_regular_grid_column_property_batch(
-    grid_epc: str,
-    grid_uuid: Union[UUID, str],
-    prop_uuids: List[Union[UUID, str]],
-    recombined_epc: str,
-    cluster,
-    n_workers: int,
-    require_success: bool = False,
-    tmp_dir_path: Union[Path, str] = '.'
-) -> List[bool]:
+def mesh_from_regular_grid_column_property_batch(grid_epc: str,
+                                                 grid_uuid: Union[UUID, str],
+                                                 prop_uuids: List[Union[UUID, str]],
+                                                 recombined_epc: str,
+                                                 cluster,
+                                                 n_workers: int,
+                                                 require_success: bool = False,
+                                                 tmp_dir_path: Union[Path, str] = '.') -> List[bool]:
     """Creates Mesh objects from a list of property uuids in parallel.
 
     Args:
