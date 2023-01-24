@@ -2923,7 +2923,7 @@ class BlockedWell(BaseResqpy):
                 well_name = self.wellbore_interpretation.title
             elif self.trajectory is not None:
                 well_name = self.trajectory.title
-            else:
+            if not well_name:
                 log.warning('no well name identified for use in WELLSPEC')
                 well_name = 'WELLNAME'
         well_name = BlockedWell.__tidy_well_name(well_name)
@@ -3133,8 +3133,9 @@ class BlockedWell(BaseResqpy):
 
         # wellbore frame elements
 
-        nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node = self.__create_bw_node_sub_elements(
-            bw_node = bw_node)
+        nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node,  \
+            gis_values_node, fis_node, fnull_node, fis_values_node =  \
+            self.__create_bw_node_sub_elements(bw_node = bw_node)
 
         self.__create_hdf5_dataset_references(ext_uuid = ext_uuid,
                                               mds_values_node = mds_values_node,

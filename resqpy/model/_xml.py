@@ -127,7 +127,7 @@ def _referenced_node(model, ref_node, consolidate = False):
     return node
 
 
-def _create_ref_node(flavour, title, uuid, content_type = None, root = None):
+def _create_ref_node(model, flavour, title, uuid, content_type = None, root = None):
     """Create a reference node, optionally add to root."""
 
     assert uuid is not None
@@ -154,7 +154,9 @@ def _create_ref_node(flavour, title, uuid, content_type = None, root = None):
         ct_node.text = 'application/x-resqml+xml;version=2.0;type=' + content_type
 
     if not title:
-        title = '(title unavailable)'
+        title = model.title(uuid = uuid)
+        if title is None:
+            title = ''
     title_node = rqet.SubElement(ref_node, ns['eml'] + 'Title')
     title_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
     title_node.text = title
@@ -295,17 +297,19 @@ def _create_crs_reference(model, root = None, crs_uuid = None):
     crs_type = model.type_of_uuid(crs_uuid)
     assert crs_type in ['obj_LocalDepth3dCrs', 'obj_LocalTime3dCrs']
 
-    return _create_ref_node('LocalCrs',
+    return _create_ref_node(model,
+                            'LocalCrs',
                             rqet.find_nested_tags_text(crs_root, ['Citation', 'Title']),
                             crs_uuid,
                             content_type = crs_type,
                             root = root)
 
 
-def _create_md_datum_reference(md_datum_root, root = None):
+def _create_md_datum_reference(model, md_datum_root, root = None):
     """Creates a node refering to an existing measured depth datum and optionally adds as child of root."""
 
-    return _create_ref_node('MdDatum',
+    return _create_ref_node(model,
+                            'MdDatum',
                             rqet.find_nested_tags_text(md_datum_root, ['Citation', 'Title']),
                             bu.uuid_from_string(md_datum_root.attrib['uuid']),
                             content_type = 'obj_MdDatum',
@@ -361,7 +365,7 @@ def _create_hdf5_ext(model,
     return ext
 
 
-def _create_hdf5_dataset_ref(hdf5_uuid, object_uuid, group_tail, root, title = 'Hdf Proxy'):
+def _create_hdf5_dataset_ref(model, hdf5_uuid, object_uuid, group_tail, root, title = 'Hdf Proxy'):
     """Creates a pair of nodes referencing an hdf5 dataset (array) and adds to root."""
 
     assert root is not None
@@ -378,7 +382,7 @@ def _create_hdf5_dataset_ref(hdf5_uuid, object_uuid, group_tail, root, title = '
     path_node.text = hdf5_path
     root.append(path_node)
 
-    _create_ref_node('HdfProxy', title, hdf5_uuid, content_type = 'obj_EpcExternalPartReference', root = root)
+    _create_ref_node(model, 'HdfProxy', title, hdf5_uuid, content_type = 'obj_EpcExternalPartReference', root = root)
 
     return path_node
 
@@ -407,7 +411,12 @@ def _create_supporting_representation(model,
         if not title:
             title = 'supporting representation'
 
-    return _create_ref_node('SupportingRepresentation', title, support_uuid, content_type = content_type, root = root)
+    return _create_ref_node(model,
+                            'SupportingRepresentation',
+                            title,
+                            support_uuid,
+                            content_type = content_type,
+                            root = root)
 
 
 def _create_source(source, root = None):
@@ -431,7 +440,8 @@ def _create_source(source, root = None):
     return emd_node
 
 
-def _create_patch(p_uuid,
+def _create_patch(model,
+                  p_uuid,
                   ext_uuid = None,
                   root = None,
                   patch_index = 0,
@@ -493,7 +503,7 @@ def _create_patch(p_uuid,
         inner_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         inner_values_node.text = rqet.null_xml_text
 
-        _create_hdf5_dataset_ref(ext_uuid, p_uuid, f'{hdf_path_tail}{patch_index}', root = inner_values_node)
+        _create_hdf5_dataset_ref(model, ext_uuid, p_uuid, f'{hdf_path_tail}{patch_index}', root = inner_values_node)
 
     else:
 
