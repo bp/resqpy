@@ -173,7 +173,7 @@ The table below shows which high level resqpy class is used to represent each RE
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_GeneticBoundaryFeature                             | none       | :class:`resqpy.organize.GeneticBoundaryFeature`           |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
-| obj_GeobodyBoundaryInterpretation                      | none       | :class:`resqpy.organize.eobodyBoundaryInterpretation`     |
+| obj_GeobodyBoundaryInterpretation                      | none       | :class:`resqpy.organize.GeobodyBoundaryInterpretation`    |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
 | obj_GeobodyFeature                                     | none       | :class:`resqpy.organize.GeobodyFeature`                   |
 +--------------------------------------------------------+------------+-----------------------------------------------------------+
