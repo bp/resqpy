@@ -186,7 +186,7 @@ def sort_parts_list(model, parts_list):
 
 
 def sort_uuids_list(model, uuids_list):
-    """Returns a copy of the uuids list sorted into the preferred order for consolidating."""
+    """Returns a copy of the uuids list (or uuid ints list) sorted into the preferred order for consolidating."""
 
     pair_list = [
         (_ordering(model.type_of_part(model.part_for_uuid(uuid), strip_obj = True)), uuid) for uuid in uuids_list

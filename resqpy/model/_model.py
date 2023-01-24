@@ -14,10 +14,8 @@ import resqpy.model._forestry as m_f
 import resqpy.model._grids as m_g
 import resqpy.model._hdf5 as m_h
 import resqpy.model._xml as m_x
+import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-from resqpy import __version__
-
-log.debug('resqpy Model class version: ' + __version__ + '; xml citation format: ' + m_x.citation_format)
 
 
 class Model():
@@ -1972,7 +1970,8 @@ class Model():
                                    cut_node_types = None,
                                    self_h5_file_name = None,
                                    h5_uuid = None,
-                                   other_h5_file_name = None):
+                                   other_h5_file_name = None,
+                                   uuid_int = None):
         """Fully copies part in from another model, with referenced parts, hdf5 data and relationships.
 
         arguments:
@@ -1994,6 +1993,8 @@ class Model():
               an optimisation when calling method repeatedly
            other_h5_file_name (string, optional): h5 file name for other model; can be passed as
               an optimisation when calling method repeatedly
+           uuid_int (int, optional): if present, the uuid (as int) of part; if uuid already established
+              use this argument as an optimisation; note: no checks for consistency are made here
 
         returns:
            the part name of the part in this model, after copying; may differ from requested part if
@@ -2003,6 +2004,27 @@ class Model():
            if the part name already exists in this model, no action is taken;
            default hdf5 file used in this model and assumed in other_model
         """
+
+        assert other_model is not None
+        if other_model is self:
+            return part
+        assert part is not None
+        if realization is not None:
+            assert isinstance(realization, int) and realization >= 0
+        if force:
+            assert consolidate
+        if not other_h5_file_name:
+            other_h5_file_name = other_model.h5_file_name()
+        if not self_h5_file_name:
+            self_h5_file_name = self.h5_file_name(file_must_exist = False)
+        hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
+
+        # check whether already existing in this model
+        if part in self.parts_forest.keys():
+            return part
+
+        if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
+            return None
 
         return m_f._copy_part_from_other_model(self,
                                                other_model,
@@ -2014,7 +2036,9 @@ class Model():
                                                cut_node_types = cut_node_types,
                                                self_h5_file_name = self_h5_file_name,
                                                h5_uuid = h5_uuid,
-                                               other_h5_file_name = other_h5_file_name)
+                                               other_h5_file_name = other_h5_file_name,
+                                               hdf5_copy_needed = hdf5_copy_needed,
+                                               uuid_int = uuid_int)
 
     def copy_uuid_from_other_model(self,
                                    other_model,
@@ -2061,8 +2085,7 @@ class Model():
         part = other_model.part_for_uuid(uuid)
         if part is None:
             return None
-        copied_part = m_f._copy_part_from_other_model(self,
-                                                      other_model,
+        copied_part = self.copy_part_from_other_model(other_model,
                                                       part,
                                                       realization = realization,
                                                       consolidate = consolidate,
@@ -2071,7 +2094,8 @@ class Model():
                                                       cut_node_types = cut_node_types,
                                                       self_h5_file_name = self_h5_file_name,
                                                       h5_uuid = h5_uuid,
-                                                      other_h5_file_name = other_h5_file_name)
+                                                      other_h5_file_name = other_h5_file_name,
+                                                      uuid_int = bu.uuid_as_int(uuid))
         if copied_part is None:
             return None
         return self.uuid_for_part(copied_part)

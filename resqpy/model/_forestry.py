@@ -526,33 +526,19 @@ def _copy_part_from_other_model(model,
                                 cut_node_types = None,
                                 self_h5_file_name = None,
                                 h5_uuid = None,
-                                other_h5_file_name = None):
+                                other_h5_file_name = None,
+                                hdf5_copy_needed = True,
+                                uuid_int = None):
     """Fully copies part in from another model, with referenced parts, hdf5 data and relationships."""
 
     # todo: double check behaviour around equivalent CRSes, especially any default crs in model
 
-    assert other_model is not None
-    if other_model is model:
-        return part
-    assert part is not None
-    if realization is not None:
-        assert isinstance(realization, int) and realization >= 0
-    if force:
-        assert consolidate
-    if not other_h5_file_name:
-        other_h5_file_name = other_model.h5_file_name()
-    if not self_h5_file_name:
-        self_h5_file_name = model.h5_file_name(file_must_exist = False)
-    hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
+    if uuid_int is None:
+        uuid = rqet.uuid_in_part_name(part)
+        uuid_int = uuid.int
+    else:
+        uuid = bu.uuid_from_int(uuid_int)
 
-    # check whether already existing in this model
-    if part in model.parts_forest.keys():
-        return part
-
-    if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
-        return None
-
-    uuid = rqet.uuid_in_part_name(part)
     if not force:
         assert m_c._part_for_uuid(model, uuid) is None, 'part copying failure: uuid exists for different part!'
 
@@ -592,7 +578,7 @@ def _copy_part_from_other_model(model,
 
         # recursively copy in referenced parts where they don't already exist in this model
         _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
-                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid)
+                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid, hdf5_copy_needed)
 
         _add_uuid_relations(model, uuid.int, part)
 
@@ -647,10 +633,12 @@ def _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node):
 
 
 def _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
-                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid):
+                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid, hdf5_copy_needed):
     # uuid = rqet.uuid_for_part_root(root_node)
     reference_node_dict = None
     for ref_uuid_int in other_model.uuid_rels_dict[uuid.int][0]:  # using dict in other model instead of duplicated xml
+        if ref_uuid_int in model.uuid_part_dict:
+            continue
         if not force:
             referred_part = m_c._part_for_uuid(other_model, bu.uuid_from_int(ref_uuid_int))
             if m_c._type_of_part(other_model, referred_part) == 'obj_EpcExternalPartReference':
@@ -667,7 +655,9 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
                                                         cut_node_types = cut_node_types,
                                                         self_h5_file_name = self_h5_file_name,
                                                         h5_uuid = h5_uuid,
-                                                        other_h5_file_name = other_h5_file_name)
+                                                        other_h5_file_name = other_h5_file_name,
+                                                        hdf5_copy_needed = hdf5_copy_needed,
+                                                        uuid_int = ref_uuid_int)
             if resident_part == referred_part:
                 continue
         if consolidate and model.consolidation is not None and ref_uuid_int in model.consolidation.map:
@@ -726,18 +716,28 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
 
     assert other_model is not None and other_model is not model
 
-    other_parts_list = m_c._parts(other_model)
-    if not other_parts_list:
+    if realization is not None:
+        assert isinstance(realization, int) and realization >= 0
+
+    other_uuid_ints_list = other_model.uuid_part_dict.keys()
+    if not other_uuid_ints_list:
         log.warning('no parts found in other model for merging')
         return
 
     if consolidate:
-        other_parts_list = cons.sort_parts_list(other_model, other_parts_list)
+        other_uuid_ints_list = cons.sort_uuids_list(other_model, other_uuid_ints_list)
 
     self_h5_file_name = model.h5_file_name(file_must_exist = False)
     self_h5_uuid = model.h5_uuid()
     other_h5_file_name = other_model.h5_file_name()
-    for part in other_parts_list:
+    hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
+
+    for uuid_int in other_uuid_ints_list:
+        if uuid_int in model.uuid_part_dict:
+            continue
+        part = other_model.uuid_part_dict[uuid_int]
+        if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
+            continue
         _copy_part_from_other_model(model,
                                     other_model,
                                     part,
@@ -745,7 +745,9 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
                                     consolidate = consolidate,
                                     self_h5_file_name = self_h5_file_name,
                                     h5_uuid = self_h5_uuid,
-                                    other_h5_file_name = other_h5_file_name)
+                                    other_h5_file_name = other_h5_file_name,
+                                    hdf5_copy_needed = hdf5_copy_needed,
+                                    uuid_int = uuid_int)
 
     if consolidate and model.consolidation is not None:
         model.consolidation.check_map_integrity()
