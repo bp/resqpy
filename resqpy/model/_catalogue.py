@@ -847,3 +847,47 @@ def _uuids_as_int_softly_related_to_uuid(model, uuid):
     if relatives is None:
         return None
     return relatives[2]
+
+
+def _check_catalogue_dictionaries(model, referred_parts_must_be_present, check_xml):
+    for uuid_int, part in model.uuid_part_dict.items():
+        assert uuid_int is not None and part
+        assert bu.is_uuid(uuid_int)
+        assert part in model.parts_forest
+    for part in model.parts_forest:
+        if part.startswith('obj_') and 'EpcExternal' not in part:
+            assert part in model.uuid_part_dict.values()
+    for uuid_int, relatives in model.uuid_rels_dict.items():
+        assert uuid_int in model.uuid_part_dict
+        if referred_parts_must_be_present:
+            for ref_uuid_int in relatives[0] | relatives[1] | relatives[2]:
+                assert ref_uuid_int in model.uuid_part_dict
+                assert ref_uuid_int != uuid_int
+            for ref_uuid_int in relatives[0]:
+                assert uuid_int in model.uuid_rels_dict[ref_uuid_int][1]
+                assert ref_uuid_int not in relatives[1] | relatives[2]
+            for ref_uuid_int in relatives[1]:
+                assert uuid_int in model.uuid_rels_dict[ref_uuid_int][0]
+                assert ref_uuid_int not in relatives[0] | relatives[2]
+            for ref_uuid_int in relatives[2]:
+                assert ref_uuid_int not in relatives[0] | relatives[1]
+    if check_xml:
+        for uuid_int, part in model.uuid_part_dict.items():
+            root = model.parts_forest[part][2].getroot()
+            assert root is not None
+            ref_nodes = rqet.list_obj_references(root, skip_hdf5 = True)
+            relatives = model.uuid_rels_dict.get(uuid_int)
+            if relatives is None:
+                assert len(ref_nodes) == 0
+                continue
+            ref_uuid_ints_from_dict = relatives[0]
+            assert len(ref_nodes) == len(ref_uuid_ints_from_dict)
+            ref_node_uuid_ints = []
+            for ref_node in ref_nodes:
+                uuid_str = rqet.find_tag_text(ref_node, 'UUID')
+                uuid = bu.uuid_from_string(uuid_str)
+                assert uuid is not None
+                assert uuid.int in ref_uuid_ints_from_dict
+                ref_node_uuid_ints.append(uuid.int)
+            for ref_uuid_int in ref_uuid_ints_from_dict:
+                assert ref_uuid_int in ref_node_uuid_ints

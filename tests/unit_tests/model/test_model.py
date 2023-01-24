@@ -809,6 +809,7 @@ def test_parts_list_filtered_by_related_uuid(example_model_with_properties):
     assert len(referred_to_by_grid_list) == 1
     assert len(referring_to_grid_list) == 9
     assert len(soft_grid_relations_list) == 1
+    example_model_with_properties.check_catalogue_dictionaries()
 
 
 def test_related_uuids_as_int_methods(example_model_with_properties):
@@ -877,3 +878,5 @@ def test_uuid_consolidation(tmp_path):
             if title == "offset":
                 offset_uuid = rqet.find_tag_text(reference_node, "UUID")
                 assert bu.matching_uuids(offset_uuid, uuid_expected)
+
+    combined_model.check_catalogue_dictionaries()

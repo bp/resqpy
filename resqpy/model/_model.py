@@ -2202,6 +2202,21 @@ class Model():
 
         return m_c._sort_parts_list_by_timestamp(self, parts_list)
 
+    def check_catalogue_dictionaries(self, referred_parts_must_be_present = True, check_xml = True):
+        """Checks internal consistency of catalogue dictionaries, raising assertion exception if inconsistent.
+
+        arguments:
+            referred_parts_must_be_present (bool, default True): if True, raises an exception if a referenced
+                part is not present in the model (such a scenario is allowed by the RESQML standard)
+            check_xml (bool, default True): if True, xml is scoured to check that references are consistent
+                with the Model uuid_rels_dict internal dictionary
+
+        note:
+            this is a thorough but slow check, use sparing; primarily intended for unit tests and debugging
+        """
+
+        m_c._check_catalogue_dictionaries(self, referred_parts_must_be_present, check_xml)
+
     def as_graph(self, uuids_subset = None):
         """Return representation of model as nodes and edges, suitable for plotting in a graph.
 

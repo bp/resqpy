@@ -208,10 +208,16 @@ def version_string(uuid_obj):
 
 
 def is_uuid(uuid_obj):
-    """Returns boolean indicating whether uuid_obj seems to be a uuid."""
+    """Returns boolean indicating whether uuid_obj seems to be a uuid, in any allowed form."""
 
     if isinstance(uuid_obj, uuid.UUID):
         return True
+    if isinstance(uuid_obj, int):
+        try:
+            _ = uuid_from_int(uuid_obj)
+            return True
+        except Exception:
+            return False
     if not uuid_obj or not isinstance(uuid_obj, str):
         return False
     if uuid_obj[0] == '_':
