@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import uuid
+import joblib
 from typing import List, Dict, Any, Callable, Union
 from pathlib import Path
 from joblib import Parallel, delayed, parallel_backend  # type: ignore
