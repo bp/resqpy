@@ -762,6 +762,8 @@ class BlockedWell(BaseResqpy):
             self.well_name = well_name
         else:
             well_name = self.well_name
+        if not self.title:
+            self.title = well_name
 
         assert len(df) > 0, 'empty dataframe for blocked well ' + str(well_name)
 
@@ -3021,6 +3023,13 @@ class BlockedWell(BaseResqpy):
 
         Uses the Blocked well citation title as the well name
         """
+        title = self.well_name
+        if not title:
+            title = self.title
+            if not title and self.trajectory is not None:
+                title = rqw.well_name(self.trajectory)
+                if not title:
+                    title = 'WELL'
         if self.trajectory is not None:
             traj_interp_uuid = self.model.uuid(obj_type = 'WellboreInterpretation', related_uuid = self.trajectory.uuid)
             if traj_interp_uuid is not None:
@@ -3031,12 +3040,12 @@ class BlockedWell(BaseResqpy):
                 if traj_feature_uuid is not None:
                     self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, uuid = traj_feature_uuid)
         if self.wellbore_feature is None:
-            self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model,
-                                                        feature_name = rqw.well_name(self.trajectory))
+            self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, feature_name = title)
             self.feature_to_be_written = True
         if self.wellbore_interpretation is None:
+            title = title if not self.wellbore_feature.title else self.wellbore_feature.title
             self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model,
-                                                                      title = self.wellbore_feature.title,
+                                                                      title = title,
                                                                       wellbore_feature = self.wellbore_feature)
             if self.trajectory.wellbore_interpretation is None and shared_interpretation:
                 self.trajectory.wellbore_interpretation = self.wellbore_interpretation

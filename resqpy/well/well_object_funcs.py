@@ -295,7 +295,8 @@ def well_name(well_object, model = None):
 
         return best_root(model, root_list)
 
-    return rqet.citation_title_for_node(best_root_for_object(well_object, model = model))
+    title = rqet.citation_title_for_node(best_root_for_object(well_object, model = model))
+    return 'WELL' if not title else title
 
 
 def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, check_well_name = False):
