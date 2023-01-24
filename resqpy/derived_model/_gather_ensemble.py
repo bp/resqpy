@@ -49,11 +49,10 @@ def gather_ensemble(case_epc_list,
 
     for r, case_epc in enumerate(case_epc_list):
         t_r_start = time()  # debug
-        log.info(f'gathering realszation {r}: {case_epc}')
+        log.debug(f'gathering realisation {r}: {case_epc}')
         epc_lookup_dict[r] = case_epc
         case_model = rq.Model(case_epc)
         if r == 0:  # first case
-            log.info('first case')  # debug
             composite_model.copy_all_parts_from_other_model(case_model, realization = 0, consolidate = consolidate)
             if shared_time_series:
                 host_ts_uuids = case_model.uuids(obj_type = 'TimeSeries')
@@ -75,7 +74,6 @@ def gather_ensemble(case_epc_list,
                     )
                     title_match_required = True
         else:  # subsequent cases
-            log.info('subsequent case')  # debug
             composite_model.consolidation = None  # discard any previous mappings to limit dictionary growth
             if shared_time_series:
                 for ts_uuid in case_model.uuids(obj_type = 'TimeSeries'):
@@ -84,7 +82,6 @@ def gather_ensemble(case_epc_list,
                     host_ts_uuid = host_ts_uuids[ts_index]
                     composite_model.force_consolidation_uuid_equivalence(ts_uuid, host_ts_uuid)
             if shared_grids:
-                log.info('shared grids')  # debug
                 for grid_uuid in case_model.uuids(obj_type = 'IjkGridRepresentation'):
                     grid_root = case_model.root(uuid = grid_uuid)
                     grid_extent = grr.extent_kji_from_root(grid_root)
@@ -118,11 +115,9 @@ def gather_ensemble(case_epc_list,
                                                                        h5_uuid = composite_h5_uuid,
                                                                        other_h5_file_name = case_h5_file_name)
                             t_props += time() - t_p_start
-                    log.info(f'time props: {t_props:.3f} sec')  # debug
             else:
-                log.info('non shared grids')  # debug
                 composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
-        log.info(f'case time: {time() - t_r_start:.2f} secs')  # debug
+        log.debug(f'case time: {time() - t_r_start:.2f} secs')  # debug
 
     if create_epc_lookup and len(epc_lookup_dict):
         epc_lookup = rqp.StringLookup(composite_model, int_to_str_dict = epc_lookup_dict, title = 'ensemble epc table')

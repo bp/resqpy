@@ -4,6 +4,8 @@ from typing import Tuple
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface
 from resqpy.multiprocessing.multiprocessing import rm_tree
+import resqpy.olio.xml_et as rqet
+import resqpy.olio.uuid as bu
 
 
 def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface: Tuple[RegularGrid, Surface]):
@@ -81,6 +83,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
+    assert len(model.uuids(obj_type = 'PropertyKind', title = "offset")) == 1
     assert len(model.uuids()) == 14
     assert len(uuid_list) == 9
 

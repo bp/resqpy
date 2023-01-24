@@ -1314,8 +1314,10 @@ def test_gather_ensemble(tmp_path):
     grid = model.grid()
     assert grid is not None
     pc = grid.property_collection
+
     assert pc.has_multiple_realizations()
     assert pc.realization_list(sort_list = True) == [0, 1, 2]
+
     ntg_pc = rqp.selective_version_of_collection(pc, property_kind = 'net to gross ratio')
     assert ntg_pc.number_of_parts() == 3
     ntg3 = ntg_pc.realizations_array_ref()

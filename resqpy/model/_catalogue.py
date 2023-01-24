@@ -20,6 +20,7 @@ def _parts(model,
            metadata = {},
            extra = {},
            related_uuid = None,
+           related_mode = None,
            epc_subdir = None,
            sort_by = None):
     """Returns a list of parts matching all of the arguments passed."""
@@ -50,7 +51,7 @@ def _parts(model,
     if extra:
         parts_list = _filtered_by_extra(model, parts_list, extra)
     if related_uuid is not None:
-        parts_list = _parts_list_filtered_by_related_uuid(model, parts_list, related_uuid)
+        parts_list = _parts_list_filtered_by_related_uuid(model, parts_list, related_uuid, related_mode = related_mode)
     if sort_by and len(parts_list):
         parts_list = _sorted_parts_list(model, parts_list, sort_by)
     return parts_list
@@ -66,6 +67,7 @@ def _part(model,
           metadata = {},
           extra = {},
           related_uuid = None,
+          related_mode = None,
           epc_subdir = None,
           multiple_handling = 'exception'):
     """Returns the name of a part matching all of the arguments passed."""
@@ -80,6 +82,7 @@ def _part(model,
                 metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
+                related_mode = related_mode,
                 epc_subdir = epc_subdir)
     if len(pl) == 0:
         return None
@@ -106,6 +109,7 @@ def _uuids(model,
            metadata = {},
            extra = {},
            related_uuid = None,
+           related_mode = None,
            epc_subdir = None,
            sort_by = None):
     """Returns a list of uuids of parts matching all of the arguments passed."""
@@ -123,6 +127,7 @@ def _uuids(model,
                 metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
+                related_mode = related_mode,
                 epc_subdir = epc_subdir,
                 sort_by = sort_by)
     if len(pl) == 0:
@@ -145,6 +150,7 @@ def _uuid(model,
           metadata = {},
           extra = {},
           related_uuid = None,
+          related_mode = None,
           epc_subdir = None,
           multiple_handling = 'exception'):
     """Returns the uuid of a part matching all of the arguments passed."""
@@ -159,6 +165,7 @@ def _uuid(model,
                  metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
+                 related_mode = related_mode,
                  epc_subdir = epc_subdir,
                  multiple_handling = multiple_handling)
     if part is None:
@@ -176,6 +183,7 @@ def _roots(model,
            metadata = {},
            extra = {},
            related_uuid = None,
+           related_mode = None,
            epc_subdir = None,
            sort_by = None):
     """Returns a list of xml root nodes of parts matching all of the arguments passed."""
@@ -190,6 +198,7 @@ def _roots(model,
                 metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
+                related_mode = related_mode,
                 epc_subdir = epc_subdir,
                 sort_by = sort_by)
     root_list = []
@@ -208,6 +217,7 @@ def _root(model,
           metadata = {},
           extra = {},
           related_uuid = None,
+          related_mode = None,
           epc_subdir = None,
           multiple_handling = 'exception'):
     """Returns the xml root node of a part matching all of the arguments passed."""
@@ -222,6 +232,7 @@ def _root(model,
                  metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
+                 related_mode = related_mode,
                  epc_subdir = epc_subdir,
                  multiple_handling = multiple_handling)
     if part is None:
@@ -239,6 +250,7 @@ def _titles(model,
             metadata = {},
             extra = {},
             related_uuid = None,
+            related_mode = None,
             epc_subdir = None,
             sort_by = None):
     """Returns a list of citation titles of parts matching all of the arguments passed."""
@@ -253,6 +265,7 @@ def _titles(model,
                 metadata = metadata,
                 extra = extra,
                 related_uuid = related_uuid,
+                related_mode = related_mode,
                 epc_subdir = epc_subdir,
                 sort_by = sort_by)
     title_list = []
@@ -271,6 +284,7 @@ def _title(model,
            metadata = {},
            extra = {},
            related_uuid = None,
+           related_mode = None,
            epc_subdir = None,
            multiple_handling = 'exception'):
     """Returns the citation title of a part matching all of the arguments passed."""
@@ -285,6 +299,7 @@ def _title(model,
                  metadata = metadata,
                  extra = extra,
                  related_uuid = related_uuid,
+                 related_mode = related_mode,
                  epc_subdir = epc_subdir,
                  multiple_handling = multiple_handling)
     if part is None:
@@ -376,55 +391,25 @@ def _parts_count_by_type(model, type_of_interest = None):
     return result_list
 
 
-def _parts_list_filtered_by_related_uuid(model, parts_list, uuid, uuid_is_source = None):
+def _parts_list_filtered_by_related_uuid(model, parts_list, uuid, uuid_is_source = None, related_mode = None):
     """From a list of parts, returns a list of those parts which have a relationship with the given uuid."""
 
     if not model.rels_present or parts_list is None or uuid is None:
         return None
+
+    relations = model.uuid_rels_dict.get(bu.uuid_from_string(uuid).int)
+    if relations is None:
+        return []
+    if related_mode is None:
+        all_relations = relations[0] | relations[1] | relations[2]
+    else:
+        all_relations = relations[related_mode]
+
     filtered_list = []
-    this_part = _part_for_uuid(model, uuid)
-
-    if this_part is not None:
-        rels_part_root = _root_for_part(model, rqet.rels_part_name_for_part(this_part), is_rels = True)
-        if rels_part_root is not None:
-            for relation_node in rels_part_root:
-                if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
-                    continue
-                target_part = relation_node.attrib['Target']
-                if target_part not in parts_list:
-                    continue
-                if uuid_is_source is not None:
-                    source_dest = relation_node.attrib['Type']
-                    if uuid_is_source:
-                        if 'source' not in source_dest:
-                            continue
-                    else:
-                        if 'source' in source_dest:
-                            continue
-                filtered_list.append(target_part)
-
     for part in parts_list:
-        if part in filtered_list:
-            continue
-        rels_part_root = _root_for_part(model, rqet.rels_part_name_for_part(part), is_rels = True)
-        if rels_part_root is None:
-            continue
-        for relation_node in rels_part_root:
-            if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
-                continue
-            target_part = relation_node.attrib['Target']
-            relation_uuid = rqet.uuid_in_part_name(target_part)
-            if bu.matching_uuids(uuid, relation_uuid):
-                if uuid_is_source is not None:
-                    source_dest = relation_node.attrib['Type']
-                    if uuid_is_source:
-                        if 'source' in source_dest:
-                            continue  # relation is source, so uuid is not
-                    else:
-                        if 'source' not in source_dest:
-                            continue  # relation is not source, so uuid is
-                filtered_list.append(part)
-                break
+        part_uuid_int = model.uuid_for_part(part).int
+        if part_uuid_int in all_relations:
+            filtered_list.append(part)
 
     return filtered_list
 
@@ -440,9 +425,17 @@ def _parts_list_filtered_by_supporting_uuid(model, parts_list, uuid):
     """From a list of parts, returns a list of those parts which have the given uuid as supporting representation."""
 
     if parts_list is None or uuid is None:
-        return None
+        return []
+
+    relations = model.uuid_rels_dict.get(bu.uuid_from_string(uuid).int)
+    if relations is None:
+        return []
+
     filtered_list = []
     for part in parts_list:
+        part_uuid_int = model.uuid_for_part(part).int
+        if part_uuid_int not in relations[1]:
+            continue
         support_ref_uuid = _supporting_representation_for_part(model, part)
         if support_ref_uuid is None:
             continue
@@ -814,3 +807,87 @@ def _sorted_parts_list(model, parts_list, sort_by):
         for _, index in sort_list:
             sorted_list.append(parts_list[index])
     return sorted_list
+
+
+def _uuids_as_int_related_to_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[0] | relatives[1] | relatives[2]
+
+
+def _uuids_as_int_referenced_by_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[0]
+
+
+def _uuids_as_int_referencing_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[1]
+
+
+def _uuids_as_int_softly_related_to_uuid(model, uuid):
+    if uuid is None:
+        return None
+    uuid_int = bu.uuid_as_int(uuid)
+    relatives = model.uuid_rels_dict.get(uuid_int)
+    if relatives is None:
+        return None
+    return relatives[2]
+
+
+def _check_catalogue_dictionaries(model, referred_parts_must_be_present, check_xml):
+    for uuid_int, part in model.uuid_part_dict.items():
+        assert uuid_int is not None and part
+        assert bu.is_uuid(uuid_int)
+        assert part in model.parts_forest
+    for part in model.parts_forest:
+        if part.startswith('obj_') and 'EpcExternal' not in part:
+            assert part in model.uuid_part_dict.values()
+    for uuid_int, relatives in model.uuid_rels_dict.items():
+        assert uuid_int in model.uuid_part_dict
+        if referred_parts_must_be_present:
+            for ref_uuid_int in relatives[0] | relatives[1] | relatives[2]:
+                assert ref_uuid_int in model.uuid_part_dict
+                assert ref_uuid_int != uuid_int
+            for ref_uuid_int in relatives[0]:
+                assert uuid_int in model.uuid_rels_dict[ref_uuid_int][1]
+                assert ref_uuid_int not in relatives[1] | relatives[2]
+            for ref_uuid_int in relatives[1]:
+                assert uuid_int in model.uuid_rels_dict[ref_uuid_int][0]
+                assert ref_uuid_int not in relatives[0] | relatives[2]
+            for ref_uuid_int in relatives[2]:
+                assert ref_uuid_int not in relatives[0] | relatives[1]
+    if check_xml:
+        for uuid_int, part in model.uuid_part_dict.items():
+            root = model.parts_forest[part][2].getroot()
+            assert root is not None
+            ref_nodes = rqet.list_obj_references(root, skip_hdf5 = True)
+            relatives = model.uuid_rels_dict.get(uuid_int)
+            if relatives is None:
+                assert len(ref_nodes) == 0
+                continue
+            ref_uuid_ints_from_dict = relatives[0]
+            assert len(ref_nodes) == len(ref_uuid_ints_from_dict)
+            ref_node_uuid_ints = []
+            for ref_node in ref_nodes:
+                uuid_str = rqet.find_tag_text(ref_node, 'UUID')
+                uuid = bu.uuid_from_string(uuid_str)
+                assert uuid is not None
+                assert uuid.int in ref_uuid_ints_from_dict
+                ref_node_uuid_ints.append(uuid.int)
+            for ref_uuid_int in ref_uuid_ints_from_dict:
+                assert ref_uuid_int in ref_node_uuid_ints

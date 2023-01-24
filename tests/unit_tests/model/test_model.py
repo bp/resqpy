@@ -6,10 +6,12 @@ import pytest
 import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.model as rq
+import resqpy.olio.consolidation as cons
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
+import resqpy.organize as rqo
 import resqpy.time_series as rqts
 import resqpy.well as rqw
 
@@ -324,16 +326,27 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
         assert sub_hdf5_path, 'hdf5 path not established for sub model'
         assert os.path.samefile(hdf5_path, sub_hdf5_path)
 
+        print(model.number_of_parts())
+        print(model.parts())
+
+        print(full_model.parts())
+
+        print("UUIDs: ", [grid_uuid, ts_uuid] + discrete_prop_uuid_list)
         # copy some common parts into the sub model (will include referenced crs)
         for uuid in [grid_uuid, ts_uuid] + discrete_prop_uuid_list:
+            print()
+            print("part: ", full_model.part(uuid = uuid))
+            print("relations: ", [full_model.uuid_part_dict[uuid] for uuid in full_model.uuid_rels_dict[uuid.int][0]])
             model.copy_part_from_other_model(full_model,
                                              full_model.part(uuid = uuid),
                                              self_h5_file_name = hdf5_path,
                                              other_h5_file_name = hdf5_path)
+            print(model.parts())
 
         # copy some realisation specific properties
         for pk in ('net to gross ratio', 'porosity'):
             property_part = pc.singleton(property_kind = pk, realization = i)
+            print(property_part)
             assert property_part is not None
             model.copy_part_from_other_model(full_model,
                                              property_part,
@@ -342,6 +355,8 @@ def test_multiple_epc_sharing_one_hdf5(tmp_path, example_model_with_prop_ts_rels
 
         # save the epc for the sub model
         model.store_epc()
+
+        print(model.parts())
 
         # check the number of parts in the sub model is as expected (includes crs and ext)
         assert model.number_of_parts() == 6 + 2 * len(discrete_prop_uuid_list)
@@ -754,3 +769,114 @@ def uuid_in_list(uuid, uuid_list):
         if bu.matching_uuids(u, uuid):
             return True
     return False
+
+
+def test_model_uuid_rels_dict(example_model_with_properties):
+    # Arrange
+    epc = example_model_with_properties.epc_file
+
+    # Act
+    model = rq.Model(epc)
+
+    # Assert
+    assert len(model.uuid_rels_dict) == 15
+    assert sum([len(values[0]) for values in model.uuid_rels_dict.values()]) == 14
+    assert sum([len(values[1]) for values in model.uuid_rels_dict.values()]) == 14
+    assert sum([len(values[2]) for values in model.uuid_rels_dict.values()]) == 10
+
+
+def test_parts_list_filtered_by_related_uuid(example_model_with_properties):
+    # Arrange
+    emf = rqo.OrganizationFeature(example_model_with_properties,
+                                  feature_name = 'profoundly muddy',
+                                  organization_kind = 'earth model')
+    emf.create_xml()
+    grid_uuid = example_model_with_properties.grid().uuid
+    example_model_with_properties.create_reciprocal_relationship_uuids(grid_uuid, 'sourceObject', emf.uuid,
+                                                                       'destinationObject')
+    parts_list = example_model_with_properties.parts()
+
+    # Act
+    filtered_list = example_model_with_properties.parts_list_filtered_by_related_uuid(parts_list, grid_uuid)
+    related_list = example_model_with_properties.uuids(related_uuid = grid_uuid)
+    referred_to_by_grid_list = example_model_with_properties.uuids(related_uuid = grid_uuid, related_mode = 0)
+    referring_to_grid_list = example_model_with_properties.parts(related_uuid = grid_uuid, related_mode = 1)
+    soft_grid_relations_list = example_model_with_properties.roots(related_uuid = grid_uuid, related_mode = 2)
+
+    # Assert
+    assert len(filtered_list) == 11
+    assert len(related_list) == 11
+    assert len(referred_to_by_grid_list) == 1
+    assert len(referring_to_grid_list) == 9
+    assert len(soft_grid_relations_list) == 1
+    example_model_with_properties.check_catalogue_dictionaries()
+
+
+def test_related_uuids_as_int_methods(example_model_with_properties):
+
+    model = example_model_with_properties
+
+    # Arrange
+    emf = rqo.OrganizationFeature(model, feature_name = 'profoundly muddy', organization_kind = 'earth model')
+    emf.create_xml()
+    grid_uuid = model.grid().uuid
+    model.create_reciprocal_relationship_uuids(grid_uuid, 'sourceObject', emf.uuid, 'destinationObject')
+    crs = rqc.Crs(model, uuid = model.uuid(obj_type = 'LocalDepth3dCrs'))
+
+    # Act
+    all_relatives = model.uuids_as_int_related_to_uuid(grid_uuid)
+    referred_to_by_grid = model.uuids_as_int_referenced_by_uuid(grid_uuid)
+    referring_to_grid = model.uuids_as_int_referencing_uuid(grid_uuid)
+    soft_grid_relations = model.uuids_as_int_softly_related_to_uuid(grid_uuid)
+
+    # Assert
+    assert len(all_relatives) == 11
+    assert len(referred_to_by_grid) == 1
+    assert len(referring_to_grid) == 9
+    assert len(soft_grid_relations) == 1
+    assert all([x in all_relatives for x in referred_to_by_grid])
+    assert all([x in all_relatives for x in referring_to_grid])
+    assert all([x in all_relatives for x in soft_grid_relations])
+    assert all_relatives == referred_to_by_grid | referring_to_grid | soft_grid_relations
+    assert crs.uuid.int in referred_to_by_grid
+
+
+def test_uuid_consolidation(tmp_path):
+    # Arrange
+    combined_model = rq.new_model(f"{tmp_path}/combined_model.epc")
+    for i in range(3):
+        model = rq.new_model(f"{tmp_path}/model_{i}.epc")
+        crs = rqc.Crs(model)
+        crs.create_xml()
+        grid = grr.RegularGrid(model, extent_kji = (2, 2, 2), crs_uuid = crs.uuid, title = f"test grid {i}")
+        grid.create_xml()
+        array = np.random.random((2, 2, 2))
+        rqp.Property.from_array(model, array, "test", "offset", grid.uuid, property_kind = "offset", uom = "m")
+        model.store_epc()
+
+    # Act
+    for i in range(3):
+        model = rq.Model(f"{tmp_path}/model_{i}.epc")
+        uuids = cons.sort_uuids_list(model, model.uuids())
+        for uuid in uuids:
+            combined_model.copy_uuid_from_other_model(model, uuid, consolidate = True)
+    combined_model.store_epc()
+    combined_model = rq.Model(f"{tmp_path}/combined_model.epc")
+
+    # Assert
+    assert len(combined_model.uuids(obj_type = 'LocalDepth3dCrs')) == 1
+    assert len(combined_model.uuids(obj_type = 'IjkGridRepresentation')) == 3
+    assert len(combined_model.uuids(obj_type = 'ContinuousProperty')) == 12
+    assert len(combined_model.uuids(obj_type = 'PropertyKind', title = "offset")) == 1
+
+    uuid_expected = combined_model.uuid(obj_type = 'PropertyKind', title = "offset")
+    for uuid in combined_model.uuids(obj_type = 'ContinuousProperty'):
+        node = combined_model.root_for_uuid(uuid)
+        reference_node = rqet.find_nested_tags(node, ["PropertyKind", "LocalPropertyKind"])
+        if reference_node is not None:
+            title = rqet.find_tag_text(reference_node, "Title")
+            if title == "offset":
+                offset_uuid = rqet.find_tag_text(reference_node, "UUID")
+                assert bu.matching_uuids(offset_uuid, uuid_expected)
+
+    combined_model.check_catalogue_dictionaries()

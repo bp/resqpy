@@ -9,6 +9,8 @@ import os
 import shutil
 import zipfile as zf
 
+import resqpy.model._catalogue as m_c
+import resqpy.model._xml as m_x
 import resqpy.olio.consolidation as cons
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as whdf5
@@ -26,7 +28,6 @@ def _load_part(model, epc, part_name, is_rels = None):
 
     try:
 
-        # log.debug('loading part ' + part_name)
         if is_rels is None:
             is_rels = part_name.endswith('.rels')
         is_other = not is_rels and part_name.startswith('docProps')
@@ -57,7 +58,7 @@ def _load_part(model, epc, part_name, is_rels = None):
                 elif uuid_from_tree is not None:
                     assert bu.matching_uuids(part_uuid, uuid_from_tree)
                 model.parts_forest[part_name] = (part_type, part_uuid, part_tree)
-                _set_uuid_to_part(model, part_name)
+                _set_uuid_to_part(model, part_name, part_uuid)
                 if model.crs_uuid is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
                     model.crs_uuid = part_uuid
 
@@ -74,6 +75,10 @@ def _fell_part(model, part_name):
 
     try:
         _del_uuid_to_part(model, part_name)
+    except Exception:
+        pass
+    try:
+        _del_uuid_relations(model, part_name)
     except Exception:
         pass
     try:
@@ -176,6 +181,59 @@ def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = 
         if full_load:
             _tidy_up_forests(model)
 
+    if full_load:
+        for uuid_int, part in model.uuid_part_dict.items():
+            _add_uuid_relations(model, uuid_int, part)
+
+        for uuid_int, part in model.uuid_part_dict.items():
+            _add_uuid_soft_relations(model, uuid_int, part)
+
+
+def _add_uuid_soft_relations(model, uuid_int, part):
+    if "EpcExternalPart" in part:
+        return
+    value = model.rels_forest.get(rqet.rels_part_name_for_part(part))
+    if value is not None:
+        rels_root = m_c._root_for_part(model, rqet.rels_part_name_for_part(part), is_rels = True)
+        if rels_root is not None:
+            for relation_node in rels_root:
+                if rqet.stripped_of_prefix(relation_node.tag) != 'Relationship':
+                    return
+                if 'Target' not in relation_node.attrib.keys():
+                    return
+                relation_part_name = relation_node.attrib['Target']
+                relation_uuid_str = str(rqet.uuid_in_part_name(relation_part_name))
+                if len(relation_uuid_str) != 36:
+                    return  # probably HDF5 external resource
+                relation_uuid_int = bu.uuid_from_string(relation_uuid_str).int
+                value = model.uuid_rels_dict.get(uuid_int)
+                if value is not None and relation_uuid_int not in value[0] and relation_uuid_int not in value[1]:
+                    value[2].add(relation_uuid_int)
+
+
+def _add_uuid_relations(model, uuid_int, part):
+    if "EpcExternalPart" in part:
+        return
+    root = model.parts_forest[part][2].getroot()
+    for ref_node in rqet.list_obj_references(root):
+        if "EpcExternalPart" in rqet.find_tag_text(ref_node, "ContentType"):
+            continue
+        ref_uuid_int = bu.uuid_from_string(rqet.find_tag_text(ref_node, "UUID")).int
+
+        # Adding reference uuid to the uuid key.
+        value = model.uuid_rels_dict.get(uuid_int)
+        if value is None:
+            model.uuid_rels_dict[uuid_int] = ({ref_uuid_int}, set(), set())
+        else:
+            value[0].add(ref_uuid_int)
+
+        # Adding uuid to the reference uuid key.
+        ref_value = model.uuid_rels_dict.get(ref_uuid_int)
+        if ref_value is None:
+            model.uuid_rels_dict[ref_uuid_int] = (set(), {uuid_int}, set())
+        else:
+            ref_value[1].add(uuid_int)
+
 
 def _copy_dataset_if_requested(copy_from, epc_file, quiet):
     if copy_from:
@@ -219,7 +277,7 @@ def _set_part_names_in_forests(model, epc_subdir, names):
                     model.rels_forest[name] = (part_uuid, None)
                 else:
                     model.parts_forest[name] = (None, part_uuid, None)
-                    _set_uuid_to_part(model, name)
+                    _set_uuid_to_part(model, name, part_uuid)
 
 
 def _complete_forest_entry_for_part(epc, model, epc_subdir, full_load, child):
@@ -286,7 +344,6 @@ def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', on
 
     with zf.ZipFile(epc_file, mode = 'w') as epc:
         with epc.open(main_xml_name, mode = 'w') as main_xml:
-            # log.debug('Writing main xml: ' + main_xml_name)
             rqet.write_xml(main_xml, model.main_tree, standalone = 'yes')
         for part_name, (_, _, part_tree) in model.parts_forest.items():
             if part_tree is None:
@@ -321,7 +378,6 @@ def _copy_part(model, existing_uuid, new_uuid, change_hdf5_refs = False):
 
     old_uuid_str = str(existing_uuid)
     new_uuid_str = str(new_uuid)
-    # log.debug('copying xml part from uuid: ' + old_uuid_str + ' to uuid: ' + new_uuid_str)
     existing_parts_list = model.parts_list_of_type(uuid = existing_uuid)
     if len(existing_parts_list) == 0:
         log.warning('failed to find existing part for copying with uuid: ' + old_uuid_str)
@@ -338,7 +394,13 @@ def _copy_part(model, existing_uuid, new_uuid, change_hdf5_refs = False):
     return part_name
 
 
-def _add_part(model, content_type, uuid, root, add_relationship_part = True, epc_subdir = None):
+def _add_part(model,
+              content_type,
+              uuid,
+              root,
+              add_relationship_part = True,
+              epc_subdir = None,
+              add_to_rels_dict = True):
     """Adds a (recently created) node as a new part in the model's parts forest."""
 
     if content_type[0].isupper():
@@ -366,7 +428,7 @@ def _add_part(model, content_type, uuid, root, add_relationship_part = True, epc
         model.other_forest[part_name] = (content_type, part_tree)
     else:
         model.parts_forest[part_name] = (content_type, uuid, part_tree)
-        _set_uuid_to_part(model, part_name)
+        _set_uuid_to_part(model, part_name, uuid)
     main_ref = rqet.SubElement(model.main_root, ns['content_types'] + 'Override')
     main_ref.set('PartName', part_name)
     main_ref.set('ContentType', ct)
@@ -379,6 +441,8 @@ def _add_part(model, content_type, uuid, root, add_relationship_part = True, epc
         else:
             rels_part_name = rqet.rels_part_name_for_part(part_name)
         model.rels_forest[rels_part_name] = (uuid, rels_tree)
+    if add_to_rels_dict and not use_other:
+        _add_uuid_relations(model, uuid.int, part_name)
     model.set_modified()
 
 
@@ -394,14 +458,12 @@ def _patch_root_for_part(model, part, root):
 def _remove_part(model, part_name, remove_relationship_part):
     """Removes a part from the parts forest; optionally remove corresponding rels part and other relationships."""
 
-    _del_uuid_to_part(model, part_name)
-    model.parts_forest.pop(part_name)
     if remove_relationship_part:
         if 'docProps' in part_name:
             rels_part_name = '_rels/.rels'
         else:
-            related_parts = model.parts_list_filtered_by_related_uuid(model.list_of_parts(),
-                                                                      rqet.uuid_in_part_name(part_name))
+            related_parts = m_c._parts_list_filtered_by_related_uuid(model, m_c._list_of_parts(model),
+                                                                     rqet.uuid_in_part_name(part_name))
             for relative in related_parts:
                 (rel_uuid, rel_tree) = model.rels_forest[rqet.rels_part_name_for_part(relative)]
                 rel_root = rel_tree.getroot()
@@ -412,18 +474,37 @@ def _remove_part(model, part_name, remove_relationship_part):
                         rel_root.remove(child)
             rels_part_name = rqet.rels_part_name_for_part(part_name)
         model.rels_forest.pop(rels_part_name)
+    _del_uuid_to_part(model, part_name)
+    _del_uuid_relations(model, part_name)
+    model.parts_forest.pop(part_name)
     _remove_part_from_main_tree(model, part_name)
     model.set_modified()
 
 
-def _duplicate_node(model, existing_node, add_as_part = True):
+def _del_uuid_relations(model, part_name):
+    uuid = model.uuid_for_part(part_name)
+    if uuid is None:
+        return
+    relations = model.uuid_rels_dict[uuid.int]
+    for related_uuid_int in relations[0]:
+        model.uuid_rels_dict[related_uuid_int][1].remove(uuid.int)
+    for related_uuid_int in relations[1]:
+        model.uuid_rels_dict[related_uuid_int][0].remove(uuid.int)
+    for related_uuid_int in relations[2]:
+        value = model.uuid_rels_dict.get(related_uuid_int)
+        if value is not None:
+            value[2].remove(uuid.int)
+    model.uuid_rels_dict.pop(uuid.int)
+
+
+def _duplicate_node(model, existing_node, add_as_part = True, add_to_rels_dict = True):
     """Creates a deep copy of the xml node (typically from another model) and optionally adds as part."""
 
     new_node = copy.deepcopy(existing_node)
     if add_as_part:
         uuid = rqet.uuid_for_part_root(new_node)
-        if model.part_for_uuid(uuid) is None:
-            _add_part(model, rqet.node_type(new_node), uuid, new_node)
+        if m_c._part_for_uuid(model, uuid) is None:
+            _add_part(model, rqet.node_type(new_node), uuid, new_node, add_to_rels_dict = add_to_rels_dict)
     return new_node
 
 
@@ -445,53 +526,37 @@ def _copy_part_from_other_model(model,
                                 cut_node_types = None,
                                 self_h5_file_name = None,
                                 h5_uuid = None,
-                                other_h5_file_name = None):
+                                other_h5_file_name = None,
+                                hdf5_copy_needed = True,
+                                uuid_int = None):
     """Fully copies part in from another model, with referenced parts, hdf5 data and relationships."""
 
     # todo: double check behaviour around equivalent CRSes, especially any default crs in model
 
-    assert other_model is not None
-    if other_model is model:
-        return part
-    assert part is not None
-    if realization is not None:
-        assert isinstance(realization, int) and realization >= 0
-    if force:
-        assert consolidate
-    if not other_h5_file_name:
-        other_h5_file_name = other_model.h5_file_name()
-    if not self_h5_file_name:
-        self_h5_file_name = model.h5_file_name(file_must_exist = False)
-    hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
+    if uuid_int is None:
+        uuid = rqet.uuid_in_part_name(part)
+        uuid_int = uuid.int
+    else:
+        uuid = bu.uuid_from_int(uuid_int)
 
-    # check whether already existing in this model
-    if part in model.parts_forest.keys():
-        return part
-
-    if other_model.type_of_part(part) == 'obj_EpcExternalPartReference':
-        # log.debug('refusing to copy hdf5 ext part from other model')
-        return None
-
-    # log.debug('copying part: ' + str(part))
-
-    uuid = rqet.uuid_in_part_name(part)
     if not force:
-        assert model.part_for_uuid(uuid) is None, 'part copying failure: uuid exists for different part!'
+        assert m_c._part_for_uuid(model, uuid) is None, 'part copying failure: uuid exists for different part!'
 
     # duplicate xml tree and add as a part
-    other_root = other_model.root_for_part(part, is_rels = False)
+    other_root = m_c._root_for_part(other_model, part, is_rels = False)
     if other_root is None:
-        log.error('failed to copy part (missing in source model?): ' + str(part))
+        log.error(f'failed to copy part (missing in source model?): {str(part)}')
         return None
 
+    # look for an equivalent part already in model
     resident_uuid = _unforced_consolidation(model, other_model, consolidate, force, part)
 
     if resident_uuid is None:
 
-        root_node = _duplicate_node(model, other_root)  # adds duplicated node as part
+        root_node = _duplicate_node(model, other_root, add_to_rels_dict = False)  # adds duplicated node as part
         assert root_node is not None
 
-        _set_realization_index_node_if_required(realization, root_node)
+        _set_realization_index_node_if_required(realization, root_node)  # todo: handle extra metadata realization
 
         if hdf5_copy_needed:
             # copy hdf5 data
@@ -508,20 +573,25 @@ def _copy_part_from_other_model(model,
         if cut_node_types:
             rqet.cut_nodes_of_types(root_node, cut_node_types)
 
+        if model.uuid_rels_dict.get(uuid.int) is None:
+            model.uuid_rels_dict[uuid.int] = (set(), set(), set())
+
         # recursively copy in referenced parts where they don't already exist in this model
         _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
-                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node)
+                               self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid, hdf5_copy_needed)
+
+        _add_uuid_relations(model, uuid.int, part)
 
         resident_uuid = uuid
 
     else:
 
-        root_node = model.root_for_uuid(resident_uuid)
+        root_node = m_c._root_for_uuid(model, resident_uuid)
 
     # copy relationships where target part is present in this model – this part is source, then destination
     _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node)
 
-    return model.part_for_uuid(resident_uuid)
+    return m_c._part_for_uuid(model, resident_uuid)
 
 
 def _unforced_consolidation(model, other_model, consolidate, force, part):
@@ -553,80 +623,92 @@ def _copy_part_hdf5_setup(model, hdf5_count, h5_uuid, root_node):
             h5_uuid = model.h5_uuid()
         model.change_hdf5_uuid_in_hdf5_references(root_node, None, h5_uuid)
         ext_part = rqet.part_name_for_object('obj_EpcExternalPartReference', h5_uuid, prefixed = False)
-        ext_node = model.root_for_part(ext_part)
-        model.create_reciprocal_relationship(root_node,
-                                             'mlToExternalPartProxy',
-                                             ext_node,
-                                             'externalPartProxyToMl',
-                                             avoid_duplicates = False)
+        ext_node = m_c._root_for_part(model, ext_part)
+        m_x._create_reciprocal_relationship(model,
+                                            root_node,
+                                            'mlToExternalPartProxy',
+                                            ext_node,
+                                            'externalPartProxyToMl',
+                                            avoid_duplicates = False)
 
 
 def _copy_referenced_parts(model, other_model, realization, consolidate, force, cut_refs_to_uuids, cut_node_types,
-                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node):
-    for ref_node in rqet.list_obj_references(root_node):
-        resident_referred_node = None
-        if consolidate:
-            resident_referred_node = model.referenced_node(ref_node, consolidate = True)
-        if force:
+                           self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid, hdf5_copy_needed):
+    # uuid = rqet.uuid_for_part_root(root_node)
+    reference_node_dict = None
+    for ref_uuid_int in other_model.uuid_rels_dict[uuid.int][0]:  # using dict in other model instead of duplicated xml
+        if ref_uuid_int in model.uuid_part_dict:
             continue
-        if resident_referred_node is None:
-            referred_node = other_model.referenced_node(ref_node)
-            if referred_node is None:
-                log.warning('referred node not found in other model for ' +
-                            f'{rqet.find_tag_text(ref_node, "Title")}; ' +
-                            f'uuid: {rqet.find_tag_text(ref_node, "UUID")}')
-            else:
-                referred_part = rqet.part_name_for_part_root(referred_node)
-                if other_model.type_of_part(referred_part) == 'obj_EpcExternalPartReference':
-                    continue
-                if referred_part in model.list_of_parts():
-                    continue
-                _copy_part_from_other_model(model,
-                                            other_model,
-                                            referred_part,
-                                            realization = realization,
-                                            consolidate = consolidate,
-                                            force = force,
-                                            cut_refs_to_uuids = cut_refs_to_uuids,
-                                            cut_node_types = cut_node_types,
-                                            self_h5_file_name = self_h5_file_name,
-                                            h5_uuid = h5_uuid,
-                                            other_h5_file_name = other_h5_file_name)
+        if not force:
+            referred_part = m_c._part_for_uuid(other_model, bu.uuid_from_int(ref_uuid_int))
+            if m_c._type_of_part(other_model, referred_part) == 'obj_EpcExternalPartReference':
+                continue
+            if referred_part in m_c._list_of_parts(model):
+                continue
+            resident_part = _copy_part_from_other_model(model,
+                                                        other_model,
+                                                        referred_part,
+                                                        realization = realization,
+                                                        consolidate = consolidate,
+                                                        force = force,
+                                                        cut_refs_to_uuids = cut_refs_to_uuids,
+                                                        cut_node_types = cut_node_types,
+                                                        self_h5_file_name = self_h5_file_name,
+                                                        h5_uuid = h5_uuid,
+                                                        other_h5_file_name = other_h5_file_name,
+                                                        hdf5_copy_needed = hdf5_copy_needed,
+                                                        uuid_int = ref_uuid_int)
+            if resident_part == referred_part:
+                continue
+        if consolidate and model.consolidation is not None and ref_uuid_int in model.consolidation.map:
+            resident_uuid_int = model.consolidation.map[ref_uuid_int]
+            assert resident_uuid_int is not None
+            # find referring node for ref_uuid_int and modify its reference to resident_uuid_int
+            if reference_node_dict is None:
+                ref_nodes = rqet.list_obj_references(root_node)
+                reference_node_dict = {}
+                for ref_node in ref_nodes:
+                    uuid_node = rqet.find_tag(ref_node, 'UUID')
+                    uuid_int = bu.uuid_from_string(uuid_node.text).int
+                    reference_node_dict[uuid_int] = uuid_node
+            uuid_node = reference_node_dict[ref_uuid_int]
+            uuid_node.text = str(bu.uuid_from_int(resident_uuid_int))
+            reference_node_dict.pop(ref_uuid_int)
+            reference_node_dict[resident_uuid_int] = uuid_node
 
 
 def _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node):
     for source_flag in [True, False]:
-        other_related_parts = other_model.parts_list_filtered_by_related_uuid(other_model.list_of_parts(),
-                                                                              resident_uuid,
-                                                                              uuid_is_source = source_flag)
+        other_related_parts = m_c._parts_list_filtered_by_related_uuid(other_model,
+                                                                       m_c._list_of_parts(other_model),
+                                                                       resident_uuid,
+                                                                       uuid_is_source = source_flag)
         for related_part in other_related_parts:
-            # log.debug('considering relationship with: ' + str(related_part))
             if not force and (related_part in model.parts_forest):
                 resident_related_part = related_part
             else:
-                # log.warning('skipping relationship between ' + str(part) + ' and ' + str(related_part))
                 if consolidate:
                     resident_related_uuid = model.consolidation.equivalent_uuid_for_part(related_part,
                                                                                          immigrant_model = other_model)
                     if resident_related_uuid is None:
                         continue
-                    resident_related_part = rqet.part_name_for_object(other_model.type_of_part(related_part),
+                    resident_related_part = rqet.part_name_for_object(m_c._type_of_part(other_model, related_part),
                                                                       resident_related_uuid)
                     if resident_related_part is None:
                         continue
                 else:
                     continue
-            if not force and resident_related_part in model.parts_list_filtered_by_related_uuid(
-                    model.list_of_parts(), resident_uuid):
+            if not force and resident_related_part in m_c._parts_list_filtered_by_related_uuid(
+                    model, m_c._list_of_parts(model), resident_uuid):
                 continue
-            related_node = model.root_for_part(resident_related_part)
+            related_node = m_c._root_for_part(model, resident_related_part)
             assert related_node is not None
 
             if source_flag:
                 sd_a, sd_b = 'sourceObject', 'destinationObject'
             else:
                 sd_b, sd_a = 'sourceObject', 'destinationObject'
-            model.create_reciprocal_relationship(root_node, sd_a, related_node, sd_b)
+            m_x._create_reciprocal_relationship(model, root_node, sd_a, related_node, sd_b)
 
 
 def _copy_all_parts_from_other_model(model, other_model, realization = None, consolidate = True):
@@ -634,18 +716,28 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
 
     assert other_model is not None and other_model is not model
 
-    other_parts_list = other_model.parts()
-    if not other_parts_list:
+    if realization is not None:
+        assert isinstance(realization, int) and realization >= 0
+
+    other_uuid_ints_list = other_model.uuid_part_dict.keys()
+    if not other_uuid_ints_list:
         log.warning('no parts found in other model for merging')
         return
 
     if consolidate:
-        other_parts_list = cons.sort_parts_list(other_model, other_parts_list)
+        other_uuid_ints_list = cons.sort_uuids_list(other_model, other_uuid_ints_list)
 
     self_h5_file_name = model.h5_file_name(file_must_exist = False)
     self_h5_uuid = model.h5_uuid()
     other_h5_file_name = other_model.h5_file_name()
-    for part in other_parts_list:
+    hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
+
+    for uuid_int in other_uuid_ints_list:
+        if uuid_int in model.uuid_part_dict:
+            continue
+        part = other_model.uuid_part_dict[uuid_int]
+        if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
+            continue
         _copy_part_from_other_model(model,
                                     other_model,
                                     part,
@@ -653,7 +745,9 @@ def _copy_all_parts_from_other_model(model, other_model, realization = None, con
                                     consolidate = consolidate,
                                     self_h5_file_name = self_h5_file_name,
                                     h5_uuid = self_h5_uuid,
-                                    other_h5_file_name = other_h5_file_name)
+                                    other_h5_file_name = other_h5_file_name,
+                                    hdf5_copy_needed = hdf5_copy_needed,
+                                    uuid_int = uuid_int)
 
     if consolidate and model.consolidation is not None:
         model.consolidation.check_map_integrity()
@@ -665,11 +759,12 @@ def _uuid_is_present(model, uuid):
     return bu.uuid_as_int(uuid) in model.uuid_part_dict.keys()
 
 
-def _set_uuid_to_part(model, part_name):
+def _set_uuid_to_part(model, part_name, uuid = None):
     """Adds an entry to the dictionary mapping from uuid to part name."""
 
     assert part_name and isinstance(part_name, str)
-    uuid = rqet.uuid_in_part_name(part_name)
+    if uuid is None:
+        uuid = rqet.uuid_in_part_name(part_name)
     model.uuid_part_dict[bu.uuid_as_int(uuid)] = part_name
 
 

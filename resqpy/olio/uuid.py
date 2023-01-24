@@ -111,6 +111,11 @@ def uuid_from_string(uuid_str):
         return None
 
 
+def uuid_from_int(uuid_int):
+    """Returns a uuid object for the given uuid int."""
+    return None if uuid_int is None else uuid.UUID(int = uuid_int)
+
+
 def uuid_as_bytes(uuid_obj):
     """Returns the uuid as a 16 byte bytes sequence; same as uuid_obj.bytes.
 
@@ -123,7 +128,9 @@ def uuid_as_bytes(uuid_obj):
 
     if uuid_obj is None:
         return None
-    if isinstance(uuid_obj, str):
+    if isinstance(uuid_obj, int):
+        uuid_obj = uuid_from_int(uuid_obj)
+    elif isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
     assert isinstance(uuid_obj, uuid.UUID)
     return uuid_obj.bytes
@@ -141,6 +148,8 @@ def uuid_as_int(uuid_obj):
 
     if uuid_obj is None:
         return None
+    if isinstance(uuid_obj, int):
+        return uuid_obj
     if isinstance(uuid_obj, str):
         uuid_obj = uuid_from_string(uuid_obj)  # resilience to accidental string arg
     if not isinstance(uuid_obj, uuid.UUID):
@@ -158,7 +167,7 @@ def matching_uuids(uuid_a, uuid_b):
        boolean: True if the two uuids are the same; False otherwise
 
     note:
-       this function is resilient to uuids being passed in hexadecimal string format
+       this function is resilient to uuids being passed in hexadecimal string format, or int
     """
 
     if isinstance(uuid_a, str):
@@ -167,7 +176,11 @@ def matching_uuids(uuid_a, uuid_b):
         uuid_b = uuid_from_string(uuid_b)
     if uuid_a is None or uuid_b is None:
         return False
-    return uuid_a.int == uuid_b.int
+    if not isinstance(uuid_a, int):
+        uuid_a = uuid_a.int
+    if not isinstance(uuid_b, int):
+        uuid_b = uuid_b.int
+    return uuid_a == uuid_b
 
 
 def version_string(uuid_obj):
@@ -195,10 +208,16 @@ def version_string(uuid_obj):
 
 
 def is_uuid(uuid_obj):
-    """Returns boolean indicating whether uuid_obj seems to be a uuid."""
+    """Returns boolean indicating whether uuid_obj seems to be a uuid, in any allowed form."""
 
     if isinstance(uuid_obj, uuid.UUID):
         return True
+    if isinstance(uuid_obj, int):
+        try:
+            _ = uuid_from_int(uuid_obj)
+            return True
+        except Exception:
+            return False
     if not uuid_obj or not isinstance(uuid_obj, str):
         return False
     if uuid_obj[0] == '_':

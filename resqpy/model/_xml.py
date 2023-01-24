@@ -32,6 +32,11 @@ def _create_tree_if_none(model):
 def _change_uuid_in_supporting_representation_reference(model, node, old_uuid, new_uuid, new_title = None):
     """Look for supporting representation reference using the old_uuid and replace with the new_uuid."""
 
+    if isinstance(old_uuid, str):
+        old_uuid = bu.uuid_from_string(old_uuid)
+    if isinstance(new_uuid, str):
+        new_uuid = bu.uuid_from_string(new_uuid)
+
     ref_node = rqet.find_tag(node, 'SupportingRepresentation')
     if ref_node is None:
         return False
@@ -40,6 +45,20 @@ def _change_uuid_in_supporting_representation_reference(model, node, old_uuid, n
         return False
     if not bu.matching_uuids(uuid_node.text, old_uuid):
         return False
+
+    uuid_node_int = rqet.uuid_for_part_root(node).int
+    relations = model.uuid_rels_dict[uuid_node_int]
+    if old_uuid.int in relations[0]:
+        relations[0].remove(old_uuid.int)
+    relations[0].add(new_uuid.int)
+
+    relations = model.uuid_rels_dict[old_uuid.int]
+    if uuid_node_int in relations[1]:
+        relations[1].remove(uuid_node_int)
+
+    relations = model.uuid_rels_dict[new_uuid.int]
+    relations[1].add(uuid_node_int)
+
     uuid_node.text = str(new_uuid)
     if new_title:
         title_node = rqet.find_tag(ref_node, 'Title')
@@ -87,10 +106,11 @@ def _referenced_node(model, ref_node, consolidate = False):
     if uuid is None:
         return None
     # return model.root_for_part(model.parts_list_of_type(type_of_interest = content_type, uuid = uuid))
-    if consolidate and model.consolidation is not None and uuid in model.consolidation.map:
-        resident_uuid = model.consolidation.map[uuid]
-        if resident_uuid is None:
+    if consolidate and model.consolidation is not None and uuid.int in model.consolidation.map:
+        resident_uuid_int = model.consolidation.map[uuid.int]
+        if resident_uuid_int is None:
             return None
+        resident_uuid = bu.uuid_for_int(resident_uuid_int)
         node = model.root_for_part(model.part_for_uuid(resident_uuid))
         if node is not None:
             # patch resident uuid and title into ref node!
@@ -567,3 +587,17 @@ def _create_reciprocal_relationship(model, node_a, rel_type_a, node_b, rel_type_
                   id_str(uuid_a))  # NB: fesapi prefixes uuid with _ for some rels only (where uuid starts with a digit)
         rel_b.set('Type', ns_url['rels_ext'] + rel_type_b)
         rel_b.set('Target', part_name_a)
+
+    if "EpcExternalPart" in rel_part_name_a or "EpcExternalPart" in rel_part_name_b:
+        return
+
+    rel_uuid_a_int = rel_uuid_a.int
+    rel_uuid_b_int = rel_uuid_b.int
+
+    value = model.uuid_rels_dict.get(rel_uuid_a_int)
+    if value is not None and rel_uuid_b_int not in value[0] and rel_uuid_b_int not in value[1]:
+        value[2].add(rel_uuid_b_int)
+
+    value = model.uuid_rels_dict.get(rel_uuid_b_int)
+    if value is not None and rel_uuid_a_int not in value[0] and rel_uuid_a_int not in value[1]:
+        value[2].add(rel_uuid_a_int)

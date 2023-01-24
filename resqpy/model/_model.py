@@ -14,10 +14,8 @@ import resqpy.model._forestry as m_f
 import resqpy.model._grids as m_g
 import resqpy.model._hdf5 as m_h
 import resqpy.model._xml as m_x
+import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-from resqpy import __version__
-
-log.debug('resqpy Model class version: ' + __version__ + '; xml citation format: ' + m_x.citation_format)
 
 
 class Model():
@@ -162,6 +160,8 @@ class Model():
         self.time_series = None  # extracted as speed optimization (single time series only for now)
         self.parts_forest = {}  # dictionary keyed on part_name; mapping to (content_type, uuid, xml_tree)
         self.uuid_part_dict = {}  # dictionary keyed on uuid.int; mapping to part_name
+        self.uuid_rels_dict = {
+        }  # dictionary keyed on uuid.int; mapping to (uuid.int that are depended on, uuid.int that depend on, uuid.int soft relationships)
         self.rels_present = False
         self.rels_forest = {}  # dictionary keyed on part_name; mapping to (uuid, xml_tree)
         self.other_forest = {}  # dictionary keyed on part_name; mapping to (content_type, xml_tree); used for docProps
@@ -183,6 +183,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               sort_by = None):
         """Returns a list of parts matching all of the arguments passed.
@@ -205,6 +206,8 @@ class Model():
               their extra metadata all the items in this argument, are included in the filtered list
            related_uuid (uuid.UUID, optional): if present, only parts which are related to this uuid
               are included in the filtered list
+           related_mode (Optional[int]): if provided, filters by the type of relationship. 0 is parts
+              referenced by related_uuid, 1 is parts that reference related_uuid, 2 is other soft related parts.
            epc_subdir (string, optional): if present, only parts which reside within the specified
               subdirectory path of the epc are included in the filtered list
            sort_by (string, optional): one of 'newest', 'oldest', 'title', 'uuid', 'type'
@@ -242,6 +245,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
 
@@ -260,6 +264,7 @@ class Model():
              metadata = {},
              extra = {},
              related_uuid = None,
+             related_mode = None,
              epc_subdir = None,
              multiple_handling = 'exception'):
         """Returns the name of a part matching all of the arguments passed.
@@ -291,6 +296,7 @@ class Model():
                          metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
+                         related_mode = related_mode,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
 
@@ -304,6 +310,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               sort_by = None):
         """Returns a list of uuids of parts matching all of the arguments passed.
@@ -327,6 +334,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
 
@@ -340,6 +348,7 @@ class Model():
              metadata = {},
              extra = {},
              related_uuid = None,
+             related_mode = None,
              epc_subdir = None,
              multiple_handling = 'exception'):
         """Returns the uuid of a part matching all of the arguments passed.
@@ -363,6 +372,7 @@ class Model():
                          metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
+                         related_mode = related_mode,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
 
@@ -376,6 +386,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               sort_by = None):
         """Returns a list of xml root nodes of parts matching all of the arguments passed.
@@ -399,6 +410,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           sort_by = sort_by)
 
@@ -412,6 +424,7 @@ class Model():
              metadata = {},
              extra = {},
              related_uuid = None,
+             related_mode = None,
              epc_subdir = None,
              multiple_handling = 'exception'):
         """Returns the xml root node of a part matching all of the arguments passed.
@@ -435,6 +448,7 @@ class Model():
                          metadata = metadata,
                          extra = extra,
                          related_uuid = related_uuid,
+                         related_mode = related_mode,
                          epc_subdir = epc_subdir,
                          multiple_handling = multiple_handling)
 
@@ -448,6 +462,7 @@ class Model():
                metadata = {},
                extra = {},
                related_uuid = None,
+               related_mode = None,
                epc_subdir = None,
                sort_by = None):
         """Returns a list of citation titles of parts matching all of the arguments passed.
@@ -471,6 +486,7 @@ class Model():
                            metadata = metadata,
                            extra = extra,
                            related_uuid = related_uuid,
+                           related_mode = related_mode,
                            epc_subdir = epc_subdir,
                            sort_by = sort_by)
 
@@ -484,6 +500,7 @@ class Model():
               metadata = {},
               extra = {},
               related_uuid = None,
+              related_mode = None,
               epc_subdir = None,
               multiple_handling = 'exception'):
         """Returns the citation title of a part matching all of the arguments passed.
@@ -507,6 +524,7 @@ class Model():
                           metadata = metadata,
                           extra = extra,
                           related_uuid = related_uuid,
+                          related_mode = related_mode,
                           epc_subdir = epc_subdir,
                           multiple_handling = multiple_handling)
 
@@ -519,6 +537,46 @@ class Model():
         """
 
         self.modified = True
+
+    def uuids_as_int_related_to_uuid(self, uuid):
+        """Returns set of ints being uuids of objects related to uuid by any category of relationship.
+
+        note:
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_related_to_uuid(self, uuid)
+
+    def uuids_as_int_referenced_by_uuid(self, uuid):
+        """Returns set of ints being uuids of objects which uuid has a reference to.
+
+        note:
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_referenced_by_uuid(self, uuid)
+
+    def uuids_as_int_referencing_uuid(self, uuid):
+        """Returns set of ints being uuids of objects which have a reference to uuid.
+
+        note:
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_referencing_uuid(self, uuid)
+
+    def uuids_as_int_softly_related_to_uuid(self, uuid):
+        """Returns set of ints being uuids of objects related to uuid by only a soft relationship.
+
+        note:
+            resqpy uses the term 'soft relationship' for those relationships held in the _rels xml area
+            but not as reference nodes in the main xml of either part involved in the relationship;
+            the Model.create_reciprocal_relationship() and create_reciprocal_relationship_uuid()
+            methods can be used by application code to create such soft relationships;
+            this method returns a set of ints; use olio.uuid.uuid_from_int() to get a UUID object
+        """
+
+        return m_c._uuids_as_int_softly_related_to_uuid(self, uuid)
 
     @property
     def crs_root(self):
@@ -733,7 +791,7 @@ class Model():
 
         return m_c._parts_count_by_type(self, type_of_interest = type_of_interest)
 
-    def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None):
+    def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None, related_mode = None):
         """From a list of parts, returns a list of those parts which have a relationship with the given uuid.
 
         arguments:
@@ -742,6 +800,8 @@ class Model():
            uuid_is_source (boolean, default None): if None, relationships in either direction qualify;
               if True, only those where uuid is sourceObject qualify; if False, only those where
               uuid is destinationObject qualify
+           related_mode (Optional[int]): if provided, filters by the type of relationship. 0 is parts
+              referenced by this uuid, 1 is parts that reference this uuid, 2 is other soft related parts.
 
         returns:
            list of strings being the subset of parts_list which are related to the object with the
@@ -752,7 +812,11 @@ class Model():
            this method scans the relationship info for every present part, looking for uuid in rels
         """
 
-        return m_c._parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = uuid_is_source)
+        return m_c._parts_list_filtered_by_related_uuid(self,
+                                                        parts_list,
+                                                        uuid,
+                                                        uuid_is_source = uuid_is_source,
+                                                        related_mode = related_mode)
 
     def supporting_representation_for_part(self, part):
         """Returns the uuid of the supporting representation for the part, if found, otherwise None."""
@@ -1406,7 +1470,12 @@ class Model():
         return m_x._new_obj_node(flavour, name_space = name_space, is_top_lvl_obj = is_top_lvl_obj)
 
     def referenced_node(self, ref_node, consolidate = False):
-        """For a given xml reference node, returns the node for the object referred to, if present."""
+        """For a given xml reference node, returns the node for the object referred to, if present.
+
+        note:
+            if consolidating and an equivalent referenced object exists, the uuid in the ref_node
+            is modified by this method; it does not update entries in the uuid_rels_dict
+        """
 
         # note: the RESQML standard allows referenced objects to be missing from the package (model)
 
@@ -1901,7 +1970,8 @@ class Model():
                                    cut_node_types = None,
                                    self_h5_file_name = None,
                                    h5_uuid = None,
-                                   other_h5_file_name = None):
+                                   other_h5_file_name = None,
+                                   uuid_int = None):
         """Fully copies part in from another model, with referenced parts, hdf5 data and relationships.
 
         arguments:
@@ -1923,6 +1993,8 @@ class Model():
               an optimisation when calling method repeatedly
            other_h5_file_name (string, optional): h5 file name for other model; can be passed as
               an optimisation when calling method repeatedly
+           uuid_int (int, optional): if present, the uuid (as int) of part; if uuid already established
+              use this argument as an optimisation; note: no checks for consistency are made here
 
         returns:
            the part name of the part in this model, after copying; may differ from requested part if
@@ -1932,6 +2004,27 @@ class Model():
            if the part name already exists in this model, no action is taken;
            default hdf5 file used in this model and assumed in other_model
         """
+
+        assert other_model is not None
+        if other_model is self:
+            return part
+        assert part is not None
+        if realization is not None:
+            assert isinstance(realization, int) and realization >= 0
+        if force:
+            assert consolidate
+        if not other_h5_file_name:
+            other_h5_file_name = other_model.h5_file_name()
+        if not self_h5_file_name:
+            self_h5_file_name = self.h5_file_name(file_must_exist = False)
+        hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
+
+        # check whether already existing in this model
+        if part in self.parts_forest.keys():
+            return part
+
+        if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
+            return None
 
         return m_f._copy_part_from_other_model(self,
                                                other_model,
@@ -1943,7 +2036,9 @@ class Model():
                                                cut_node_types = cut_node_types,
                                                self_h5_file_name = self_h5_file_name,
                                                h5_uuid = h5_uuid,
-                                               other_h5_file_name = other_h5_file_name)
+                                               other_h5_file_name = other_h5_file_name,
+                                               hdf5_copy_needed = hdf5_copy_needed,
+                                               uuid_int = uuid_int)
 
     def copy_uuid_from_other_model(self,
                                    other_model,
@@ -1990,8 +2085,7 @@ class Model():
         part = other_model.part_for_uuid(uuid)
         if part is None:
             return None
-        copied_part = m_f._copy_part_from_other_model(self,
-                                                      other_model,
+        copied_part = self.copy_part_from_other_model(other_model,
                                                       part,
                                                       realization = realization,
                                                       consolidate = consolidate,
@@ -2000,7 +2094,8 @@ class Model():
                                                       cut_node_types = cut_node_types,
                                                       self_h5_file_name = self_h5_file_name,
                                                       h5_uuid = h5_uuid,
-                                                      other_h5_file_name = other_h5_file_name)
+                                                      other_h5_file_name = other_h5_file_name,
+                                                      uuid_int = bu.uuid_as_int(uuid))
         if copied_part is None:
             return None
         return self.uuid_for_part(copied_part)
@@ -2106,6 +2201,21 @@ class Model():
         """Returns a copy of the parts list sorted by citation block creation date, with the newest first."""
 
         return m_c._sort_parts_list_by_timestamp(self, parts_list)
+
+    def check_catalogue_dictionaries(self, referred_parts_must_be_present = True, check_xml = True):
+        """Checks internal consistency of catalogue dictionaries, raising assertion exception if inconsistent.
+
+        arguments:
+            referred_parts_must_be_present (bool, default True): if True, raises an exception if a referenced
+                part is not present in the model (such a scenario is allowed by the RESQML standard)
+            check_xml (bool, default True): if True, xml is scoured to check that references are consistent
+                with the Model uuid_rels_dict internal dictionary
+
+        note:
+            this is a thorough but slow check, use sparing; primarily intended for unit tests and debugging
+        """
+
+        m_c._check_catalogue_dictionaries(self, referred_parts_must_be_present, check_xml)
 
     def as_graph(self, uuids_subset = None):
         """Return representation of model as nodes and edges, suitable for plotting in a graph.

@@ -9,6 +9,7 @@ from pathlib import Path
 from joblib import Parallel, delayed, parallel_backend  # type: ignore
 
 import resqpy.model as rq
+import resqpy.olio.consolidation as cons
 
 log = logging.getLogger(__name__)
 
@@ -82,6 +83,8 @@ def function_multiprocessing(function: Callable,
     """
     log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))
 
+    if tmp_dir_path is None:
+        tmp_dir_path = '.'
     tmp_dir = Path(tmp_dir_path) / f'tmp_{uuid.uuid4()}'
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
@@ -141,7 +144,7 @@ def function_multiprocessing(function: Callable,
                 if attempt >= 10:
                     raise FileNotFoundError(f'timeout waiting for mp epc {epc}')
                 time.sleep(1)
-        uuids = uuids_list[i]
+        uuids = cons.sort_uuids_list(model, uuids_list[i])
         if uuids is None:
             uuids = model.uuids()
         for u in uuids:
