@@ -636,7 +636,10 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
                            self_h5_file_name, h5_uuid, other_h5_file_name, root_node, uuid, hdf5_copy_needed):
     # uuid = rqet.uuid_for_part_root(root_node)
     reference_node_dict = None
-    for ref_uuid_int in other_model.uuid_rels_dict[uuid.int][0]:  # using dict in other model instead of duplicated xml
+    relatives = other_model.uuid_rels_dict.get(uuid.int)
+    if relatives is None:  # todo: have a think about whether this is indicating a problem
+        return
+    for ref_uuid_int in relatives[0]:  # using dict in other model instead of duplicated xml
         if ref_uuid_int in model.uuid_part_dict:
             continue
         if not force:
