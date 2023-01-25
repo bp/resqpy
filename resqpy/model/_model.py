@@ -1498,7 +1498,7 @@ class Model():
            newly created reference xml node
         """
 
-        return m_x._create_ref_node(flavour, title, uuid, content_type = content_type, root = root)
+        return m_x._create_ref_node(self, flavour, title, uuid, content_type = content_type, root = root)
 
     def uom_node(self, root, uom):
         """Add a generic unit of measure sub element to root.
@@ -1637,7 +1637,7 @@ class Model():
            newly created measured depth datum reference xml node
         """
 
-        return m_x._create_md_datum_reference(md_datum_root, root = root)
+        return m_x._create_md_datum_reference(self, md_datum_root, root = root)
 
     def create_hdf5_ext(self,
                         add_as_part = True,
@@ -1694,7 +1694,7 @@ class Model():
            the newly created xml node holding the hdf5 internal path
         """
 
-        return m_x._create_hdf5_dataset_ref(hdf5_uuid, object_uuid, group_tail, root, title = title)
+        return m_x._create_hdf5_dataset_ref(self, hdf5_uuid, object_uuid, group_tail, root, title = title)
 
     def create_supporting_representation(self,
                                          grid_root = None,
@@ -1789,7 +1789,8 @@ class Model():
            such in the xml and no data is stored in the hdf5
         """
 
-        return m_x._create_patch(p_uuid,
+        return m_x._create_patch(self,
+                                 p_uuid,
                                  ext_uuid = ext_uuid,
                                  root = root,
                                  patch_index = patch_index,
@@ -1812,7 +1813,7 @@ class Model():
            the newly created time series reference xml node
         """
 
-        return m_x._create_ref_node('TimeSeries', 'time series', time_series_uuid, root = root)
+        return m_x._create_ref_node(self, 'TimeSeries', 'time series', time_series_uuid, root = root)
 
     def create_solitary_point3d(self, flavour, root, xyz):
         """Creates a subelement to root for a solitary point in 3D space.

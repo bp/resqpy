@@ -762,6 +762,8 @@ class BlockedWell(BaseResqpy):
             self.well_name = well_name
         else:
             well_name = self.well_name
+        if not self.title:
+            self.title = well_name
 
         assert len(df) > 0, 'empty dataframe for blocked well ' + str(well_name)
 
@@ -2923,7 +2925,7 @@ class BlockedWell(BaseResqpy):
                 well_name = self.wellbore_interpretation.title
             elif self.trajectory is not None:
                 well_name = self.trajectory.title
-            else:
+            if not well_name:
                 log.warning('no well name identified for use in WELLSPEC')
                 well_name = 'WELLNAME'
         well_name = BlockedWell.__tidy_well_name(well_name)
@@ -3021,6 +3023,13 @@ class BlockedWell(BaseResqpy):
 
         Uses the Blocked well citation title as the well name
         """
+        title = self.well_name
+        if not title:
+            title = self.title
+            if not title and self.trajectory is not None:
+                title = rqw.well_name(self.trajectory)
+                if not title:
+                    title = 'WELL'
         if self.trajectory is not None:
             traj_interp_uuid = self.model.uuid(obj_type = 'WellboreInterpretation', related_uuid = self.trajectory.uuid)
             if traj_interp_uuid is not None:
@@ -3031,12 +3040,12 @@ class BlockedWell(BaseResqpy):
                 if traj_feature_uuid is not None:
                     self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, uuid = traj_feature_uuid)
         if self.wellbore_feature is None:
-            self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model,
-                                                        feature_name = rqw.well_name(self.trajectory))
+            self.wellbore_feature = rqo.WellboreFeature(parent_model = self.model, feature_name = title)
             self.feature_to_be_written = True
         if self.wellbore_interpretation is None:
+            title = title if not self.wellbore_feature.title else self.wellbore_feature.title
             self.wellbore_interpretation = rqo.WellboreInterpretation(parent_model = self.model,
-                                                                      title = self.wellbore_feature.title,
+                                                                      title = title,
                                                                       wellbore_feature = self.wellbore_feature)
             if self.trajectory.wellbore_interpretation is None and shared_interpretation:
                 self.trajectory.wellbore_interpretation = self.wellbore_interpretation
@@ -3133,8 +3142,9 @@ class BlockedWell(BaseResqpy):
 
         # wellbore frame elements
 
-        nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node = self.__create_bw_node_sub_elements(
-            bw_node = bw_node)
+        nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node,  \
+            gis_values_node, fis_node, fnull_node, fis_values_node =  \
+            self.__create_bw_node_sub_elements(bw_node = bw_node)
 
         self.__create_hdf5_dataset_references(ext_uuid = ext_uuid,
                                               mds_values_node = mds_values_node,
