@@ -10,7 +10,7 @@ import numpy as np
 import numpy.ma as ma
 
 import resqpy
-import resqpy.property
+import resqpy.property as rqp
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 import resqpy.property.property_kind as rqpk
@@ -212,7 +212,7 @@ def _get_perm_k_part(collection, perms, perm_k_mode, share_perm_parts, perm_i_pa
             elif perm_k_mode == 'ntg squared':
                 ntg = collection.cached_part_array_ref(ntg_part)
                 kv *= ntg * ntg
-        kv_collection = resqpy.property.PropertyCollection()
+        kv_collection = rqp.PropertyCollection()
         kv_collection.set_support(support_uuid = collection.support_uuid, model = collection.model)
         kv_collection.add_cached_array_to_imported_list(kv,
                                                         'derived from horizontal perm with mode ' + str(perm_k_mode),
