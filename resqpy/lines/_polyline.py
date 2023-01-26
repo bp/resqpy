@@ -33,7 +33,7 @@ class Polyline(rql_c._BasePolyline):
                  rep_int_root = None,
                  originator = None,
                  extra_metadata = None):
-        """Initialises a new PolylineRepresentation object.
+        """Initialises a new polyline object.
 
         arguments:
             parent_model (model.Model object): the model which the new PolylineRepresentation belongs to
@@ -41,8 +41,8 @@ class Polyline(rql_c._BasePolyline):
                 to initialise the resqpy Polyline
             set_bool (boolean, optional): if True, a new polyline created from coordinates is flagged as
                 a closed polyline (polygon); ignored if uuid is not None
-            set_coord (numpy array of shape (..., 3), optional): an ordered set of xyz values used to define
-                a new polyline; ignored if uuid is not None
+            set_coord (numpy float array, optional): an ordered set of xyz values used to define a new polyline;
+                last dimension of array must have extent 3; ignored if uuid is not None
             set_crs (uuid.UUID, optional): the uuid of a crs to be used when initialising from coordinates;
                 ignored if uuid is not None
             title (str, optional): the citation title to use for a new polyline;
@@ -54,7 +54,7 @@ class Polyline(rql_c._BasePolyline):
                 ignored if uuid is not None
 
         returns:
-            the newly instantiated Polyline object
+            the newly instantiated polyline object
         """
 
         self.model = parent_model

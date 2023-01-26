@@ -1,7 +1,5 @@
 """Containing resqml propertykind class"""
 
-version = '24th November 2021'
-
 # Nexus is a registered trademark of the Halliburton Company
 
 import logging
