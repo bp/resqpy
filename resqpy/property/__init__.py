@@ -31,7 +31,7 @@ from .property_kind import PropertyKind, create_transmisibility_multiplier_prope
 from .string_lookup import StringLookup
 from .property_collection import PropertyCollection
 from .grid_property_collection import GridPropertyCollection
-from .property import Property
+from ._property import Property
 from .well_interval_property import WellIntervalProperty
 from .well_interval_property_collection import WellIntervalPropertyCollection
 from .well_log import WellLog

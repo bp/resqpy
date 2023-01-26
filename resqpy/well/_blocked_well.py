@@ -114,8 +114,6 @@ class BlockedWell(BaseResqpy):
            multiple grids are currently only supported when loading an existing blocked well from xml;
            mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
            not used here
-
-        :meta common:
         """
 
         self.trajectory = trajectory  #: trajectory object associated with the wellbore

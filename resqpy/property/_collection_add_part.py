@@ -11,7 +11,6 @@ import numpy as np
 import resqpy.property
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-
 import resqpy.property.property_common as rqp_c
 import resqpy.property._collection_get_attributes as pcga
 

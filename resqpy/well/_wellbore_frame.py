@@ -14,7 +14,7 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
-import resqpy.well
+import resqpy.well as rqw
 import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -115,7 +115,7 @@ class WellboreFrame(BaseResqpy):
         trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
         assert trajectory_uuid is not None, 'wellbore frame trajectory reference not found in xml'
         if self.trajectory is None:
-            self.trajectory = resqpy.well.Trajectory(self.model, uuid = trajectory_uuid)
+            self.trajectory = rqw.Trajectory(self.model, uuid = trajectory_uuid)
         else:
             assert bu.matching_uuids(self.trajectory.uuid, trajectory_uuid), 'wellbore frame trajectory uuid mismatch'
 

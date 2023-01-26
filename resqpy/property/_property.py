@@ -384,6 +384,7 @@ class Property(BaseResqpy):
     def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None):
         """Writes the array data to the hdf5 file; not usually called directly.
 
+        arguments:
            file_name (str, optional): if present, the path of the hdf5 file to use; strongly recommended not to
               set this argument
            mode (str, default 'a'): 'a' or 'w' being the mode to open the hdf5 file in; strongly recommended to use 'a'
@@ -392,7 +393,7 @@ class Property(BaseResqpy):
            dtype (numpy dtype, optional): if present, the elemental data type to use when writing the array to hdf5
 
         notes:
-           see the documentation for the convenience method from_array();
+           see the documentation for the convenience method from_array()
         """
         if not self.collection.imported_list:
             log.warning('no imported Property array to write to hdf5')
