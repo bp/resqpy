@@ -782,11 +782,11 @@ class Model():
 
         arguments:
            type_of_interest (string, optional): if not None, the returned list only contains one pair, with
-              a count for that type (resqml object class)
+              a count for that type, ie. resqml object class
 
         returns:
-           list of pairs, each being (string, int) representing part type (resqml object class without leading obj_)
-           and count
+           list of pairs, each being (string, int) representing part type, ie. resqml object class, without leading
+           obj underscore, and count
         """
 
         return m_c._parts_count_by_type(self, type_of_interest = type_of_interest)
@@ -906,8 +906,8 @@ class Model():
 
         arguments:
            part_name (string): the part for which the type is required
-           strip_obj (boolean, default False): if True, the leading 'obj_' is removed
-              from the returned string
+           strip_obj (boolean, default False): if True, the leading obj and underscore
+              is removed from the returned string
 
         returns:
            string being the type (resqml object class) for the named part
@@ -922,8 +922,8 @@ class Model():
 
         arguments:
            uuid (uuid.UUID or str): the uuid for which the type is required
-           strip_obj (boolean, default False): if True, the leading 'obj_' is removed
-              from the returned string
+           strip_obj (boolean, default False): if True, the leading obj and underscore
+              is removed from the returned string
 
         returns:
            string being the type (resqml object class) for the named part

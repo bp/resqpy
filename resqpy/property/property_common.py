@@ -523,31 +523,47 @@ def selective_version_of_collection(
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:
-       collection: an existing PropertyCollection from which a subset will be returned as a new object;
-                   the existing collection might often be the 'main' collection holding all the properties
-                   for a supporting representation (grid or wellbore frame)
-
-    Other optional arguments:
-    realization, support_uuid, grid, uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
-    citation_title, time_series_uuid, time_index, uom, string_lookup_uuid, categorical, title, related_uuid:
-    title_mode (str, optional): if present, one of 'is', 'starts', 'ends', 'contains', 'is not',
-        'does not start', 'does not end', 'does not contain'; None is the same as 'is'
-
-    for each of these arguments: if None, then all members of collection pass this filter;
-    if not None then only those members with the given value pass this filter;
-    special values: '*' any non-None value passes; 'none' only None passes
-    finally, the filters for all the attributes must be passed for a given member
-    to be included in the returned collection; title is a synonym for the citation_title argument;
-    related_uuid will pass if a soft relationship exists
+       collection (PropertyCollection): an existing collection from which a subset will be returned as a new object
+       realization (int, optional): realization number to filter on
+       support_uuid (UUID or str, optional): UUID of supporting representation, to filter on
+       grid (Grid, DEPRECATED): for backward compatibility, use support_uuid instead
+       uuid (UUID or str, optional): a property uuid to select a singleton property from the collection
+       continuous (bool, optional): if True, continuous properties are selected; if False, discrete and categorical
+       points (bool, optional): if True, points properties are selected; if False, they are excluded
+       count (int, optional): a count value to filter on
+       indexable (str, optional): indexable elements flavour to filter on
+       property_kind (str, optional): property kind to filter on (commonly used)
+       facet_type (str, optional): a facet_type to filter on (must be present for property to be selected)
+       facet (str, optional): a facet value to filter on (if used, facet_type should be specified)
+       citation_title (str, optional): citation to title to filter on; see also title_mode argument
+       time_series_uuid (UUID or str, optional): UUID of a TimeSeries to filter on
+       time_index (int, optional): a time series time index to filter on
+       uom (str, optional): unit of measure to filter on
+       string_lookup_uuid (UUID or str, optional): UUID of a string lookup table to filter on
+       categorical (bool, optional): if True, only categorical properties are selected; if False they are excluded
+       title (str, optional): synonymous with citation_title argument
+       title_mode (str, optional): if present, one of 'is', 'starts', 'ends', 'contains', 'is not',
+           'does not start', 'does not end', 'does not contain'; None is the same as 'is'; will default to 'is'
+           if not specified and title or citation_title argument is present
+       related_uuid (UUID or str, optional): only properties with direct relationship to this uuid are selected
+       const_value (float or int, optional): only properties flagged as constant, with given value, are selected
 
     returns:
        a new PropertyCollection containing those properties which match the filter parameters that are not None
 
-    note:
+    notes:
+       the existing collection might often be the 'main' collection holding all the properties
+       for a supporting representation (eg. grid, blocked well or wellbore frame);
+       for each of the filtering arguments: if None, then all members of collection pass this filter;
+       if not None then only those members with the given value pass this filter;
+       special values: '*' any non-None value passes; 'none' only None passes;
+       citation_title (or its synonym title) uses string filtering in association with title_mode argument;
+       finally, the filters for all the attributes must be passed for a given member
+       to be included in the returned collection; title is a synonym for the citation_title argument;
+       related_uuid will pass if any relationship exists ('hard' or 'soft');
        the grid keyword argument is maintained for backward compatibility: support_uuid argument takes precedence;
-       the categorical boolean argument can be used to select only
-       categorical (or non-categorical) properties, even though this is not explicitly held as a field in the
-       internal dictionary
+       the categorical boolean argument can be used to select only categorical (or non-categorical) properties,
+       even though this is not explicitly held as a field in the internal dictionary
     """
 
     assert collection is not None

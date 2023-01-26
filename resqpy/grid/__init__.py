@@ -1,4 +1,4 @@
-"""The Grid Module"""
+"""The Grid Module."""
 
 __all__ = [
     'Grid', 'RegularGrid', 'extract_grid_parent', 'establish_zone_property_kind', 'find_cell_for_x_sect_xz',

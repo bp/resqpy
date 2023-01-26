@@ -57,7 +57,7 @@ def add_wells_from_ascii_file(model,
           of a default coordinate reference system; ignored if crs_uuid is not None
 
     returns:
-       tuple of lists of objects: (feature_list, interpretation_list, trajectory_list, md_datum_list),
+       tuple of lists of objects: (feature_list, interpretation_list, trajectory_list, md_datum_list)
 
     notes:
        ascii file must be table with first line being column headers, with columns for WELL, MD, X, Y & Z;
@@ -302,11 +302,7 @@ def well_name(well_object, model = None):
 def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, check_well_name = False):
     """Creates a WellLogCollection and WellboreFrame from a LAS file.
 
-    Note:
-       In this current implementation, the first curve in the las object must be
-       Measured Depths, not e.g. TVDSS.
-
-    Arguments:
+    arguments:
        las: an lasio.LASFile object
        trajectory: an instance of :class:`resqpy.well.Trajectory` .
        realization (integer): if present, the single realisation (within an ensemble)
@@ -314,9 +310,13 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, ch
        check_well_name (bool): if True, raise warning if LAS well name does not match
           existing wellborefeature citation title
 
-    Returns:
+    returns:
        collection, well_frame: instances of :class:`resqpy.property.WellLogCollection`
           and :class:`resqpy.well.WellboreFrame`
+
+    note:
+       in this current implementation, the first curve in the las object must be
+       Measured Depths, not e.g. TVDSS
     """
 
     # Lookup relevant related resqml parts
@@ -408,7 +408,7 @@ def add_blocked_wells_from_wellspec(model, grid, wellspec_file, usa_date_format 
 def add_logs_from_cellio(blockedwell, cellio):
     """Creates a WellIntervalPropertyCollection for a given BlockedWell, using a given cell I/O file.
 
-    Arguments:
+    arguments:
        blockedwell: a resqml blockedwell object
        cellio: an ascii file exported from RMS containing blocked well geometry and logs;
            must contain columns i_index, j_index and k_index, plus additional columns for logs to be imported
@@ -504,10 +504,11 @@ def add_logs_from_cellio(blockedwell, cellio):
 def lookup_from_cellio(line, model):
     """Create a StringLookup Object from a cell I/O row containing a categorical column name and details.
 
-    Arguments:
+    arguments:
        line: a string from a cell I/O file, containing the column (log) name, type and categorical information
        model: the model to add the StringTableLookup to
-    Returns:
+
+    returns:
        uuid: the uuid of a StringTableLookup, either for a newly created table, or for an existing table if an identical one exists
     """
     lookup_dict = {}

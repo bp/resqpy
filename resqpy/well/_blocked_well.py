@@ -203,7 +203,7 @@ class BlockedWell(BaseResqpy):
         # else an empty object is returned
 
     def __set_grid(self, grid, wellspec_file, cellio_file, column_ji0):
-        """Set the grid to which the blocked well belongs"""
+        """Set the grid to which the blocked well belongs."""
 
         if grid is None and (self.trajectory is not None or wellspec_file is not None or cellio_file is not None or
                              column_ji0 is not None):
@@ -213,7 +213,7 @@ class BlockedWell(BaseResqpy):
         return grid_final
 
     def __check_cellio_init_okay(self, cellio_file, well_name, grid):
-        """ Checks if BlockedWell object initialization from a cellio file is okay"""
+        """Checks if BlockedWell object initialization from a cellio file is okay."""
 
         okay = self.import_from_rms_cellio(cellio_file, well_name, grid)
         if not okay:
@@ -221,7 +221,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __choose_init_data_source(trajectory, wellspec_file, cellio_file, column_ji0):
-        """Specify the data source from which the BlockedWell object will be initialized"""
+        """Specify the data source from which the BlockedWell object will be initialized."""
         if trajectory is not None:
             return "trajectory"
         elif wellspec_file is not None:
@@ -283,7 +283,7 @@ class BlockedWell(BaseResqpy):
         self.cell_grid_link = self.map_cell_and_grid_indices()
 
     def __find_trajectory_uuid(self, node):
-        """ Find and verify the uuid of the trajectory associated with the BlockedWell object."""
+        """Find and verify the uuid of the trajectory associated with the BlockedWell object."""
 
         trajectory_uuid = bu.uuid_from_string(rqet.find_nested_tags_text(node, ['Trajectory', 'UUID']))
         assert trajectory_uuid is not None, 'blocked well trajectory reference not found in xml'
@@ -499,14 +499,11 @@ class BlockedWell(BaseResqpy):
         return well_box
 
     def face_pair_array(self):
-        """Returns numpy int array of shape (N, 2, 2) being pairs of face (axis, polarity) pairs, to go with
+        """Returns numpy int array of shape (N, 2, 2) being pairs of face (axis, polarity) pairs, to go with cell_kji0_array().
 
-        cell_kji0_array().
-
-        note:
+        notes:
            each of the N rows in the returned array is of the form:
               ((entry_face_axis, entry_face_polarity), (exit_face_axis, exit_face_polarity))
-
            where the axis values are in the range 0 to 2 for k, j & i respectively, and
            the polarity values are zero for the 'negative' face and 1 for the 'positive' face;
            exit values may be -1 to indicate TD within the cell (ie. no exit point)
@@ -579,10 +576,7 @@ class BlockedWell(BaseResqpy):
             assert bw is self
 
     def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True, length_uom = None):
-        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md
-
-        datum.
-        """
+        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md datum."""
 
         if well_name:
             self.well_name = well_name
@@ -616,7 +610,7 @@ class BlockedWell(BaseResqpy):
                              length_uom = None):
         """Populates empty blocked well from Nexus WELLSPEC data; creates simulation trajectory and md datum.
 
-        args:
+        arguments:
            wellspec_file (string): path of Nexus ascii file holding WELLSPEC keyword
            well_name (string): the name of the well as used in the wellspec data
            grid (grid.Grid object): the grid object which the cell indices in the wellspec data relate to
@@ -724,7 +718,7 @@ class BlockedWell(BaseResqpy):
         return self
 
     def __derive_from_wellspec_check_well_name(self, well_name):
-        """ Set the well name to be used in the wellspec file."""
+        """Set the well name to be used in the wellspec file."""
         if well_name:
             self.well_name = well_name
         else:
@@ -921,7 +915,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __calculate_entry_and_exit_axes_polarities_and_points_using_angles(row, cp, well_name, xy_units, z_units):
-        """ Calculate entry and exit axes, polarities and points using azimuth and inclination angles."""
+        """Calculate entry and exit axes, polarities and points using azimuth and inclination angles."""
 
         angla = row['ANGLA']
         inclination = row['ANGLV']
@@ -997,7 +991,7 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __override_vector_based_xyz_entry_and_exit_points_if_necessary(use_face_centres, entry_axis, exit_axis,
                                                                        entry_polarity, exit_polarity, cp):
-        """Override the vector based xyz entry and exit with face centres"""
+        """Override the vector based xyz entry and exit with face centres."""
 
         if use_face_centres:  # override the vector based xyz entry and exit points with face centres
             if entry_axis == 0:
@@ -1074,10 +1068,8 @@ class BlockedWell(BaseResqpy):
                                          length_uom,
                                          time_index = None,
                                          time_series_uuid = None):
-        """If add_as_properties is True and present as a list of wellspec column names, both the blocked well and
-
-        the properties will have their hdf5 data written, xml created and be added as parts to the model.
-        """
+        # if add_as_properties is True and present as a list of wellspec column names, both the blocked well and
+        # the properties will have their hdf5 data written, xml created and be added as parts to the model
 
         if add_as_properties and len(df.columns) > 3:
             # NB: atypical writing of hdf5 data and xml creation in order to support related properties
@@ -1103,7 +1095,7 @@ class BlockedWell(BaseResqpy):
                                set_tangent_vectors = False):
         """Populates empty blocked well from RMS cell I/O data; creates simulation trajectory and md datum.
 
-        args:
+        arguments:
            cellio_file (string): path of RMS ascii export file holding blocked well cell I/O data; cell entry and
               exit points are expected
            well_name (string): the name of the well as used in the cell I/O file
@@ -1256,10 +1248,8 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __calculate_cell_cp_center_and_vectors(grid, cell_kji0, entry_xyz, exit_xyz, well_name):
-        """Calculate the i,j,k coordinates that represent the corner points and center of a perforation cell.
-
-        Calculate the entry and exit vectors for the perforation cell.
-        """
+        # calculate the i,j,k coordinates that represent the corner points and center of a perforation cell
+        # calculate the entry and exit vectors for the perforation cell
 
         cp = grid.corner_points(cell_kji0 = cell_kji0, cache_resqml_array = False)
         assert not np.any(np.isnan(
@@ -1272,7 +1262,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __check_number_of_blocked_well_intervals(blocked_cells_kji0, well_name, grid_name):
-        """ Check that at least one interval is blocked for the specified well."""
+        """Check that at least one interval is blocked for the specified well."""
 
         blocked_count = len(blocked_cells_kji0)
         if blocked_count == 0:
@@ -1418,6 +1408,7 @@ class BlockedWell(BaseResqpy):
            property_time_index (int, optional): if present and use_properties is True, the time index to select properties for;
               if add_as_properties is True, the time index to tag this set of properties with
            time_series_uuid (UUID, optional): the uuid of the time series for time dependent properties being added
+
         notes:
            units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
            the length_uom argument is used;
@@ -1433,6 +1424,7 @@ class BlockedWell(BaseResqpy):
            add_as_properties and use_properties cannot both be True;
            add_as_properties and use_properties are only currently functional for single grid blocked wells;
            at present, unit conversion is not handled when using properties
+
         :meta common:
         """
 
@@ -1774,7 +1766,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_angle_references(anglv_ref, angla_plane_ref):
-        """ Verify that the references for anglv and angla are one of the acceptable options."""
+        """Verify that the references for anglv and angla are one of the acceptable options."""
 
         assert anglv_ref in ['gravity', 'z down', 'z+', 'k down', 'k+', 'normal ij', 'normal ij down']
         if anglv_ref == 'gravity':
@@ -1790,10 +1782,8 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_saturation_ranges_and_property_uuids(max_satw, min_sato, max_satg, satw_uuid, sato_uuid, satg_uuid):
-        """Verify that the fluid saturation limits fall within 0.0 to 1.0 and that the uuid of the required
-
-        saturation property array has been specified.
-        """
+        # verify that the fluid saturation limits fall within 0.0 to 1.0 and that the uuid of the required
+        # saturation property array has been specified.
 
         if max_satw is not None and max_satw >= 1.0:
             max_satw = None
@@ -1815,10 +1805,10 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __verify_extra_properties_to_be_added_to_dataframe(extra_columns_list, column_list, add_as_properties,
                                                            use_properties, skin, stat, radw):
-        """ Determine which extra columns, if any, should be added as properties to the dataframe.
+        """Determine which extra columns, if any, should be added as properties to the dataframe.
 
         note:
-            if skin, stat or radw are None, default values are specified.
+            if skin, stat or radw are None, default values are specified
         """
 
         if extra_columns_list:
@@ -1856,7 +1846,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __check_skin_stat_radw_to_be_added_as_properties(skin, stat, radw, column_list):
-        """ Verify whether skin should be added as a property in the dataframe."""
+        """Verify whether skin should be added as a property in the dataframe."""
 
         if skin is not None and 'SKIN' not in column_list:
             column_list.append('SKIN')
@@ -1880,10 +1870,8 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_perm_i_uuid_for_well_inflow(column_list, perm_i_uuid, pc_titles):
-        """ Verify that the I direction permeability has been specified if well inflow properties are to be added
-
-        to the dataframe.
-        """
+        # Verify that the I direction permeability has been specified if well inflow properties are to be added
+        # to the dataframe.
 
         do_well_inflow = (('WI' in column_list and 'WI' not in pc_titles) or
                           ('WBC' in column_list and 'WBC' not in pc_titles) or
@@ -1895,10 +1883,8 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_perm_i_uuid_for_kh(min_kh, column_list, perm_i_uuid, pc_titles):
-        """ Verify that the I direction permeability has been specified if permeability thickness and
-
-        wellbore constant properties are to be added to the dataframe.
-        """
+        # verify that the I direction permeability has been specified if permeability thickness and
+        # wellbore constant properties are to be added to the dataframe.
 
         if min_kh is not None and min_kh <= 0.0:
             min_kh = None
@@ -1914,10 +1900,8 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_perm_j_k_uuids_for_kh_and_well_inflow(doing_kh, do_well_inflow, perm_i_uuid, perm_j_uuid, perm_k_uuid):
-        """ Verify that the J and K direction permeabilities have been specified if well inflow properties or
-
-        permeability thickness properties are to be added to the dataframe.
-        """
+        # verify that the J and K direction permeabilities have been specified if well inflow properties or
+        # permeability thickness properties are to be added to the dataframe.
 
         isotropic_perm = None
         if doing_kh or do_well_inflow:
@@ -1936,7 +1920,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_k_layers_to_be_included(min_k0, max_k0, k0_list):
-        """Verify that the k layers to be included in the dataframe exist within the appropriate range."""
+        # verify that the k layers to be included in the dataframe exist within the appropriate range
 
         if min_k0 is None:
             min_k0 = 0
@@ -1949,7 +1933,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __verify_if_angles_xyz_and_length_to_be_added(column_list, pc_titles, doing_kh, do_well_inflow, length_mode):
-        """ Determine if angla, anglv, x, y, z and length data are to be added as properties to the dataframe."""
+        # determine if angla, anglv, x, y, z and length data are to be added as properties to the dataframe
 
         doing_angles = any([('ANGLA' in column_list and 'ANGLA' not in pc_titles),
                             ('ANGLV' in column_list and 'ANGLV' not in pc_titles), (doing_kh), (do_well_inflow)])
@@ -1969,10 +1953,8 @@ class BlockedWell(BaseResqpy):
         return doing_angles, doing_xyz, doing_entry_exit
 
     def __verify_number_of_grids_and_crs_units(self, column_list):
-        """ Verify that a GRID column is included in the dataframe if the well intersects more than one grid.
-
-        Verify that each grid's crs units are consistent in all directions.
-        """
+        # verify that a GRID column is included in the dataframe if the well intersects more than one grid
+        # verify that each grid's crs units are consistent in all directions
 
         if 'GRID' not in column_list and self.number_of_grids() > 1:
             log.error('creating blocked well dataframe without GRID column for well that intersects more than one grid')
@@ -1995,7 +1977,7 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __check_cell_depth(max_depth, grid, cell_kji0, grid_crs):
-        """ Check whether the maximum depth specified has been exceeded with the current interval."""
+        """Check whether the maximum depth specified has been exceeded with the current interval."""
 
         max_depth_exceeded = False
         if max_depth is not None:
@@ -2035,7 +2017,7 @@ class BlockedWell(BaseResqpy):
         return skip_interval
 
     def __get_part_perf_fraction_for_interval(self, pc, pc_titles, ci, perforation_list, interval, length_tol = 0.01):
-        """ Get the partial perforation fraction for the interval."""
+        """Get the partial perforation fraction for the interval."""
 
         skip_interval = False
         if 'PPERF' in pc_titles:
@@ -2067,10 +2049,7 @@ class BlockedWell(BaseResqpy):
 
     def __get_entry_exit_xyz_and_crs_for_interval(self, doing_entry_exit, use_face_centres, grid, cell_kji0, interval,
                                                   ci, grid_crs, traj_crs):
-        """Calculate the entry and exit points for the interval and set the entry and exit
-
-        coordinate reference system.
-        """
+        # calculate the entry and exit points for the interval and set the entry and exit coordinate reference system
 
         entry_xyz = None
         exit_xyz = None
@@ -2303,7 +2282,6 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __get_kh_if_doing_kh(isotropic_perm, ntg_is_one, length, perm_i_uuid, grid, tuple_kji0, k_i, k_j, k_k, anglv,
                              sine_anglv, cosine_anglv, sine_angla, cosine_angla):
-
         # note: this is believed to return required value even when grid crs has mixed xy & z units;
         # angles are true angles accounting for any mixed units
         if isotropic_perm and ntg_is_one:
@@ -2705,11 +2683,10 @@ class BlockedWell(BaseResqpy):
                   length_uom = None,
                   use_face_centres = False,
                   preferential_perforation = True):
-        """Returns the total static K.H (permeability x height); length units are those of trajectory md_uom unless
+        """Returns the total static K.H (permeability x height).
 
-        length_upm is set.
-
-        note:
+        notes:
+           length units are those of trajectory md_uom unless length_upm is set;
            see doc string for dataframe() method for argument descriptions; perm_i_uuid required
         """
 
@@ -2914,7 +2891,7 @@ class BlockedWell(BaseResqpy):
         return False
 
     def __get_well_name(self, well_name):
-        """ Get the name of the well whose data is to be written to the Nexus WELLSPEC file."""
+        """Get the name of the well whose data is to be written to the Nexus WELLSPEC file."""
 
         if not well_name:
             if self.well_name:
@@ -2934,10 +2911,8 @@ class BlockedWell(BaseResqpy):
 
     def __write_wellspec_file_units_metadata(self, write_nexus_units, fp, length_uom, length_uom_comment,
                                              extra_columns_list, well_name):
-        """Write the units of measure (uom) and system of measure for length in the WELLSPEC file.
-
-        Also write a comment on the length uom if necessary.
-        """
+        # write the units of measure (uom) and system of measure for length in the WELLSPEC file
+        # also write a comment on the length uom if necessary
 
         if write_nexus_units:
             length_uom_system_list = ['METRIC', 'ENGLISH']
@@ -3021,7 +2996,8 @@ class BlockedWell(BaseResqpy):
     def create_feature_and_interpretation(self, shared_interpretation = True):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects.
 
-        Uses the Blocked well citation title as the well name
+        note:
+            uses the Blocked well citation title or other related object title as the well name
         """
         title = self.well_name
         if not title:
@@ -3164,7 +3140,7 @@ class BlockedWell(BaseResqpy):
         return bw_node
 
     def __create_wellbore_feature_and_interpretation_xml_if_needed(self, add_as_part, add_relationships, originator):
-        """ Create root node for WellboreFeature and WellboreInterpretation objects if necessary."""
+        """Create root node for WellboreFeature and WellboreInterpretation objects if necessary."""
 
         if self.feature_to_be_written:
             if self.wellbore_feature is None:
@@ -3180,7 +3156,7 @@ class BlockedWell(BaseResqpy):
 
     def __create_trajectory_xml_if_needed(self, create_for_trajectory_if_needed, add_as_part, add_relationships,
                                           originator, ext_uuid, title):
-        """ Create root node for associated Trajectory object if necessary."""
+        """Create root node for associated Trajectory object if necessary."""
         if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root is None:
             md_datum_root = self.trajectory.md_datum.create_xml(add_as_part = add_as_part,
                                                                 add_relationships = add_relationships,
@@ -3194,7 +3170,7 @@ class BlockedWell(BaseResqpy):
                                        originator = originator)
 
     def __create_bw_node_sub_elements(self, bw_node):
-        """ Append sub-elements to the BlockedWell object's root node."""
+        """Append sub-elements to the BlockedWell object's root node."""
         nc_node = rqet.SubElement(bw_node, ns['resqml2'] + 'NodeCount')
         nc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
         nc_node.text = str(self.node_count)
@@ -3296,10 +3272,7 @@ class BlockedWell(BaseResqpy):
 
     def __add_as_part_and_add_relationships_if_required(self, add_as_part, add_relationships, bw_node, interp_root,
                                                         ext_uuid):
-        """Add the newly created BlockedWell object's root node as a part in the model and
-
-        add reciprocal relationships.
-        """
+        # add the newly created BlockedWell object's root node as a part in the model and add reciprocal relationships
 
         if add_as_part:
             self.model.add_part('obj_BlockedWellboreRepresentation', self.uuid, bw_node)

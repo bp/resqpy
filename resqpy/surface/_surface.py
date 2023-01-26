@@ -84,7 +84,7 @@ class Surface(rqsb.BaseSurface):
            4. as a simple triangulation of a mesh in an ascii file
            5. from a GOCAD-TSurf format file
            5. as an empty surface
-           if an empty surface is created, 'set_from_...' methods are available to then set for one of:
+           if an empty surface is created, set_from... methods are available to then set for one of:
            - a horizontal plane
            - a single triangle
            - a 'sail' (a triangle wrapped onto a sphere)

@@ -37,28 +37,31 @@ class WellboreMarker():
                  title = None,
                  originator = None,
                  extra_metadata = None):
-        """Creates a new wellbore marker object and optionally loads it from xml.
+        """Creates a new wellbore marker object and loads it from xml or populates it from arguments.
 
         arguments:
            parent_model (model.Model object): the model which the new wellbore marker belongs to
-           parent_frame (wellbore_marker_frame.WellboreMarkerFramer object): the wellbore marker frame to which the wellbore marker belongs
+           parent_frame (wellbore_marker_frame.WellboreMarkerFramer object): the wellbore marker frame to which
+              the wellbore marker belongs
            marker_index (int): index of the wellbore marker in the parent WellboreMarkerFrame object
            marker_node (xml node, optional): if given, loads from xml. Else, creates new
            marker_type (str, optional): the type of geologic, fluid or contact feature
-             e.g. "fault", "geobody", "horizon ", "gas/oil/water down to", "gas/oil/water up to",
-              "free water contact", "gas oil contact", "gas water contact", "water oil contact", "seal"
-           interpretation_uuid (uuid.UUID or string, optional): uuid of the boundary feature Interpretation
-              organizational object that the marker refers to.
-              note: it is highly recommended that a related boundary feature interpretation is provided
-           title (str, optional): the citation title to use for a new wellbore marker
-              ignored if uuid is not None;
+              e.g. "fault", "geobody", "horizon ", "gas/oil/water down to", "gas/oil/water up to",
+              "free water contact", "gas oil contact", "gas water contact", "water oil contact", "seal";
+              ignored if marker_node is present
+           interpretation_uuid (uuid.UUID or string, optional): uuid of the boundary feature interpretation
+              organizational object that the marker refers to; ignored if marker_node is present
+           title (str, optional): the citation title to use for a new wellbore marker; ignored if marker_node is present
            originator (str, optional): the name of the person creating the wellbore marker, defaults to login id;
-              ignored if uuid is not None
+              ignored if uuid is not None; ignored if marker_node is present
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the wellbore marker;
-              ignored if uuid is not None
+              ignored if uuid is not None; ignored if marker_node is present
 
         returns:
            the newly created wellbore marker object
+
+        note:
+           it is highly recommended that a related boundary feature interpretation uuid is provided
         """
         # verify that marker type is valid
         if marker_type is not None:
@@ -69,14 +72,20 @@ class WellboreMarker():
 
         self.model = parent_model
         self.wellbore_frame = parent_frame
-        self.marker_index = marker_index
         self.uuid = None
-        self.marker_type = marker_type
-        self.interpretation_uuid = interpretation_uuid
-        self.title = title
-        self.originator = originator
-        self.extra_metadata = extra_metadata
-        if marker_node is not None:
+        self.marker_index = marker_index
+        self.marker_type = None
+        self.interpretation_uuid = None
+        self.title = None
+        self.originator = None
+        self.extra_metadata = None
+        if marker_node is None:
+            self.marker_type = marker_type
+            self.interpretation_uuid = interpretation_uuid
+            self.title = title
+            self.originator = originator
+            self.extra_metadata = extra_metadata
+        else:
             self._load_from_xml(marker_node = marker_node)
         if self.uuid is None:
             self.uuid = bu.new_uuid()
@@ -86,9 +95,10 @@ class WellboreMarker():
         """Creates the xml tree for this wellbore marker.
 
         arguments:
-           parent_node (xml node): the root node of the WellboreMarkerFrame object to which the newly created node will be appended
-           title (string, optional): the citation title of the newly created node
-             note: if not None, self.title will be used instead of "wellbore marker"
+           parent_node (xml node): the root node of the WellboreMarkerFrame object to which the newly created node
+               will be appended
+           title (string, default "wellbore marker"): the citation title of the newly created node; only used if
+               self.title is None
 
         returns:
            the newly created xml node
@@ -99,7 +109,7 @@ class WellboreMarker():
         wbm_node.set('uuid', str(self.uuid))
 
         # Citation block
-        if self.title is not None:
+        if self.title:
             title = self.title
         citation = self.model.create_citation(root = wbm_node, title = title, originator = self.originator)
 
@@ -132,12 +142,10 @@ class WellboreMarker():
         return wbm_node
 
     def _load_from_xml(self, marker_node):
-        """Load attributes from xml.
+        """Load attributes from xml; invoked as part of the init method when an existing uuid is given.
 
-        This is invoked as part of the init method when an existing uuid is given.
-
-        Returns:
-           [bool]: True if successful
+        returns:
+           bool: True if successful
         """
 
         assert marker_node is not None
