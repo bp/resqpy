@@ -99,6 +99,8 @@ class Mesh(rqsb.BaseSurface):
            4. pass nj, ni, origin, dxyz_dij and crs_uuid to initialise a regular mesh directly
            5. pass z_values, z_supporting_mesh_uuid and crs_uuid to initialise a 'ref & z' mesh
            6. leave all optional arguments as None for an empty Mesh object
+
+        :meta common:
         """
 
         assert surface_role in ['map', 'pick']

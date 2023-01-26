@@ -33,14 +33,11 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 class BlockedWell(BaseResqpy):
     """Class for RESQML Blocked Wellbore Representation (Wells), ie cells visited by wellbore.
 
-    RESQML documentation:
-
+    notes:
+       RESQML documentation:
        The information that allows you to locate, on one or several grids (existing or planned),
        the intersection of volume (cells) and surface (faces) elements with a wellbore trajectory
-       (existing or planned).
-
-    note:
-       measured depth data must be in same crs as those for the related trajectory
+       (existing or planned)
     """
 
     resqml_type = 'BlockedWellboreRepresentation'
@@ -113,7 +110,10 @@ class BlockedWell(BaseResqpy):
            cell fluid phase units);
            multiple grids are currently only supported when loading an existing blocked well from xml;
            mysterious RESQML WellboreFrameIndexableElements is not used in any other RESQML classes and is therefore
-           not used here
+           not used here;
+           measured depth data must be in same crs as those for the related trajectory
+
+        :meta common:
         """
 
         self.trajectory = trajectory  #: trajectory object associated with the wellbore
@@ -2527,7 +2527,7 @@ class BlockedWell(BaseResqpy):
                           time_series_uuid = None,
                           realization = None):
         """Creates a property part for each column in the dataframe, based on the dataframe values.
-        
+
         arguments:
             df (pd.DataFrame): dataframe containing the columns that will be converted to properties
             columns (List[str]): list of the column names that will be converted to properties
