@@ -66,7 +66,7 @@ class DeviationSurvey(BaseResqpy):
         If uuid is given, loads from XML. Else, create new. If loading from disk, other
         parameters will be overwritten.
 
-        Args:
+        arguments:
            parent_model (model.Model): the model which the new survey belongs to
            uuid (uuid.UUID): If given, loads from disk. Else, creates new.
            title (str): Citation title
@@ -85,11 +85,13 @@ class DeviationSurvey(BaseResqpy):
            originator (str): name of author
            extra_metadata (dict, optional): extra metadata key, value pairs
 
-        Returns:
+        returns:
            DeviationSurvey
 
-        Notes:
+        notes:
            this method does not create an xml node, nor write hdf5 arrays
+
+        :meta common:
         """
 
         self.is_final = is_final

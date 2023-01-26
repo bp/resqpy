@@ -69,6 +69,8 @@ class WellboreFrame(BaseResqpy):
 
         note:
            if initialising from a list of measured depths, the wellbore trajectory object must already exist
+
+        :meta common:
         """
 
         #: Associated wellbore trajectory, an instance of :class:`resqpy.well.Trajectory`.

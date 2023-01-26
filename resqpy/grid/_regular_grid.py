@@ -98,6 +98,8 @@ class RegularGrid(grr_g.Grid):
            otherwise, avoid write_hdf5() and call create_xml(..., write_geometry = False);
            if geometry is not stored explicitly, the uuid of the crs is stored as extra metadata
            if origin is not triple zero, a new crs will be created with the origin moved appropriately
+
+        :meta common:
         """
 
         if as_irregular_grid:

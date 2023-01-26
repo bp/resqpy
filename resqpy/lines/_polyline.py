@@ -55,6 +55,8 @@ class Polyline(rql_c._BasePolyline):
 
         returns:
             the newly instantiated polyline object
+
+        :meta common:
         """
 
         self.model = parent_model
@@ -354,8 +356,8 @@ class Polyline(rql_c._BasePolyline):
         """Returns bool array, True where p is inside closed polygon, in xy plane, otherwise False.
 
         arguments:
-           p_array (numpy float array of shape (..., 2 or 3)): an array of points, each of which is
-              tested for inclusion against the closed polygon
+           p_array (numpy float array): an array of points, each of which is tested for inclusion against
+              the closed polygon; the final axis of the array must have extent 2 or 3
 
         returns:
            numpy bool array of shape p_array.shape[:-1], set True for those points which are inside
@@ -482,7 +484,7 @@ class Polyline(rql_c._BasePolyline):
            or None, None, None if no intersection found
 
         note:
-           'first' primariliy refers to the ordering of segments in this polyline
+           first primariliy refers to the ordering of segments in this polyline
         """
 
         seg_count = len(self.coordinates) - 1
@@ -585,7 +587,7 @@ class Polyline(rql_c._BasePolyline):
         return crossings
 
     def normalised_xy(self, x, y, mode = 'square'):
-        """Returns a normalised x',y' pair (in range 0..1) being point x,y under mapping from convex polygon.
+        """Returns a normalised x,y pair (in range 0..1) being point x,y under mapping from convex polygon.
 
         arguments:
             x, y (floats): location of a point inside the polyline, which must be closed and project to a
@@ -593,7 +595,7 @@ class Polyline(rql_c._BasePolyline):
             mode (string): which mapping algorithm to use, one of: 'square', 'circle', or 'perimeter'
 
         returns:
-            x', y' (floats, each in range 0..1) being the normalised representation of point x,y
+            xn, yn (floats, each in range 0..1) being the normalised representation of point x,y
 
         notes:
             this method is the inverse of denormalised_xy(), as long as a consistent mode is selected;
@@ -793,9 +795,9 @@ class Polyline(rql_c._BasePolyline):
                    add_relationships = True,
                    title = None,
                    originator = None):
-        """Create xml from polyline.
+        """Create xml for polyline and optionally adds as part to model.
 
-        args:
+        arguments:
             ext_uuid: the uuid of the hdf5 external part
 
         :meta common:

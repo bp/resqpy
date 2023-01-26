@@ -60,6 +60,8 @@ class WellboreMarkerFrame(BaseResqpy):
 
         returns:
            the newly created wellbore marker frame object
+
+        :meta common:
         """
         self.trajectory_uuid = trajectory_uuid
         self.node_count = None

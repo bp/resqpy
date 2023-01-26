@@ -42,6 +42,8 @@ class Property(BaseResqpy):
 
         returns:
            new resqpy Property object
+
+        :meta common:
         """
 
         self.collection = rqp_pc.PropertyCollection()

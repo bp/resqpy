@@ -97,6 +97,8 @@ class Grid(BaseResqpy):
 
         note:
            only IJK grids are handled here; see also resqpy unstructured
+
+        :meta common:
         """
 
         # note: currently only handles IJK grids
