@@ -576,8 +576,7 @@ class BlockedWell(BaseResqpy):
             assert bw is self
 
     def set_for_column(self, well_name, grid, col_ji0, skip_inactive = True, length_uom = None):
-        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md datum.
-        """
+        """Populates empty blocked well for a 'vertical' well in given column; creates simulation trajectory and md datum."""
 
         if well_name:
             self.well_name = well_name
