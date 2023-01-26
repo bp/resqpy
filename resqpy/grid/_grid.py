@@ -81,9 +81,9 @@ class Grid(BaseResqpy):
         arguments:
            parent_model (model.Model object): the model which this grid is part of
            uuid (uuid.UUID, optional): if present, the new grid object is populated from the RESQML object
-           find_properties (boolean, default True): if True and uuid is present, a
-              grid property collection is instantiated as an attribute, holding properties for which
-              this grid is the supporting representation
+           find_properties (boolean, default True): if True and uuid is present, a grid property collection
+              is instantiated as an attribute, holding properties for which this grid is the supporting
+              representation
            geometry_required (boolean, default True): if True and no geometry node exists in the xml,
               an assertion error is raised; ignored if uuid is None
            title (str, optional): citation title for new grid; ignored if loading from xml
@@ -95,10 +95,8 @@ class Grid(BaseResqpy):
         returns:
            a newly created Grid object
 
-        notes:
-           only IJK grids are handled at the moment (the resqml standard also defines 5 other varieties)
-
-        :meta common:
+        note:
+           only IJK grids are handled here; see also resqpy unstructured
         """
 
         # note: currently only handles IJK grids

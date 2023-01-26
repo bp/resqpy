@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 import warnings
 import numpy as np
 
-import resqpy.property
+import resqpy.property as rqp
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.weights_and_measures as bwam
@@ -567,7 +567,7 @@ def selective_version_of_collection(
     """
 
     assert collection is not None
-    view = resqpy.property.PropertyCollection()
+    view = rqp.PropertyCollection()
     if support_uuid is None and grid is not None:
         support_uuid = grid.uuid
     if support_uuid is not None:
@@ -615,7 +615,7 @@ def property_over_time_series_from_collection(collection, example_part):
 
     assert collection is not None and example_part is not None
     assert collection.part_in_collection(example_part)
-    view = resqpy.property.PropertyCollection()
+    view = rqp.PropertyCollection()
     if collection.support_uuid is not None:
         view.set_support(support_uuid = collection.support_uuid, model = collection.model)
     if collection.realization is not None:
@@ -740,19 +740,19 @@ def write_hdf5_and_create_xml_for_active_property(model,
                                                   time_index = None):
     """Writes hdf5 data and creates xml for an active cell property; returns uuid."""
 
-    active = resqpy.property.Property.from_array(parent_model = model,
-                                                 cached_array = active_property_array,
-                                                 source_info = None,
-                                                 keyword = title,
-                                                 support_uuid = support_uuid,
-                                                 property_kind = 'active',
-                                                 local_property_kind_uuid = None,
-                                                 indexable_element = 'cells',
-                                                 discrete = True,
-                                                 time_series_uuid = time_series_uuid,
-                                                 time_index = time_index,
-                                                 realization = realization,
-                                                 find_local_property_kind = True)
+    active = rqp.Property.from_array(parent_model = model,
+                                     cached_array = active_property_array,
+                                     source_info = None,
+                                     keyword = title,
+                                     support_uuid = support_uuid,
+                                     property_kind = 'active',
+                                     local_property_kind_uuid = None,
+                                     indexable_element = 'cells',
+                                     discrete = True,
+                                     time_series_uuid = time_series_uuid,
+                                     time_index = time_index,
+                                     realization = realization,
+                                     find_local_property_kind = True)
     return active.uuid
 
 

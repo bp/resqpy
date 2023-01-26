@@ -55,8 +55,6 @@ class Polyline(rql_c._BasePolyline):
 
         returns:
             the newly instantiated Polyline object
-
-        :meta common:
         """
 
         self.model = parent_model
