@@ -22,28 +22,29 @@ def mesh_from_regular_grid_column_property_wrapper(
     grid_uuid: Union[UUID, str],
     prop_uuids: List[Union[UUID, str]],
 ) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
-    """Wrapper function of the Mesh from_regular_grid_column_property method.
+    """Multiprocessing wrapper function of the Mesh from_regular_grid_column_property method.
 
-    Used for multiprocessing to create a new model that is saved in a temporary epc file
-    and returns the required values, which are used in the multiprocessing function to
-    recombine all the objects into a single epc file.
+    arguments:
+        index (int): the index of the function call from the multiprocessing function
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function
+        grid_epc (str): epc file path where the grid is saved
+        grid_uuid (UUID or str): UUID (universally unique identifier) of the regular grid object
+        prop_uuids (list of UUID or str): a list of the property uuids used to create each Mesh
+            and their relationship
 
-    Args:
-        index (int): the index of the function call from the multiprocessing function.
-        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
-        grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the regular grid object.
-        prop_uuids (List[UUID/str]): a list of the property uuids used to create each Mesh
-            and their relationship.
-
-    Returns:
+    returns:
         Tuple containing:
+            - index (int): the index passed to the function
+            - success (bool): True if all the Mesh objects could be created, False otherwise
+            - epc_file (str): the epc file path where the objects are stored
+            - uuid_list (List[UUID/str]): list of UUIDs of relevant objects
 
-            - index (int): the index passed to the function.
-            - success (bool): True if all the Mesh objects could be created, False
-              otherwise.
-            - epc_file (str): the epc file path where the objects are stored.
-            - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
+    notes:
+        Use this function as argument to multiprocessing function; it will create a new model that
+        is saved in a temporary epc file and returns the required values, which are used in the
+        multiprocessing function to recombine all the objects into a single epc file; applications
+        should generally call mesh_from_regular_grid_column_property_batch() which makes use of
+        this wrapper
     """
     uuid_list = []
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
@@ -91,22 +92,22 @@ def mesh_from_regular_grid_column_property_batch(grid_epc: str,
                                                  tmp_dir_path: Union[Path, str] = '.') -> List[bool]:
     """Creates Mesh objects from a list of property uuids in parallel.
 
-    Args:
-        grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
+    arguments:
+        grid_epc (str): epc file path where the grid is saved
+        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object
         prop_uuids (List[UUID/str]): a list of the column property uuids used to create each Mesh
-            and their relationship.
+            and their relationship
         recombined_epc (Path/str): A pathlib Path or path string of
-            where the combined epc will be saved.
+            where the combined epc will be saved
         cluster (LocalCluster/JobQueueCluster): a LocalCluster is a Dask cluster on a
             local machine. If using a job queing system, a JobQueueCluster can be used
-            such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
-        n_workers (int): the number of workers on the cluster.
+            such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc
+        n_workers (int): the number of workers on the cluster
         require_success (bool, default False): if True an exception is raised if any failures
         tmp_dir_path (str or Path, default '.'): the directory within which temporary directories will reside
 
-    Returns:
-        success_list (List[bool]): A boolean list of successful function calls.
+    returns:
+        success_list (list of bool): A boolean list of successful function calls; one value per batch
     """
     n_uuids = len(prop_uuids)
     prop_uuids_list = [prop_uuids[i * n_uuids // n_workers:(i + 1) * n_uuids // n_workers] for i in range(n_workers)]

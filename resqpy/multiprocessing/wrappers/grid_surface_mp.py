@@ -40,21 +40,17 @@ def find_faces_to_represent_surface_regular_wrapper(
         extra_metadata = None,
         return_properties: Optional[List[str]] = None,
         raw_bisector: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
-    """Wrapper function of find_faces_to_represent_surface_regular_optimised.
+    """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
-    Used for multiprocessing to create a new model that is saved in a temporary epc file
-    and returns the required values, which are used in the multiprocessing function to
-    recombine all the objects into a single epc file.
-
-    Args:
-        index (int): the index of the function call from the multiprocessing function.
-        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
+    arguments:
+        index (int): the index of the function call from the multiprocessing function
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function
         use_index_as_realisation (bool): if True, uses the index number as the realization number on
-            the property collection.
-        grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        surface_epc (str): epc file path where the surface (or point set) is saved.
-        surface_uuid (UUID/str): UUID (universally unique identifier) of the surface (or point set) object.
+            the property collection
+        grid_epc (str): epc file path where the grid is saved
+        grid_uuid (UUID or str): UUID (universally unique identifier) of the grid object
+        surface_epc (str): epc file path where the surface (or point set) is saved
+        surface_uuid (UUID or str): UUID (universally unique identifier) of the surface (or point set) object.
         name (str): the feature name to use in the grid connection set.
         title (str): the citation title to use for the grid connection set; defaults to name
         agitate (bool): if True, the points of the surface are perturbed by a small random
@@ -73,7 +69,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         consistent_side (bool): if True, the cell pairs will be ordered so that all the first
            cells in each pair are on one side of the surface, and all the second cells on the other
         extra_metadata (dict, optional): extra metadata items to be added to the grid connection set
-        return_properties (List[str]): if present, a list of property arrays to calculate and
+        return_properties (list of str): if present, a list of property arrays to calculate and
            return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
            'flange bool', 'grid bisector' and 'grid shadow';
            triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
@@ -87,14 +83,17 @@ def find_faces_to_represent_surface_regular_wrapper(
         raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
            form without assessing which side is shallower (True values indicate same side as origin cell)
 
-    Returns:
+    returns:
         Tuple containing:
+            - index (int): the index passed to the function
+            - success (bool): whether the function call was successful, whatever that definiton is
+            - epc_file (str): the epc file path where the objects are stored
+            - uuid_list (List[str]): list of UUIDs of relevant objects
 
-            - index (int): the index passed to the function.
-            - success (bool): whether the function call was successful, whatever that
-                definiton is.
-            - epc_file (str): the epc file path where the objects are stored.
-            - uuid_list (List[str]): list of UUIDs of relevant objects.
+    notes:
+        Use this function as argument to the multiprocessing function; it will create a new model that is saved
+        in a temporary epc file and returns the required values, which are used in the multiprocessing function to
+        recombine all the objects into a single epc file
     """
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)

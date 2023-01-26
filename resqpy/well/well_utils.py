@@ -39,10 +39,10 @@ def extract_xyz(xyz_node):
     """Extracts an x,y,z coordinate from a solitary point xml node.
 
     argument:
-       xyz_node: the xml node representing the solitary point (in 3D space)
+        xyz_node: the xml node representing the solitary point (in 3D space)
 
     returns:
-       triple float: (x, y, z) coordinates as a tuple
+        triple float: (x, y, z) coordinates as a tuple
     """
 
     if xyz_node is None:
@@ -108,8 +108,9 @@ def find_entry_and_exit(cp, entry_vector, exit_vector, well_name):
 def _as_optional_array(arr):
     """If not None, cast as numpy array.
 
-    Casting directly to an array can be problematic: np.array(None) creates an unsized array, which is potentially
-    confusing.
+    note:
+        casting directly to an array can be problematic: np.array(None) creates an unsized array,
+        which is potentially confusing
     """
     if arr is None:
         return None
@@ -122,7 +123,7 @@ def _pl(i, e = False):
 
 
 def _derive_from_wellspec_verify_col_list(add_properties):
-    """ Verify additional properties to be added to the WELLSPEC file.
+    """Verify additional properties to be added to the WELLSPEC file.
 
     argument:
        add_properties (boolean): if True, the additional properties specified will be added to the WELLSPEC file
@@ -142,13 +143,13 @@ def _derive_from_wellspec_verify_col_list(add_properties):
 
 
 def _derive_from_wellspec_check_grid_name(check_grid_name, grid, col_list):
-    """ Verify the grid object to which the cell indices in the WELLSPEC table belong.
+    """Verify the grid object to which the cell indices in the WELLSPEC table belong.
 
     arguments:
        check_grid_name (boolean): if True, the citation title of the grid will be extracted and returned
        grid (grid object): the grid object whose citation titles will be returned
-       col_list (list): list of strings of column names to be added to the WELLSPEC file. If a citation title is
-                        extracted from the grid object, 'GRID' will be added to the col_list
+       col_list (list): list of strings of column names to be added to the WELLSPEC file; if a citation title is
+           extracted from the grid object, 'GRID' will be added to the col_list
 
     returns:
        string of grid citation title extracted from the grid object

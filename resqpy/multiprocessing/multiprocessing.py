@@ -18,11 +18,8 @@ log = logging.getLogger(__name__)
 def rm_tree(path: Union[Path, str]) -> None:
     """Removes a directory using a pathlib Path.
 
-    Args:
-        path (Path/str): pathlib Path or string of the directory path.
-
-    Returns:
-        None.
+    arguments:
+        path (Path or str): pathlib Path or string of the directory path
     """
     path = Path(path)
     if os.path.isdir(path):
@@ -47,39 +44,37 @@ def function_multiprocessing(function: Callable,
     A multiprocessing pool is used to call the function multiple times in parallel. Once
     all results are returned, they are combined into a single epc file.
 
-    Args:
-        function (Callable): the wrapper function to be called. Needs to return:
-
-            - index (int): the index of the kwargs in the kwargs_list.
+    arguments:
+        function (Callable): the wrapper function to be called; needs to return:
+            - index (int): the index of the kwargs in the kwargs_list
             - success (bool): whether the function call was successful, whatever that
-                definiton is.
-            - epc_file (Path/str): the epc file path where the objects are stored.
-            - uuid_list (List[str]): list of UUIDs of relevant objects.
-
+                definiton is
+            - epc_file (Path/str): the epc file path where the objects are stored
+            - uuid_list (List[str]): list of UUIDs of relevant objects
         kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are
-            used when calling the function.
+            used when calling the function
         recombined_epc (Path/str): A pathlib Path or path string of
-            where the combined epc will be saved.
+            where the combined epc will be saved
         cluster: if using the Dask backend, a LocalCluster is a Dask cluster on a
             local machine. If using a job queing system, a JobQueueCluster can be used
-            such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
+            such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc
         consolidate (bool): if True and an equivalent part already exists in
-            a model, it is not duplicated and the uuids are noted as equivalent.
+            a model, it is not duplicated and the uuids are noted as equivalent
         require_success (bool): if True and any instance fails, then an exception is
             raised
-        tmp_dir_path (str): path where the temporary directory is saved. Defaults to
-            the calling code directory.
+        tmp_dir_path (str): path where the temporary directory is saved; defaults to
+            the calling code directory
         backend (str): the joblib parallel backend used. Dask is used by default
-            so a Dask cluster must be passed to the cluster argument.
+            so a Dask cluster must be passed to the cluster argument
 
-    Returns:
-        success_list (List[bool]): A boolean list of successful function calls.
+    returns:
+        success_list (List[bool]): A boolean list of successful function calls
 
-    Note:
+    notes:
         This function uses the Dask backend by default to run the given function in
         parallel, so a Dask cluster must be setup and passed as an argument if Dask is
-        used. Dask will need to be installed in the Python environment because it is not
-        a dependency of the project. More info can be found at 
+        used; Dask will need to be installed in the Python environment because it is not
+        a dependency of the project; More info can be found at
         https://resqpy.readthedocs.io/en/latest/tutorial/multiprocessing.html
     """
     log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))

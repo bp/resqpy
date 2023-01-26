@@ -23,29 +23,30 @@ def blocked_well_from_trajectory_wrapper(
     trajectory_epc: str,
     trajectory_uuids: List[Union[UUID, str]],
 ) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
-    """Wrapper function of the BlockedWell initialisation from a Trajectory.
+    """Multiprocessing wrapper function of the BlockedWell initialisation from a Trajectory.
 
-    Used for multiprocessing to create a new model that is saved in a temporary epc file
-    and returns the required values, which are used in the multiprocessing function to
-    recombine all the objects into a single epc file.
+    arguments:
+        index (int): the index of the function call from the multiprocessing function
+        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function
+        grid_epc (str): epc file path where the grid is saved
+        grid_uuid (UUID or str): UUID (universally unique identifier) of the grid object
+        trajectory_epc (str): epc file path where the trajectories are saved
+        trajectory_uuids (list of UUID or str): a list of the trajectory uuids used to create each
+            Trajectory object
 
-    Args:
-        index (int): the index of the function call from the multiprocessing function.
-        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function.
-        grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        trajectory_epc (str): epc file path where the trajectories are saved.
-        trajectory_uuids (List[UUID/str]): a list of the trajectory uuids used to create each
-            Trajectory object.
-
-    Returns:
+    returns:
         Tuple containing:
-
-            - index (int): the index passed to the function.
+            - index (int): the index passed to the function
             - success (bool): True if all the BlockedWell objects could be created, False
-              otherwise.
-            - epc_file (str): the epc file path where the objects are stored.
-            - uuid_list (List[UUID/str]): list of UUIDs of relevant objects.
+              otherwise
+            - epc_file (str): the epc file path where the objects are stored
+            - uuid_list (List[UUID/str]): list of UUIDs of relevant objects
+
+    note:
+        Used this wrapper when calling the multiprocessing function to initialise blocked wells from
+        trajectories; it will create a new model that is saved in a temporary epc file
+        and returns the required values, which are used in the multiprocessing function to
+        recombine all the objects into a single epc file
     """
     uuid_list = []
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
@@ -85,27 +86,26 @@ def blocked_well_from_trajectory_batch(grid_epc: str,
                                        n_workers: int,
                                        require_success: bool = False,
                                        tmp_dir_path: Union[Path, str] = '.') -> List[bool]:
-    """Creates BlockedWell objects from a common grid and a list of trajectories uuids in parallel.
+    """Creates BlockedWell objects from a common grid and a list of trajectories' uuids, in parallel.
 
-    Args:
-        grid_epc (str): epc file path where the grid is saved.
-        grid_uuid (UUID/str): UUID (universally unique identifier) of the grid object.
-        trajectory_epc (str): epc file path where the trajectories are saved.
-        trajectory_uuids (List[UUID/str]): a list of the trajectory uuids used to create each
-            Trajectory object.
-        recombined_epc (Path/str): A pathlib Path or path string of
-            where the combined epc will be saved.
+    arguments:
+        grid_epc (str): epc file path where the grid is saved
+        grid_uuid (UUID or str): UUID (universally unique identifier) of the grid object
+        trajectory_epc (str): epc file path where the trajectories are saved
+        trajectory_uuids (list of UUID or str): a list of the trajectory uuids used to create each
+            Trajectory object
+        recombined_epc (Path or str): A pathlib Path or path string, where the combined epc will be saved
         cluster (LocalCluster/JobQueueCluster): a LocalCluster is a Dask cluster on a
-            local machine. If using a job queing system, a JobQueueCluster can be used
-            such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc.
-        n_workers (int): the number of workers on the cluster.
+            local machine; if using a job queing system, a JobQueueCluster can be used
+            such as an SGECluster, SLURMCluster, PBSCluster, LSFCluster etc
+        n_workers (int): the number of workers on the cluster
         require_success (bool, default False): if True an exception is raised if any failures
         tmp_dir_path (str or Path, default '.'): the directory within which temporary directories will reside
 
-    Returns:
-        success_list (List[bool]): A boolean list of successful function calls.
+    returns:
+        success_list (list of bool): A boolean list of successful function calls
 
-    Note:
+    notes:
         the returned success list contains one value per batch, set True if all blocked wells
         were successfully created in the batch, False if one or more failed in the batch
     """
