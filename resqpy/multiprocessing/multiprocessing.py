@@ -41,19 +41,15 @@ def function_multiprocessing(function: Callable,
                              backend: str = 'dask') -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
-    A multiprocessing pool is used to call the function multiple times in parallel. Once
-    all results are returned, they are combined into a single epc file.
-
     arguments:
         function (Callable): the wrapper function to be called; needs to return:
-            - index (int): the index of the kwargs in the kwargs_list
-            - success (bool): whether the function call was successful, whatever that
-                definiton is
-            - epc_file (Path/str): the epc file path where the objects are stored
-            - uuid_list (List[str]): list of UUIDs of relevant objects
-        kwargs_list (List[Dict[Any]]): A list of keyword argument dictionaries that are
+            - index (int): the index of the kwargs in the kwargs_list;
+            - success (bool): whether the function call was successful, however that is defined;
+            - epc_file (Path or str): the epc file path where the objects are stored;
+            - uuid_list (list of str): list of UUIDs of relevant objects;
+        kwargs_list (list of dict): A list of keyword argument dictionaries that are
             used when calling the function
-        recombined_epc (Path/str): A pathlib Path or path string of
+        recombined_epc (Path or str): A pathlib Path or path string of
             where the combined epc will be saved
         cluster: if using the Dask backend, a LocalCluster is a Dask cluster on a
             local machine. If using a job queing system, a JobQueueCluster can be used
@@ -71,10 +67,12 @@ def function_multiprocessing(function: Callable,
         success_list (List[bool]): A boolean list of successful function calls
 
     notes:
-        This function uses the Dask backend by default to run the given function in
+        a multiprocessing pool is used to call the function multiple times in parallel;
+        once all results are returned, they are combined into a single epc file;
+        this function uses the Dask backend by default to run the given function in
         parallel, so a Dask cluster must be setup and passed as an argument if Dask is
         used; Dask will need to be installed in the Python environment because it is not
-        a dependency of the project; More info can be found at
+        a dependency of the project; more info can be found at
         https://resqpy.readthedocs.io/en/latest/tutorial/multiprocessing.html
     """
     log.info("multiprocessing function called with %s function, %s entries.", function.__name__, len(kwargs_list))

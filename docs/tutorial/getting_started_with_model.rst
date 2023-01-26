@@ -73,11 +73,11 @@ Selectively listing high level objects
 --------------------------------------
 The four methods mentioned above have similar lists of optional arguments, some of which allow for filtering of the list:
 
-* ``obj_type`` (string): only objects of this RESQML high level object class are included in the returned list. The leading 'obj_' may be omitted from the class name. Examples:
+* ``obj_type`` (string): only objects of this RESQML high level object class are included in the returned list. The leading obj underscore may be omitted from the class name. Examples:
     .. code-block:: python
 
-        model.parts(obj_type = 'obj_LocalDepth3dCrs')
-        model.titles(obj_type = 'DeviationSurveyRepresentation')
+        model.parts(obj_type = "obj_LocalDepth3dCrs")
+        model.titles(obj_type = "DeviationSurveyRepresentation")
 
 * ``uuid`` (UUID object or string): the list will contain the one high level object which matches this uuid, eg.:
     .. code-block:: python
@@ -110,7 +110,7 @@ If multiple filtering arguments are supplied, then only those high level objects
 Rather than starting from the full list of high level objects present in the model, it is also possible to pass in a starting list to apply other filters to:
 
 * ``parts_list`` (list of strings): if present, a list of 'input' part names to which any other filtering arguments are applied, eg:
-    * roots(parts_list = ['obj_IjkGridRepresentation_27e10fc2-231b-11ea-8971-80e650222718.xml', 'obj_IjkGridRepresentation_319154f4-5f3e-11eb-9d8d-80e650222718.xml'], title = 'ROOT')
+    * roots(parts_list = ["obj_IjkGridRepresentation_27e10fc2-231b-11ea-8971-80e650222718.xml", "obj_IjkGridRepresentation_319154f4-5f3e-11eb-9d8d-80e650222718.xml"], title = 'ROOT')
 
 The return list will not be in any particular order unless a further argument is supplied:
 

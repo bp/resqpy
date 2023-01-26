@@ -31,19 +31,18 @@ class ModelContext:
     def __init__(self, epc_file, mode = "r") -> None:
         """Open a resqml file, safely closing file handles upon exit.
 
-        The modes operate as follows:
-
-        - In "read" mode, an existing epc file is opened. Any changes are not
-        saved to disk automatically, but can still be saved by calling
-        `model.store_epc()`.
-        - In "read/write" mode, changes are written to disk when the context exists.
-        - In "create" mode, a new model is created and saved upon exit. Any existing
-            model will be deleted.
-
-        Args:
+        arguments:
             epc_file (str): path to existing resqml file
-            mode (str): one of "read", "read/write", "create", or shorthands
-            "r", "rw", "c".
+            mode (str, default 'r'): one of "read", "read/write", "create", or shorthands "r", "rw", "c"
+
+        notes:
+            the modes operate as follows:
+            - In "read" mode, an existing epc file is opened; any changes are not
+            saved to disk automatically, but can still be saved by calling
+            `model.store_epc()`;
+            - In "read/write" mode, changes are written to disk when the context exists;
+            - In "create" mode, a new model is created and saved upon exit; any pre-existing
+            model will be deleted
         """
 
         # Validate mode

@@ -380,24 +380,21 @@ class Grid(BaseResqpy):
     def cache_all_geometry_arrays(self):
         """Loads from hdf5 into memory all the arrays defining the grid geometry.
 
-        returns:
-           None
-
         notes:
-           call this method if much grid geometry processing is coming up, to save having to worry about
-           individual caching arguments to many other methods;
-           this method does not create a column to pillar mapping which will often also be needed;
-           the arrays are cached as direct attributes to this grid object;
-           the names, shapes and types of the attributes are:
-              array_cell_geometry_is_defined   (nk, nj, ni)  bool
-              array_pillar_geometry_is_defined (nj + 1, ni + 1)  bool
-              points_cached  (nk + 1, nj + 1, ni + 1, 3) or (nk + 1, np, 3)  float  (np = number of primary pillars)
-              split_pillar_indices_cached  (nps)  int  (nps = number of primary pillars that are split)
-              cols_for_split_pillars  (npxc)  int  (npxc = number of column corners using extra pillars due to splitting)
-              cols_for_split_pillars_cl  (npx)  int  (npx = number of extra pillars due to splitting)
-           the last 3 are only present when the grid has one or more split pillars;
-           the split pillar data includes the use of a 'jagged' array (effectively an array of lists represented as
-           a linear array and a 'cumulative length' index array)
+            call this method if much grid geometry processing is coming up, to save having to worry about
+            individual caching arguments to many other methods;
+            this method does not create a column to pillar mapping which will often also be needed;
+            the arrays are cached as direct attributes to this grid object;
+            the names, shapes and types of the attributes are:
+            - array_cell_geometry_is_defined  (nk, nj, ni)  bool;
+            - array_pillar_geometry_is_defined  (nj + 1, ni + 1)  bool;
+            - points_cached  (nk + 1, nj + 1, ni + 1, 3) or (nk + 1, np, 3)  float  (np = number of primary pillars);
+            - split_pillar_indices_cached  (nps)  int  (nps = number of primary pillars that are split);
+            - cols_for_split_pillars  (npxc)  int  (npxc = number of column corners using extra pillars due to splitting);
+            - cols_for_split_pillars_cl  (npx)  int  (npx = number of extra pillars due to splitting);
+            the last 3 are only present when the grid has one or more split pillars;
+            the split pillar data includes the use of a 'jagged' array (effectively an array of lists represented as
+            a linear array and a 'cumulative length' index array)
 
         :meta common:
         """

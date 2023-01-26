@@ -36,14 +36,13 @@ def blocked_well_from_trajectory_wrapper(
 
     returns:
         Tuple containing:
-            - index (int): the index passed to the function
-            - success (bool): True if all the BlockedWell objects could be created, False
-              otherwise
-            - epc_file (str): the epc file path where the objects are stored
-            - uuid_list (List[UUID/str]): list of UUIDs of relevant objects
+        - index (int): the index passed to the function;
+        - success (bool): True if all the BlockedWell objects could be created, False otherwise;
+        - epc_file (str): the epc file path where the objects are stored;
+        - uuid_list (List[UUID/str]): list of UUIDs of relevant objects
 
     note:
-        Used this wrapper when calling the multiprocessing function to initialise blocked wells from
+        used this wrapper when calling the multiprocessing function to initialise blocked wells from
         trajectories; it will create a new model that is saved in a temporary epc file
         and returns the required values, which are used in the multiprocessing function to
         recombine all the objects into a single epc file

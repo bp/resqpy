@@ -27,20 +27,22 @@ def infill_block_geometry(extent,
                           nudge = True):
     """Scans logically vertical columns of cells setting depth (& thickness) of inactive cells.
 
-    args:
+    arguments:
        extent (numpy integer vector of shape (3,)): corresponds to nk, nj and ni
-       depth (3D numpy float array): size matches extent.
-        note: Depth values are assumed more positive with increasing depth. Zero values indicate inactive cells
-       thickness (3D numpy float array): size matches extent
-       x (3D numpy float array): size matches extent
-       y (3D numpy float array): size matches extent
-       k_increase_direction (string, default 'down'): direction of increasing values. Either 'up' or 'down'
+       depth (3D numpy float array): shape matches extent
+       thickness (3D numpy float array): shape matches extent
+       x (3D numpy float array): shape matches extent
+       y (3D numpy float array): shape matches extent
+       k_increase_direction (string, default 'down'): direction of increasing K indices; either 'up' or 'down'
        depth_zero_tolerance (float, optional, default 0.01): maximum value for which the depth is considered zero
        vertical_cell_overlap_tolerance (float, optional, default 0.01): maximum acceptable overlap of cells on input
        snap_to_top_and_base (boolean, optional, default True): when True, causes cells above topmost active and below
-        deepest active to be populated with pinched out cells at the top and bottom faces respectively
-        nudge (boolean, optional, default True): when True causes the depth of cells with greater k to be moved to
-         clean up overlap over pinchouts
+          deepest active to be populated with pinched out cells at the top and bottom faces respectively
+       nudge (boolean, optional, default True): when True causes the depth of cells with greater k to be moved to
+          clean up overlap over pinchouts
+
+    note:
+       depth values are assumed more positive with increasing depth; zero values indicate inactive cells
 
     """
 
@@ -173,10 +175,8 @@ def __snap_to_top_and_base(snap_to_top_and_base,
                            k_top,
                            k_dir_sign,
                            k_base_greater_or_equal_to_extent = False):
-    """ Cells above topmost active and below deepest active will be populated with pinched out cells at the top and
-
-    bottom faces respectively.
-    """
+    # Cells above topmost active and below deepest active will be populated with pinched out cells at the top and
+    # bottom faces respectively
     if k_base_greater_or_equal_to_extent:
         k_top = k_top - 1
         if snap_to_top_and_base:
@@ -192,7 +192,7 @@ def __snap_to_top_and_base(snap_to_top_and_base,
 
 def __nudge_overlapping_cells_if_requested(nudge, i, j, k_base, extent, depth, void_interval, void_bottom_depth,
                                            depth_zero_tolerance, k_dir_sign):
-    """ Clean up overlap over pinchouts by moving the depths of cells with greater k."""
+    """Clean up overlap over pinchouts by moving the depths of cells with greater k."""
 
     if nudge:
         nudge_count = 0  # debug
@@ -432,7 +432,7 @@ def translate_corp(corner_points, x_shift = None, y_shift = None, min_xy = None,
 def triangles_for_cell_faces(cp):
     """Returns numpy array of shape (3, 2, 4, 3, 3) with axes being kji, -+, triangle within face, triangle corner, xyz.
 
-    args:
+    arguments:
        cp (numpy float array of shape (2, 2, 2, 3)): single cell corner point array in pagoda protocol
 
     returns:
@@ -489,8 +489,8 @@ def triangles_for_cell_faces(cp):
 def actual_pillar_shape(pillar_points, tolerance = 0.001):
     """Returns 'curved', 'straight' or 'vertical' for shape of pillar points.
 
-    Args:
-        pillar_points: fully defined points array of shape (nk + k_gaps + 1,..., 3).
+    arguments:
+        pillar_points (numpy float array): fully defined points array of shape (nk + k_gaps + 1,..., 3).
     """
 
     assert pillar_points.ndim >= 3 and pillar_points.shape[-1] == 3
@@ -522,7 +522,8 @@ def actual_pillar_shape(pillar_points, tolerance = 0.001):
 def columns_to_nearest_split_face(grid):
     """Return an int array of shape (NJ, NI) being number of cells to nearest split edge.
 
-    Uses Manhattan distance.
+    note:
+       uses Manhattan distance
     """
     if not grid.has_split_coordinate_lines:
         return None
