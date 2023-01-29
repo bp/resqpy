@@ -1155,6 +1155,38 @@ def test_basic_static_property_parts_permshared(example_model_with_properties):
     assert pc.facet_for_part(permk) == 'K'
 
 
+def test_property_parts_with_facets(example_model_with_properties):
+
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+
+    # Assert
+    assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'rock permeability')) == 2
+    assert len(rqp.property_parts(model, obj_type = 'Continuous', property_kind = 'permeability rock')) == 2
+    assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'permeability rock')) == 0
+    assert rqp.property_part(model,
+                             'ContinuousProperty',
+                             property_kind = 'permeability rock',
+                             facet_type = 'direction',
+                             facet = 'I') is not None
+    assert rqp.property_part(
+        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
+        facet = 'J') is None
+    assert rqp.property_part(model,
+                             obj_type = 'Continuous',
+                             property_kind = 'permeability rock',
+                             facet_type = 'direction',
+                             facet = 'K') is not None
+    assert rqp.property_part(model,
+                             'Continuous',
+                             property_kind = 'rock permeability',
+                             facet_type = 'direction',
+                             facet = 'K') is not None
+    assert rqp.property_part(
+        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'what', facet = 'I') is None
+
+
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
                                                  ('IJ', [False, False, True]), ('IJK', [False, False, False]),
                                                  ('Invalid', [False, True, True])])

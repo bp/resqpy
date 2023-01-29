@@ -78,6 +78,11 @@ class StringLookup(BaseResqpy):
         self.max_index = max(self.str_dict.keys())
         self.set_list_from_dict_conditionally()
 
+    def as_dict(self):
+        """Returns the string lookup as a python dictionary."""
+
+        return self.str_dict
+
     def is_equivalent(self, other):
         """Returns True if this lookup is the same as other (apart from uuid); False otherwise."""
 

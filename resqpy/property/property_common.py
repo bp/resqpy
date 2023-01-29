@@ -764,8 +764,25 @@ def check_and_warn_property_kind(pk, activity):
         # raise ValueError
 
 
-def property_parts(model, obj_type, parts_list = None, property_kind = None, related_uuid = None):
+def property_parts(model,
+                   obj_type,
+                   parts_list = None,
+                   property_kind = None,
+                   facet_type = None,
+                   facet = None,
+                   related_uuid = None):
     """Returns list of property parts from model matching filters."""
+
+    def facet_match(root, facet_type, facet):
+        if not facet_type and not facet:
+            return True
+        assert facet_type and facet is not None
+        facets = rqet.list_of_tag(root, 'Facet')
+        for f_node in facets:
+            if rqet.find_tag_text(f_node, 'Facet') == facet_type:
+                return rqet.find_tag_text(f_node, 'Value') == str(facet)
+        return False
+
     if not obj_type.endswith('Property'):
         obj_type += 'Property'
     assert obj_type in ['ContinuousProperty', 'DiscreteProperty', 'CategoricalProperty', 'PointsProperty']
@@ -779,18 +796,35 @@ def property_parts(model, obj_type, parts_list = None, property_kind = None, rel
                 # following relies on title in reference xml matching that of the local proparty kind
                 node = rqet.find_nested_tags(root, ['PropertyKind', 'LocalPropertyKind', 'Title'])
                 assert node is not None
-            if node.text == property_kind:
+            if node.text != property_kind and (property_kind not in ['rock permeability', 'permeability rock'] or
+                                               node.text not in ['rock permeability', 'permeability rock']):
+                continue
+            if facet_match(root, facet_type, facet):
                 pk_parts.append(part)
         parts = pk_parts
+    elif facet_type and facet is not None:
+        f_parts = []
+        for part in parts:
+            root = model.root_for_part(part)
+            if facet_match(root, facet_type, facet):
+                pk_parts.append(part)
     return parts
 
 
-def property_part(model, obj_type, parts_list = None, property_kind = None, related_uuid = None):
+def property_part(model,
+                  obj_type,
+                  parts_list = None,
+                  property_kind = None,
+                  facet_type = None,
+                  facet = None,
+                  related_uuid = None):
     """Returns individual property part from model matching filters."""
     parts = property_parts(model,
                            obj_type,
                            parts_list = parts_list,
                            property_kind = property_kind,
+                           facet_type = facet_type,
+                           facet = facet,
                            related_uuid = related_uuid)
     if parts is None or len(parts) == 0:
         return None
