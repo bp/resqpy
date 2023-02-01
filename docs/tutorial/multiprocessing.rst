@@ -8,7 +8,7 @@ You should edit the file paths in the examples to point to your own files.
 
 Installing Dask
 ---------------
-To use the multiprocesing module, *Dask* needs to be installed in the Python environment because it is
+To use the multi_processing module, *Dask* needs to be installed in the Python environment because it is
 not a dependency of the project. *Dask* is a flexible open-source Python library for parallel
 computing. It scales Python code from multi-core local machines to large distributed clusters
 on-prem or in the cloud.
@@ -179,7 +179,7 @@ levels of other loggers can also be specified, such as *Numba* in the following 
 Resqpy Wrapper Functions
 ------------------------
 To run the multiprocessing function, a wrapper function for the corresponding resqpy function is
-required. These can be found within the ``multiprocessing.wrappers`` module. Currently there is only a
+required. These can be found within the ``multi_processing.wrappers`` module. Currently there is only a
 wrapper function for the ``find_faces_to_represent_surface_regular`` function, however any wrapper
 function can be created, providing that it returns the following:
 
@@ -206,8 +206,10 @@ The multiprocessing function must receive the following arguments:
 
 .. code-block:: python
 
-    from resqpy.multiprocessing import function_multiprocessing
+    from resqpy.multi_processing import function_multiprocessing
 
     success_list = function_multiprocessing(func, kwargs_list, recombined_epc, cluster=cluster)
 
 A list of successes from the wrapper function in order of their call is returned.
+
+Note: the resqpy.multi_processing sub-package was previously named resqpy.multiprocessing. The name was change with major release v4.0.0 in order to avoid potential namespace clashes with the standard python multiprocessing package.
