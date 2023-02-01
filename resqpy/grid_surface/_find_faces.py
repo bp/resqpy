@@ -5,9 +5,9 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
-import numba
 import warnings
-from numba import njit
+import numba  # type: ignore
+from numba import njit, prange  # type: ignore
 from typing import Tuple, Optional, Dict
 
 import resqpy as rq
@@ -1204,7 +1204,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
         - triangle_per_face (np.ndarray): array of triangle numbers
     """
     n_faces = faces.shape[2 - axis]
-    for i in numba.prange(len(hits)):
+    for i in prange(len(hits)):
         tri, d1, d2 = hits[i]
 
         # Line start point in 3D which had a projection hit.
