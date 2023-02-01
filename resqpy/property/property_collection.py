@@ -653,9 +653,7 @@ class PropertyCollection():
     def selective_parts_list(
             self,
             realization = None,
-            support = None,  # maintained for backward compatibility
             support_uuid = None,
-            grid = None,  # maintained for backward compatibility
             continuous = None,
             points = None,
             count = None,
@@ -685,17 +683,8 @@ class PropertyCollection():
         returns:
            list of part names (strings) of those parts which match any selection arguments which are not None
 
-        note:
-           the support and grid keyword arguments are maintained for backward compatibility;
-           support_uuid takes precedence over support and both take precedence over grid
-
         :meta common:
         """
-
-        if support is None:
-            support = grid
-        if support_uuid is None and support is not None:
-            support_uuid = support.uuid
 
         if title and not citation_title:
             citation_title = title
@@ -725,9 +714,7 @@ class PropertyCollection():
     def singleton(
             self,
             realization = None,
-            support = None,  # for backward compatibility
             support_uuid = None,
-            grid = None,  # for backward compatibility
             uuid = None,
             continuous = None,
             points = None,
@@ -765,11 +752,6 @@ class PropertyCollection():
         :meta common:
         """
 
-        if support is None:
-            support = grid
-        if support_uuid is None and support is not None:
-            support_uuid = support.uuid
-
         temp_collection = rqp_c.selective_version_of_collection(self,
                                                                 realization = realization,
                                                                 support_uuid = support_uuid,
@@ -794,20 +776,15 @@ class PropertyCollection():
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
-        if len(parts_list) > 1 and multiple_handling != 'exception' and support is not None:
-            if support is not None:
-                parts_list = [support.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
-            elif self.model is not None:
-                parts_list = [self.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
+        if len(parts_list) > 1 and multiple_handling != 'exception' and self.model is not None:
+            parts_list = [self.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
         assert len(parts_list) == 1, 'More than one property part matches selection criteria'
         return parts_list[0]
 
     def single_array_ref(
             self,
             realization = None,
-            support = None,  # for backward compatibility
             support_uuid = None,
-            grid = None,  # for backward compatibility
             uuid = None,
             continuous = None,
             points = None,
@@ -842,7 +819,7 @@ class PropertyCollection():
            title (string, optional): synonym for citation_title argument
 
         Other optional arguments:
-        realization, support, support_uuid, grid, continuous, points, count, indexable, property_kind, facet_type, facet,
+        realization, support_uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
         citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid:
 
         For each of these arguments: if None, then all members of collection pass this filter;
@@ -856,16 +833,9 @@ class PropertyCollection():
         notes:
            returns None if no parts match; if more than one part matches multiple_handling argument determines behaviour;
            multiple calls will return the same cached array so calling code should copy if duplication is needed;
-           support and grid arguments are for backward compatibilty: support_uuid takes precedence over support and
-           both take precendence over grid
 
         :meta common:
         """
-
-        if support is None:
-            support = grid
-        if support_uuid is None and support is not None:
-            support_uuid = support.uuid
 
         part = self.singleton(realization = realization,
                               support_uuid = support_uuid,
@@ -2098,20 +2068,6 @@ class PropertyCollection():
             resqml_a[..., face] = resqpy_a[..., axis, polarity]
 
         return resqml_a
-
-    def cached_normalized_part_array_ref(self,
-                                         part,
-                                         masked = False,
-                                         use_logarithm = False,
-                                         discrete_cycle = None,
-                                         trust_min_max = False):
-        """DEPRECATED: replaced with normalized_part_array() method."""
-
-        return self.normalized_part_array(part,
-                                          masked = masked,
-                                          use_logarithm = use_logarithm,
-                                          discrete_cycle = discrete_cycle,
-                                          trust_min_max = trust_min_max)
 
     def normalized_part_array(self,
                               part,

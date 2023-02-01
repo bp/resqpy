@@ -17,7 +17,6 @@ import resqpy.surface as rqs
 def add_surfaces(
     epc_file,  # existing resqml model
     crs_uuid = None,  # optional crs uuid, defaults to crs associated with model (usually main grid crs)
-    ext_uuid = None,  # if None, uuid for hdf5 file holding main grid geometry will be used
     surface_file_format = 'zmap',  # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
     rq_class = 'surface',  # 'surface' or 'mesh': the class of object to be created
     surface_role = 'map',  # 'map' or 'pick'
@@ -29,7 +28,6 @@ def add_surfaces(
     Arguments:
         epc_file (str): file name and path to an existing resqml model
         crs_uuid (uuid.UUID, default None): uuid for a coordinate reference system. Defaults to crs associated with model (usually the main grid crs)
-        ext_uuid (uuid.UUID, default None): DEPRECATED, not used
         surface_file_format (str, default 'zmap'): 'zmap', 'rms', 'roxar' or 'GOCAD-Tsurf'. The format of the input file
         rq_class (str, default 'surface'): 'surface' or 'mesh'. The class of object ot be
         surface_role (str, default 'map'): 'map' or 'pick'
@@ -44,9 +42,6 @@ def add_surfaces(
     assert surface_file_list, 'surface file list is empty or missing'
     assert surface_file_format in ['zmap', 'rms', 'roxar',
                                    'GOCAD-Tsurf'], 'unsupported surface file format: ' + str(surface_file_format)
-    if ext_uuid is not None:
-        log.warning('DEPRECATED: ext_uuid argument to add_surfaces() function')
-
     rq_class = _get_rq_class(rq_class)
 
     model, crs_uuid = _get_model_details(epc_file, crs_uuid)

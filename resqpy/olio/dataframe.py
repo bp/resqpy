@@ -39,7 +39,6 @@ class DataFrame:
     def __init__(
             self,
             model,
-            support_root = None,  # deprecated
             uuid = None,
             df = None,
             uom_list = None,
@@ -52,29 +51,27 @@ class DataFrame:
 
         arguments:
            model (model.Model): the model to which the new Dataframe will be attached
-           support_root (lxml.Element, DEPRECATED): use uuid instead
            uuid (uuid.UUID, optional): the uuid of an existing Grid2dRepresentation
               object acting as support for a dataframe property (or holding the dataframe as z values)
            df (pandas.DataFrame, optional): a dataframe from which the new Dataframe is to be created;
-              if both uuid (or support_root) and df are supplied, realization must not be None and a new
+              if both uuid and df are supplied, realization must not be None and a new
               realization property will be created
            uom_list (list of str, optional): a list holding the units of measure for each
               column; if present, length of list must match number of columns in df; ignored if
-              uuid or support_root is not None
+              uuid is not None
            realization (int, optional): if present, the realization number of the RESQML property
               holding the dataframe
            title (str, default 'dataframe'): used as the citation title for the Mesh (and property);
-              ignored if uuid or support_root is not None
+              ignored if uuid is not None
            column_lookup_uuid (uuid, optional): if present, the uuid of a string lookup table holding
               the column names; if present, the contents and order of the table must match the columns
-              in the dataframe; if absent, a new lookup table will be created; ignored if support_root
-              is not None
+              in the dataframe; if absent, a new lookup table will be created
            uom_lookup_uuid (uuid, optional): if present, the uuid of a string lookup table holding
               the units of measure for each column; if None and uom_list is present, a new table
               will be created; if both uom_list and uom_lookup_uuid are present, their contents
-              must match; ignored if support_root is not None
+              must match
            extra_metadata (dict, optional): if present, a dictionary of extra metadata items, str: str;
-              ignored if uuid (or support_root) is not None
+              ignored if uuid is not None
 
         returns:
            a newly created Dataframe object
@@ -82,18 +79,13 @@ class DataFrame:
         notes:
            when initialising from an existing RESQML object, the supporting mesh and its property should
            have been originally created using this class; when working with ensembles, each object of this
-           class will only handle the data for one realization, though they may share a common support_root
+           class will only handle the data for one realization, though they may share a common support;
+           if both a uuid and a df are provided, a realization number must also be given and the dataframe
+           is used to create a new realization similar to that identified by the uuid
         """
 
-        assert uuid is not None or support_root is not None or df is not None
-        assert (uuid is None and support_root is None) or df is None or realization is not None
-
-        if uuid is None:
-            if support_root is not None:
-                warnings.warn("support_root parameter is deprecated, use uuid instead", DeprecationWarning)
-                uuid = rqet.uuid_for_part_root(support_root)
-        else:
-            support_root = model.root_for_uuid(uuid)
+        assert uuid is not None or df is not None
+        assert uuid is None or df is None or realization is not None
 
         self.model = model
         self.df = None
@@ -110,6 +102,7 @@ class DataFrame:
         self.extra_metadata = extra_metadata
 
         if uuid is not None:
+            support_root = model.root_for_uuid(uuid)
             assert rqet.node_type(support_root) == 'obj_Grid2dRepresentation'
             self.mesh = rqs.Mesh(self.model, uuid = uuid)
             self.extra_metadata = self.mesh.extra_metadata
@@ -141,7 +134,7 @@ class DataFrame:
                 else:
                     assert realization is None
                 self.df = pd.DataFrame(da, columns = self.column_lookup.get_list())
-            else:  # both support_root and df supplied: add a new realisation
+            else:  # both uuid and df supplied: add a new realisation
                 if existing_count > 0:
                     assert existing_pc.singleton(
                         realization = self.realization) is None, 'dataframe realization already exists'
@@ -149,7 +142,7 @@ class DataFrame:
                 assert len(self.df) == self.n_rows
                 assert len(self.df.columns) == self.n_rows
         else:
-            assert df is not None, 'no dataframe (or support root) provided when instantiating DataFrame object'
+            assert df is not None, 'no dataframe provided when instantiating DataFrame object'
             self.df = df.copy()
             # todo: check data type of columns – restrict to numerical data
             self.n_rows = len(self.df)
@@ -279,7 +272,6 @@ class TimeTable(DataFrame):
     def __init__(
             self,
             model,
-            support_root = None,  # deprecated
             uuid = None,
             df = None,
             uom_list = None,
@@ -300,18 +292,17 @@ class TimeTable(DataFrame):
 
         # todo: add option to set up time series from a column in the dataframe?
 
-        assert uuid is not None or support_root is not None or (df is not None and time_series is not None)
+        assert uuid is not None or (df is not None and time_series is not None)
 
         super().__init__(model,
                          uuid = uuid,
-                         support_root = support_root,
                          df = df,
                          uom_list = uom_list,
                          realization = realization,
                          title = title,
                          column_lookup_uuid = column_lookup_uuid,
                          uom_lookup_uuid = uom_lookup_uuid)
-        if uuid is not None or support_root is not None:
+        if uuid is not None:
             ts_uuid = self.model.uuid(obj_type = 'TimeSeries', related_uuid = self.mesh.uuid)
             assert ts_uuid is not None, 'no time series related to mesh holding dataframe'
             self.ts = rqts.TimeSeries(self.model, uuid = ts_uuid)

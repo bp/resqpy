@@ -6,7 +6,7 @@ __all__ = [
     'blocked_well_from_trajectory_wrapper', 'blocked_well_from_trajectory_batch'
 ]
 
-from .multiprocessing import function_multiprocessing
+from ._multiprocessing import function_multiprocessing
 from .wrappers.grid_surface_mp import find_faces_to_represent_surface_regular_wrapper
 from .wrappers.mesh_mp import mesh_from_regular_grid_column_property_wrapper, mesh_from_regular_grid_column_property_batch
 from .wrappers.blocked_well_mp import blocked_well_from_trajectory_wrapper, blocked_well_from_trajectory_batch

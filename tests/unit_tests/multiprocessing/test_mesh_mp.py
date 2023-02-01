@@ -1,7 +1,7 @@
-from resqpy.multiprocessing.wrappers import mesh_mp
 from resqpy.model import Model
 from resqpy.surface import Mesh
-from resqpy.multiprocessing.multiprocessing import rm_tree
+from resqpy.multi_processing.wrappers import mesh_mp
+from resqpy.multi_processing._multiprocessing import rm_tree
 
 
 def test_mesh_from_regular_grid_column_property_wrapper(small_grid_with_properties):

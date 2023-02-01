@@ -26,7 +26,6 @@ def fault_throw_scaling(epc_file,
                         ref_k0 = 0,
                         ref_k_faces = 'top',
                         cell_range = 0,
-                        offset_decay = 0.5,
                         store_displacement = False,
                         inherit_properties = False,
                         inherit_realization = None,
@@ -50,7 +49,6 @@ def fault_throw_scaling(epc_file,
        ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
        cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
           smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
-       offset_decay (float, default 0.5): DEPRECATED; ignored
        store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
           displacement of cells' centres brought about by the fault throw scaling
        inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated
@@ -74,7 +72,6 @@ def fault_throw_scaling(epc_file,
        stretch is towards or away from mid-point of throw;
        same shift is applied to all layers along pillar;
        pillar lines assumed to be straight;
-       the offset decay argument might be changed in a future version to give improved smoothing;
        if a large fault is represented by a series of parallel minor faults 'stepping' down, each minor fault will have the
        scaling factor applied independently, leading to some unrealistic results
     """
@@ -191,7 +188,6 @@ def global_fault_throw_scaling(epc_file,
                                ref_k0 = 0,
                                ref_k_faces = 'top',
                                cell_range = 0,
-                               offset_decay = 0.5,
                                store_displacement = False,
                                inherit_properties = False,
                                inherit_realization = None,
@@ -210,7 +206,6 @@ def global_fault_throw_scaling(epc_file,
        ref_k_faces (string, default 'top'): 'top' or 'base' identifying which bounding interface to use as the reference
        cell_range (integer, default 0): the number of cells away from faults which will have depths adjusted to spatially
           smooth the effect of the throw scaling (ie. reduce sudden changes in gradient due to the scaling)
-       offset_decay (float, default 0.5): DEPRECATED; ignored
        store_displacement (boolean, default False): if True, 3 grid property parts are created, one each for x, y, & z
           displacement of cells' centres brought about by the fault throw scaling
        inherit_properties (boolean, default False): if True, the new grid will have a copy of any properties associated

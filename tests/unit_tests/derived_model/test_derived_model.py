@@ -935,7 +935,6 @@ def test_add_faults(tmp_path):
                                      ref_k0 = 0,
                                      ref_k_faces = 'top',
                                      cell_range = 0,
-                                     offset_decay = 0.5,
                                      store_displacement = False,
                                      inherit_properties = True,
                                      inherit_realization = None,

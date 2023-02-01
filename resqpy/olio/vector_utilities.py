@@ -12,7 +12,6 @@ log = logging.getLogger(__name__)
 
 import math as maths
 import numpy as np
-import multiprocessing as m_p
 import numba  # type: ignore
 from numba import njit
 from typing import Tuple, Optional
@@ -757,12 +756,12 @@ def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points
     Returns:
         polygons_points (np.ndarray): 2D array containing only the points within each polygon,
             with each row being the polygon number, points y index, and points x index.
-    """
-    args = [(points, polygons[polygon_num], points_xlen, polygon_num) for polygon_num in range(len(polygons))]
-    with m_p.Pool() as p:
-        r = p.starmap(points_in_polygon, args)
 
-    return np.vstack(r)
+    note:
+        this function now calls the numba just-in-time compiled version of the function instead
+        of using a multiprocessing pool
+    """
+    return points_in_polygons(points, polygons, points_xlen)
 
 
 @njit
