@@ -212,4 +212,4 @@ The multiprocessing function must receive the following arguments:
 
 A list of successes from the wrapper function in order of their call is returned.
 
-Note: the resqpy.multi_processing sub-package was previously named resqpy.multiprocessing. The name was change with major release v4.0.0 in order to avoid potential namespace clashes with the standard python multiprocessing package.
+Note: the ``resqpy.multi_processing`` sub-package was previously named ``resqpy.multiprocessing``. The name was change with major release v4.0.0 in order to avoid potential namespace clashes with the standard python multiprocessing package.
