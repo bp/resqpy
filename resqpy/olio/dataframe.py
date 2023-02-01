@@ -36,17 +36,16 @@ class DataFrame:
        relative permeability data
     """
 
-    def __init__(
-            self,
-            model,
-            uuid = None,
-            df = None,
-            uom_list = None,
-            realization = None,
-            title = 'dataframe',
-            column_lookup_uuid = None,
-            uom_lookup_uuid = None,
-            extra_metadata = None):
+    def __init__(self,
+                 model,
+                 uuid = None,
+                 df = None,
+                 uom_list = None,
+                 realization = None,
+                 title = 'dataframe',
+                 column_lookup_uuid = None,
+                 uom_lookup_uuid = None,
+                 extra_metadata = None):
         """Create a new Dataframe object from either a previously stored property or a pandas dataframe.
 
         arguments:
@@ -269,17 +268,16 @@ class TimeTable(DataFrame):
        inherits from DataFrame class
     """
 
-    def __init__(
-            self,
-            model,
-            uuid = None,
-            df = None,
-            uom_list = None,
-            realization = None,
-            time_series = None,
-            title = 'timetable',
-            column_lookup_uuid = None,
-            uom_lookup_uuid = None):
+    def __init__(self,
+                 model,
+                 uuid = None,
+                 df = None,
+                 uom_list = None,
+                 realization = None,
+                 time_series = None,
+                 title = 'timetable',
+                 column_lookup_uuid = None,
+                 uom_lookup_uuid = None):
         """Create a new TimeTable object from either a previously stored property or a pandas dataframe.
 
         arguments:

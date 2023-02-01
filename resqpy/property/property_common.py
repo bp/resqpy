@@ -497,28 +497,27 @@ def _guess_uom_gor_ogr(property_kind, from_crs):
     return None
 
 
-def selective_version_of_collection(
-        collection,
-        realization = None,
-        support_uuid = None,
-        uuid = None,
-        continuous = None,
-        points = None,
-        count = None,
-        indexable = None,
-        property_kind = None,
-        facet_type = None,
-        facet = None,
-        citation_title = None,
-        time_series_uuid = None,
-        time_index = None,
-        uom = None,
-        string_lookup_uuid = None,
-        categorical = None,
-        title = None,
-        title_mode = None,
-        related_uuid = None,
-        const_value = None):
+def selective_version_of_collection(collection,
+                                    realization = None,
+                                    support_uuid = None,
+                                    uuid = None,
+                                    continuous = None,
+                                    points = None,
+                                    count = None,
+                                    indexable = None,
+                                    property_kind = None,
+                                    facet_type = None,
+                                    facet = None,
+                                    citation_title = None,
+                                    time_series_uuid = None,
+                                    time_index = None,
+                                    uom = None,
+                                    string_lookup_uuid = None,
+                                    categorical = None,
+                                    title = None,
+                                    title_mode = None,
+                                    related_uuid = None,
+                                    const_value = None):
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:

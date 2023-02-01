@@ -4,7 +4,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-
 import numpy as np
 
 import resqpy.surface as rqs
@@ -248,11 +247,8 @@ class GridSkin:
                                                                              return_second = True)
             xyz_1, segment_1, tri_index_1, xyz_2, segment_2, tri_index_2 = bundle
         else:
-            xyz_1, segment_1, tri_index_1 = rqgs.find_first_intersection_of_trajectory_with_surface(trajectory,
-                                                                                                    self.skin,
-                                                                                                    start = start,
-                                                                                                    start_xyz = start_xyz,
-                                                                                                    nudge = nudge)
+            xyz_1, segment_1, tri_index_1 = rqgs.find_first_intersection_of_trajectory_with_surface(
+                trajectory, self.skin, start = start, start_xyz = start_xyz, nudge = nudge)
             xyz_2 = segment_2 = tri_index_2 = None
         if xyz_1 is None:
             return None, None, None, None, None
@@ -396,10 +392,8 @@ class GridSkin:
                                                                                         k0 = k0,
                                                                                         ref_k_faces = 'base',
                                                                                         quad_triangles = quad_triangles)
-                        gap_base_surf = rqgs.generate_untorn_surface_for_layer_interface(self.grid,
-                                                                                         k0 = k0 + 1,
-                                                                                         ref_k_faces = 'top',
-                                                                                         quad_triangles = quad_triangles)
+                        gap_base_surf = rqgs.generate_untorn_surface_for_layer_interface(
+                            self.grid, k0 = k0 + 1, ref_k_faces = 'top', quad_triangles = quad_triangles)
                     k_gap_surf_list.append(gap_top_surf)
                     k_gap_surf_list.append(gap_base_surf)
                     self.k_gap_after_layer_list.append(k0)

@@ -218,17 +218,16 @@ def find_faces_to_represent_surface_regular_wrapper(
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
-    returns = rqgs.find_faces_to_represent_surface_regular_optimised(
-        grid,
-        surface,
-        name,
-        title,
-        agitate,
-        feature_type,
-        is_curtain,
-        progress_fn,
-        return_properties,
-        raw_bisector = raw_bisector)
+    returns = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                                     surface,
+                                                                     name,
+                                                                     title,
+                                                                     agitate,
+                                                                     feature_type,
+                                                                     is_curtain,
+                                                                     progress_fn,
+                                                                     return_properties,
+                                                                     raw_bisector = raw_bisector)
 
     success = False
 

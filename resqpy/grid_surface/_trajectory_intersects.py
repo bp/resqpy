@@ -4,7 +4,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-
 import numpy as np
 
 import resqpy.crs as rqc
@@ -419,4 +418,3 @@ def trajectory_grid_overlap(trajectory, grid, lazy = False):
         traj_box[1] = np.max(t_box, axis = 0)
     log.debug(f'overlap check: traj: {traj_box}; grid{grid_box}; overlap: {bx.boxes_overlap(traj_box, grid_box)}')
     return bx.boxes_overlap(traj_box, grid_box)
-

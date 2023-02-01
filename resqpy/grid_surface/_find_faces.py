@@ -4,7 +4,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-
 import numpy as np
 import numba
 import warnings
@@ -466,17 +465,16 @@ def find_faces_to_represent_surface_regular(grid,
     return gcs
 
 
-def find_faces_to_represent_surface_regular_optimised(
-        grid,
-        surface,
-        name,
-        title = None,
-        agitate = False,
-        feature_type = 'fault',
-        is_curtain = False,
-        progress_fn = None,
-        return_properties = None,
-        raw_bisector = False):
+def find_faces_to_represent_surface_regular_optimised(grid,
+                                                      surface,
+                                                      name,
+                                                      title = None,
+                                                      agitate = False,
+                                                      feature_type = 'fault',
+                                                      is_curtain = False,
+                                                      progress_fn = None,
+                                                      return_properties = None,
+                                                      raw_bisector = False):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     argumants:
@@ -808,6 +806,7 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
 
 
 # TODO: replace this with bisector_from_faces_new() ? ie. delete this and rename the other
+
 
 def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
                         i_faces: np.ndarray, raw_bisector: bool) -> Tuple[np.ndarray, bool]:
@@ -1254,7 +1253,7 @@ def intersect_numba(axis: int, index1: int, index2: int, hits: np.ndarray, n_axi
 
 @njit
 def _seed_array(point: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-               boundary: Tuple[int, int, int, int, int, int], array: np.ndarray) -> Tuple[np.ndarray, int, int, int]:
+                boundary: Tuple[int, int, int, int, int, int], array: np.ndarray) -> Tuple[np.ndarray, int, int, int]:
     """Sets values of the array True up until a face is hit in each direction.
 
     arguments:

@@ -4,7 +4,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-
 import numpy as np
 
 import resqpy.crs as rqc
@@ -390,30 +389,30 @@ def __find_next_cell(
 def __faulted(trajectory, grid, segment, kji0, axis, polarity, xyz, lazy, use_single_layer_tactics, previous_kji0):
     # look for intersections with column face
     xyz_f, k0 = rqgs.find_intersection_of_trajectory_interval_with_column_face(trajectory,
-                                                                          grid,
-                                                                          segment,
-                                                                          kji0[1:],
-                                                                          axis,
-                                                                          1 - polarity,
-                                                                          start_xyz = xyz,
-                                                                          nudge = -0.1,
-                                                                          quad_triangles = True)
+                                                                               grid,
+                                                                               segment,
+                                                                               kji0[1:],
+                                                                               axis,
+                                                                               1 - polarity,
+                                                                               start_xyz = xyz,
+                                                                               nudge = -0.1,
+                                                                               quad_triangles = True)
     if xyz_f is not None and k0 is not None:
         kji0[0] = k0
         seg_fraction = __segment_fraction(trajectory.control_points, segment, xyz_f)
         return vec.isclose(xyz, xyz_f, tolerance = 0.001), kji0, axis, 1 - polarity, segment, seg_fraction, xyz_f
     log.debug('failed to find entry point in column face after crossing fault; checking entire cross section')
     x_sect_surf = rqgs.generate_torn_surface_for_x_section(grid,
-                                                      'KJI'[axis],
-                                                      ref_slice0 = kji0[axis],
-                                                      plus_face = (polarity == 0),
-                                                      quad_triangles = True,
-                                                      as_single_layer = False)
+                                                           'KJI'[axis],
+                                                           ref_slice0 = kji0[axis],
+                                                           plus_face = (polarity == 0),
+                                                           quad_triangles = True,
+                                                           as_single_layer = False)
     xyz_f, segment_f, tri_index_f = rqgs.find_first_intersection_of_trajectory_with_surface(trajectory,
-                                                                                       x_sect_surf,
-                                                                                       start = segment,
-                                                                                       start_xyz = xyz,
-                                                                                       nudge = -0.1)
+                                                                                            x_sect_surf,
+                                                                                            start = segment,
+                                                                                            start_xyz = xyz,
+                                                                                            nudge = -0.1)
     if xyz_f is not None:
         # back out cell info from triangle index; note 'column_from...' is actually x_section cell face
         k0, j_or_i0 = x_sect_surf.column_from_triangle_index(tri_index_f)
