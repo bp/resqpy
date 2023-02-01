@@ -36,14 +36,15 @@ def strip_path(full_path):
     return os.path.basename(full_path)
 
 
-def stripped_of_prefix(prefixed):
-    """Returns a simplified version of an xml tag or other element with any {xsd defining prefix} stripped off."""
+def stripped_of_prefix(s):
+    """Returns a simplified version of an xml tag or other str with any {xsd defining prefix} stripped off."""
 
-    if prefixed is None:
+    if s is None:
         return None
-    if '}' in prefixed:
-        return prefixed[prefixed.rfind('}') + 1:]
-    return prefixed[prefixed.rfind(':') + 1:]
+    p = s.rfind('}')
+    if p >= 0:
+        return s[p + 1:]
+    return s[s.rfind(':') + 1:]
 
 
 def colon_prefixed(curly_prefixed):
@@ -654,13 +655,15 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     """Recursively write an xml node to an open file; return number of nodes written."""
 
     def _escaped_text(text):
-        d = {'<': '&lt;', '>': '&gt;', '&': '&amp;'}
-        esc = '<&>'
         # todo: include quotes if needed
         e = ''
         for ch in str(text):
-            if ch in esc:
-                e += d[ch]
+            if ch == '<':
+                e += '&lt;'
+            elif ch == '>':
+                e += '&gt;'
+            elif ch == '&':
+                e += '&amp;'
             else:
                 e += ch
         return e
