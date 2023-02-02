@@ -2273,7 +2273,12 @@ class PropertyCollection():
         self.remove_cached_imported_arrays()
         self.remove_cached_part_arrays()
 
-    def write_hdf5_for_imported_list(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None):
+    def write_hdf5_for_imported_list(self,
+                                     file_name = None,
+                                     mode = 'a',
+                                     expand_const_arrays = False,
+                                     dtype = None,
+                                     use_int32 = None):
         """Create or append to an hdf5 file, writing datasets for the imported arrays.
 
         arguments:
@@ -2283,7 +2288,11 @@ class PropertyCollection():
               the hdf5 file and the same argument should be used when creating the xml
            dtype (numpy dtype, optional): the required numpy element type to use when writing to hdf5;
               eg. np.float16, np.float32, np.float64, np.uint8, np.int16, np.int32, np.int64 etc.;
-              defaults to the dtype of each individual numpy array in the imported list
+              defaults to the dtype of each individual numpy array in the imported list except for int64
+              for which the use_int32 controls whether to write as 32 bit data
+           use_int32 (bool, optional): if dtype is None, this controls whether 64 bit int arrays are written
+              as 32 bit; if None, the system default is to write as 32 bit; if True, 32 bit is used; if
+              False, 64 bit data is written; ignored if dtype is not None
 
         :meta common:
         """
@@ -2307,7 +2316,7 @@ class PropertyCollection():
                 cached_name = entry[3]
             tail = 'points_patch0' if entry[18] else 'values_patch0'
             h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
-        h5_reg.write(file = file_name, mode = mode)
+        h5_reg.write(file = file_name, mode = mode, use_int32 = use_int32)
 
     def write_hdf5_for_part(self, part, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing dataset for the specified part."""

@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 import numpy as np
 
 import resqpy.olio.write_hdf5 as rwh5
-import resqpy.property as rprop
+import resqpy.property as rqp
 
 always_write_pillar_geometry_is_defined_array = False
 always_write_cell_geometry_is_defined_array = False
@@ -20,7 +20,8 @@ def _write_hdf5_from_caches(grid,
                             imported_properties = None,
                             write_active = None,
                             stratigraphy = True,
-                            expand_const_arrays = False):
+                            expand_const_arrays = False,
+                            use_int32 = None):
     """Create or append to an hdf5 file.
 
     Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
@@ -30,7 +31,11 @@ def _write_hdf5_from_caches(grid,
     # xml is not created here for property objects
 
     if write_active is None:
-        write_active = geometry
+        existing_active = rqp.property_parts(grid.model,
+                                             obj_type = 'DiscreteProperty',
+                                             property_kind = 'active',
+                                             related_uuid = grid.uuid)
+        write_active = geometry and not existing_active
 
     if geometry:
         grid.cache_all_geometry_arrays()
@@ -47,7 +52,7 @@ def _write_hdf5_from_caches(grid,
 
     if write_active and grid.inactive is not None:
         if imported_properties is None:
-            imported_properties = rprop.PropertyCollection()
+            imported_properties = rqp.PropertyCollection()
             imported_properties.set_support(support = grid)
         else:
             filtered_list = []
@@ -75,7 +80,7 @@ def _write_hdf5_from_caches(grid,
                 h5_reg.register_dataset(entry[0], tail, imported_properties.__dict__[entry[3]])
             if entry[10] == 'active':
                 grid.active_property_uuid = entry[0]
-    h5_reg.write(file, mode = mode)
+    h5_reg.write(file, mode = mode, use_int32 = use_int32)
 
 
 def __write_geometry(grid, h5_reg):
