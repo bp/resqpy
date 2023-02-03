@@ -220,7 +220,10 @@ def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_propertie
                             uom = 'm')
         for entry in prop.collection.imported_list:  # only one entry
             # override internal hdf5 path
-            h5_reg.register_dataset(entry[0], 'values_patch0', prop.collection.__dict__[entry[3]], hdf5_path = path)
+            h5_reg.register_dataset(entry[0],
+                                    'values_patch0',
+                                    prop.collection.__dict__[entry[3]],
+                                    hdf5_internal_path = path)
         prop_list.append(prop)
         path_list.append(path)
     h5_reg.write(mode = 'a')
