@@ -772,9 +772,17 @@ def property_parts(model,
             return True
         assert facet_type and facet is not None
         facets = rqet.list_of_tag(root, 'Facet')
+        if facet_type == 'none' and facets:
+            return False
         for f_node in facets:
             if rqet.find_tag_text(f_node, 'Facet') == facet_type:
+                if facet == 'none':
+                    return False
+                if facet == '*':
+                    return True
                 return rqet.find_tag_text(f_node, 'Value') == str(facet)
+        if facet == 'none':
+            return True
         return False
 
     if not obj_type.endswith('Property'):
