@@ -21,6 +21,8 @@ import resqpy.olio.intersection as meet
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 
+# note: resqpy.grid_surface._grid_surface_cuda will be imported by the find_faces_to_represent_surface() function if needed
+
 
 def find_faces_to_represent_surface_staffa(grid, surface, name, feature_type = 'fault', progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
@@ -775,7 +777,25 @@ def find_faces_to_represent_surface_regular_optimised(grid,
 
 
 def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_type = 'fault', progress_fn = None):
-    """Returns a grid connection set containing those cell faces which are deemed to represent the surface."""
+    """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
+
+    arguments:
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface
+        surface (Surface): the triangulated surface for which grid cell faces are required
+        name (str): the feature name to use in the grid connection set
+        mode (str, default 'auto'): one of 'auto', 'staffa', 'regular', 'regular_optimised', 'regular_cuda';
+           auto will translate to regular_optimised for regulat grids, and staffa for irregular grids;
+           regular_cude required GPU hardware and the correct installation of numba.cuda and cupy
+        feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+        progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+
+    returns:
+        a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created
+
+    note:
+        this is a wrapper function selecting between more specialised functions; use those directly for more options
+    """
 
     log.debug('finding cell faces for surface')
     if mode == 'auto':
@@ -801,83 +821,18 @@ def find_faces_to_represent_surface(grid, surface, name, mode = 'auto', feature_
                                                                  name,
                                                                  feature_type = feature_type,
                                                                  progress_fn = progress_fn)
+    elif mode == 'regular_cuda':
+        import resqpy.grid_surface.grid_surface_cuda as rgs_c
+        return rgs_c.find_faces_to_represent_surface_regular_cuda_mgpu(grid,
+                                                                       surface,
+                                                                       name,
+                                                                       feature_type = feature_type,
+                                                                       progress_fn = progress_fn)
     log.critical('unrecognised mode: ' + str(mode))
     return None
 
 
-# TODO: replace this with bisector_from_faces_new() ? ie. delete this and rename the other
-
-
-def bisector_from_faces(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-                        i_faces: np.ndarray, raw_bisector: bool) -> Tuple[np.ndarray, bool]:
-    """Returns a numpy bool array denoting the bisection of the grid by the face sets.
-
-    arguments:
-        grid_extent_kji (triple int): the shape of the grid
-        k_faces, j_faces, i_faces (numpy bool arrays): True where an internal grid face forms part of the
-            bisecting surface
-
-    returns:
-        (numpy bool array of shape grid_extent_kji, bool) where the array is set True for cells on one side
-        of the face sets deemed to be shallower (more strictly, lower K index on average); set False for cells
-        on othe side; the bool value is True if the surface is a curtain (vertical), otherwise False
-
-    notes:
-        the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid);
-        any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
-        assigned to either the True or False part
-    """
-    assert len(grid_extent_kji) == 3
-    # a = np.zeros(grid_extent_kji, dtype = numba.boolean)  # initialise to False
-    # c = np.zeros(grid_extent_kji, dtype = numba.boolean)  # cells changing
-    a = np.zeros(grid_extent_kji, dtype = np.bool_)  # initialise to False
-    c = np.zeros(grid_extent_kji, dtype = np.bool_)  # cells changing
-    open_k = np.logical_not(k_faces)
-    open_j = np.logical_not(j_faces)
-    open_i = np.logical_not(i_faces)
-    # set one or more seeds; todo: more seeds to improve performance if needed
-    a[0, 0, 0] = True
-    # repeatedly spread True values to neighbouring cells that are not the other side of a face
-    # todo: check that following works when a dimension has extent 1
-    limit = grid_extent_kji[0] * grid_extent_kji[1] * grid_extent_kji[2]
-    for _ in range(limit):
-        c[:] = False
-        # k faces
-        c[1:, :, :] = np.logical_and(a[:-1, :, :], open_k)
-        c[:-1, :, :] = np.logical_or(c[:-1, :, :], np.logical_and(a[1:, :, :], open_k))
-        # j faces
-        c[:, 1:, :] = np.logical_or(c[:, 1:, :], np.logical_and(a[:, :-1, :], open_j))
-        c[:, :-1, :] = np.logical_or(c[:, :-1, :], np.logical_and(a[:, 1:, :], open_j))
-        # i faces
-        c[:, :, 1:] = np.logical_or(c[:, :, 1:], np.logical_and(a[:, :, :-1], open_i))
-        c[:, :, :-1] = np.logical_or(c[:, :, :-1], np.logical_and(a[:, :, 1:], open_i))
-        c[:] = np.logical_and(c, np.logical_not(a))
-        if np.count_nonzero(c) == 0:
-            break
-        a[:] = np.logical_or(a, c)
-    a_count = np.count_nonzero(a)
-    cell_count = a.size
-    assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
-    # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
-    layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
-    a_k_sum = 0
-    not_a_k_sum = 0
-    for k in range(grid_extent_kji[0]):
-        a_layer_count = np.count_nonzero(a[k])
-        a_k_sum += (k + 1) * a_layer_count
-        not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
-    a_mean_k = float(a_k_sum) / float(a_count)
-    not_a_mean_k = float(not_a_k_sum) / float(cell_count - a_count)
-    is_curtain = False
-    if abs(a_mean_k - not_a_mean_k) <= 0.001:
-        # log.warning('unable to determine which side of surface is shallower')
-        is_curtain = True
-    elif a_mean_k > not_a_mean_k and not raw_bisector:
-        a[:] = np.logical_not(a)
-    return a, is_curtain
-
-
-def bisector_from_faces_new(  # type: ignore
+def bisector_from_faces(  # type: ignore
         grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
         raw_bisector: bool) -> Tuple[np.ndarray, bool]:
     """Creates a boolean array denoting the bisection of the grid by the face sets.
@@ -1113,6 +1068,7 @@ def get_boundary(  # type: ignore
     returns:
         boundary (Dict[str, int]): a dictionary of the indices that bound the surface.
     """
+
     boundary = {
         "k_min": None,
         "k_max": None,
@@ -1122,34 +1078,49 @@ def get_boundary(  # type: ignore
         "i_max": None,
     }
 
-    indices = ['k', 'j', 'i']
-    values = [0, 1, 2]
+    starting = True
+
     for i, faces in enumerate([k_faces, j_faces, i_faces]):
-        true_values = list(where_true(faces))
-        val = values.copy()
-        del val[i]
 
-        index_1 = indices[val[0]]
-        index_2 = indices[val[1]]
-        true_values_dim1 = true_values[val[0]]
-        true_values_dim2 = true_values[val[1]]
+        where_k, where_j, where_i = where_true(faces)
+        if len(where_k) == 0:
+            continue
 
-        if true_values_dim1.size > 0 and true_values_dim2.size > 0:
-            for index, dim in zip([index_1, index_2], [true_values_dim1, true_values_dim2]):  # type: ignore
-                if boundary[f"{index}_min"] is None:
-                    boundary[f"{index}_min"] = min(dim)
-                elif min(dim) < boundary[f"{index}_min"]:
-                    boundary[f"{index}_min"] = min(dim)
-                if boundary[f"{index}_max"] is None:
-                    boundary[f"{index}_max"] = max(dim)
-                elif max(dim) > boundary[f"{index}_max"]:
-                    boundary[f"{index}_max"] = max(dim)
+        min_k = where_k[0]
+        max_k = where_k[-1]
+        min_j = np.amin(where_j)
+        max_j = np.amax(where_j)
+        min_i = np.amin(where_i)
+        max_i = np.amax(where_i)
 
-    for i, index in enumerate(indices):
-        if boundary[f"{index}_min"] != 0:
-            boundary[f"{index}_min"] -= 1  # type: ignore
-        if boundary[f"{index}_max"] != grid_extent_kji[i] - 1:
-            boundary[f"{index}_max"] += 1  # type: ignore
+        if i == 0:
+            max_k += 1
+        elif i == 1:
+            max_j += 1
+        else:
+            max_i += 1
+
+        if starting:
+            boundary['k_min'] = min_k
+            boundary['k_max'] = max_k
+            boundary['j_min'] = min_j
+            boundary['j_max'] = max_j
+            boundary['i_min'] = min_i
+            boundary['i_max'] = max_i
+            starting = False
+        else:
+            if min_k < boundary['k_min']:
+                boundary['k_min'] = min_k
+            if max_k < boundary['k_max']:
+                boundary['k_max'] = max_k
+            if min_j < boundary['j_min']:
+                boundary['j_min'] = min_j
+            if max_j < boundary['j_max']:
+                boundary['j_max'] = max_j
+            if min_i < boundary['i_min']:
+                boundary['i_min'] = min_i
+            if max_i < boundary['i_max']:
+                boundary['i_max'] = max_i
 
     return boundary  # type: ignore
 

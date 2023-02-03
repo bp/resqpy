@@ -1,10 +1,11 @@
-"""Functions relating to intsection of resqml grid with surface or trajectory objects."""
+"""Functions relating to intersection of resqml grid with surface or trajectory objects."""
 
 import logging
 
 log = logging.getLogger(__name__)
 
 import numpy as np
+import threading
 
 import resqpy.olio.intersection as meet
 import resqpy.olio.vector_utilities as vec
