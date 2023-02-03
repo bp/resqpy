@@ -14,9 +14,9 @@ from typing import Tuple, Optional, Dict
 import threading
 
 import numba  # type: ignore
-from numba import njit, cuda
-from numba.cuda.cudadrv.devicearray import DeviceNDArray
-import cupy
+from numba import njit, cuda  # type: ignore
+from numba.cuda.cudadrv.devicearray import DeviceNDArray  # type: ignore
+import cupy  # type: ignore
 
 import resqpy.crs as rqc
 import resqpy.grid as grr
