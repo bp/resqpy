@@ -24,19 +24,19 @@ import resqpy.olio.vector_utilities as vec
 def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Calculates the Delaunay triangulation for an array of points and the convex hull indices.
     
-    Args:
-        points (np.ndarray): Coordinates of the points to triangulate. Array has shape
-            (npoints, ndim).
+    arguments:
+        points (np.ndarray): coordinates of the points to triangulate; array has shape
+            (npoints, ndim)
 
-    Returns:
+    returns:
         (tuple): tuple containing:
 
-            simplices (np.ndarray): Indices of the points forming the triangulation simplices. Array
-                has shape (nsimplex, ndim+1).
-            convex_hull_indices (np.ndarray): Indices of the points forming the convex hull. Array
-                has shape (nhull,).
+            simplices (np.ndarray): indices of the points forming the triangulation simplices; array
+                has shape (nsimplex, ndim+1)
+            convex_hull_indices (np.ndarray): indices of the points forming the convex hull; array
+                has shape (nhull,)
 
-    Note:
+    note:
         the triangulation is carried out on the points as projected onto the xy plane
     """
     delaunay = Delaunay(points[..., :2])
@@ -747,7 +747,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
        implicit xy & z units for points are assumed to be the same;
        the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
        determine the triangulation;
-       the numpy linear algebra option seems to be memory intensive
+       the numpy linear algebra option seems to be memory intensive, not recommended
     """
 
     def z_range(p):
