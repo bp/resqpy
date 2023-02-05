@@ -668,21 +668,21 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     """Calculates which points are within a polygon in 2D.
 
     arguments:
-        points (np.ndarray): array of the points in 2D.
-        polygon (np.ndarray): array of the polygon's vertices in 2D.
-        points_xlen (int): the number of unique x coordinates.
-        polygon_num (int): the polygon number, default is 0.
+        points (np.ndarray): array of shape (N, 2 or 3), of the points in 2D (xy, any z values are ignored)
+        polygon (np.ndarray): list-like array of the polygon's vertices in 2D
+        points_xlen (int): the original I extent of the now flattened points, use 1 if not applicable
+        polygon_num (int): the polygon number, default is 0, for copying to output
 
     returns:
-        polygon_points (np.ndarray): 2D array containing only the points within the polygon,
-            with each row being the polygon number, points y index, and points x index.
+        polygon_points (np.ndarray): list-like 2D array containing only the points within the polygon,
+            with each row being the polygon number (as input), points J index, and points I index
     """
     polygon_points = np.empty((0, 3), dtype = numba.int32)
     for point_num in numba.prange(len(points)):
         p = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
         if p is True:
-            yi, xi = divmod(point_num, points_xlen)
-            polygon_points = np.append(polygon_points, np.array([[polygon_num, yi, xi]], dtype = numba.int32), axis = 0)
+            j, i = divmod(point_num, points_xlen)
+            polygon_points = np.append(polygon_points, np.array([[polygon_num, j, i]], dtype = numba.int32), axis = 0)
 
     return polygon_points
 

@@ -8,6 +8,7 @@ import math as maths
 import numpy as np
 
 import resqpy.surface as rqs
+import resqpy.olio.vector_utilities as vec
 
 root_3_by_2 = maths.sqrt(3.0) / 2.0
 
@@ -239,4 +240,36 @@ class TriMesh(rqs.Mesh):
         assert 0 <= tj < self.nj - 1 and 0 <= ti < 2 * (self.ni - 1)
         return 2 * (self.ni - 1) * tj + ti
 
-    # todo: sample_z method based on trilinear interpolation within triangle
+    def tri_nodes_in_triangles(self, triangles):
+        """Return indices of nodes of this tri mesh which are within other triangles, in xy space.
+
+        arguments:
+            triangles (numpy float array of shape (N, 3, 2)): other triangles' vertices in 2D (last axis is x,y)
+
+        returns:
+            numpy int array (list-like) of shape (M, 3) where last axis is (triangle index, nj, ni)
+
+        note:
+            other triangles must be in the same crs as this tri mesh; they do not need to be equilateral
+        """
+
+        tp = triangles.copy()
+        if self.origin is not None:
+            tp[:] -= np.expand_dims(np.expand_dims(self.origin[:2], axis = 0), axis = 0)
+
+        # test odd node j rows of tri mesh points; note that vec function assumes a half 'cell' offset!
+        tn_b = vec.points_in_triangles_aligned_optimised(self.ni, self.nj // 2, self.t_side,
+                                                         2.0 * root_3_by_2 * self.t_side, tp)
+        tn_b[:, 1] *= 2
+        tn_b[:, 1] += 1
+
+        # shift other triangles' points so as to compensate for half cell offset, for even j node rows
+        offset = np.array((0.5, root_3_by_2), dtype = float) * self.t_side
+        tp[:] += np.expand_dims(np.expand_dims(offset, axis = 0), axis = 0)
+
+        # test even node j rows of tri mesh points
+        tn_a = vec.points_in_triangles_aligned_optimised(self.ni, (self.nj + 1) // 2, self.t_side,
+                                                         2.0 * root_3_by_2 * self.t_side, tp)
+        tn_a[:, 1] *= 2
+
+        return np.concatenate((tn_a, tn_b), axis = 0)
