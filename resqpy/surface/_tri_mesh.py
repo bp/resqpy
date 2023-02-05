@@ -73,7 +73,7 @@ class TriMesh(rqs.Mesh):
             if z_values is not None:
                 xyz[:, :, 2] = z_values
             if origin is not None:
-                xyz += np.expand_dims(np.expand_dims(origin, axis = -1), axis = -1)
+                xyz += np.expand_dims(np.expand_dims(origin, axis = 0), axis = 0)
             super().__init__(parent_model,
                              mesh_flavour = 'explicit',
                              xyz_values = xyz,
