@@ -34,14 +34,12 @@ def _cross_d(A: DeviceNDArray, B: DeviceNDArray, c: DeviceNDArray):
     c[0] = A[1] * B[2] - A[2] * B[1]
     c[1] = A[2] * B[0] - A[0] * B[2]
     c[2] = A[0] * B[1] - A[1] * B[0]
-    return
 
 
 @cuda.jit(device = True)
 def _negative_d(v: DeviceNDArray, nv: DeviceNDArray):
     for d in range(v.shape[0]):
         nv[d] = numba.float32(-1.) * v[d]
-    return
 
 
 @cuda.jit(device = True)
@@ -49,7 +47,6 @@ def _dot_d(v1: DeviceNDArray, v2: DeviceNDArray, prod: DeviceNDArray):
     prod[0] = 0.0
     for d in range(v1.shape[0]):
         prod[0] += v1[d] * v2[d]
-    return
 
 
 @cuda.jit(device = True)
@@ -58,7 +55,6 @@ def _norm_d(v: DeviceNDArray, n: DeviceNDArray):
     for dim in range(3):
         n[0] += v[dim]**2.
     n[0] = maths.sqrt(n[0])
-    return
 
 
 @cuda.jit
@@ -268,8 +264,6 @@ def project_polygons_to_surfaces(faces: DeviceNDArray, triangles: DeviceNDArray,
                     if return_triangles:
                         triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = triangle_num
 
-    return
-
 
 @cuda.jit
 def _diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, start, stop, inc):
@@ -298,7 +292,6 @@ def _diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, st
                         or (a[i,j,k-1] and (not fault_behind)) or (a[i,j,k+1] and (not fault_back)) \
                         or a[i,j,k] # already closed
                 cuda.syncthreads()
-    return
 
 
 def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
@@ -334,7 +327,6 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
     gridSize_i = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1],
                   (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
 
-    iteration = 0
     while True:
         # forward sweeps
         _diffuse_closed_faces[gridSize_k, blockSize](a, k_faces, j_faces, i_faces, 1, 2, 0, 0, grid_extent_kji[0],
@@ -356,7 +348,6 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         if a_count == a_count_before:
             break
         a_count_before = a_count
-        iteration += 1
 
     a = cupy.asnumpy(a[1:-1, 1:-1, 1:-1])
     cell_count = a.size
@@ -391,8 +382,8 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     feature_type = 'fault',
     progress_fn = None,
     return_properties = None,
-    iSurface = 0,
-    iGPU = 0,
+    i_surface = 0,
+    i_gpu = 0,
     gcs_list = None,
     props_dict_list = None,
 ):
@@ -424,8 +415,9 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         to trim first;
         organisational objects for the feature are created if needed
     """
+    # todo: update with extra arguments to keep functionality aligned with find_faces...regular_optimised
 
-    cuda.select_device(iGPU)  # bind device to thread
+    cuda.select_device(i_gpu)  # bind device to thread
     device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
 
     assert isinstance(grid, grr.RegularGrid)
@@ -457,14 +449,14 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         progress_fn(0.0)
 
     # prepare surfaces
-    surface = surfaces[iSurface]  # get surface under consideration
+    surface = surfaces[i_surface]  # get surface under consideration
     log.debug(f'intersecting surface {surface.title} with regular grid {grid.title} on a GPU')
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
     # print some information about the CUDA card
-    log.debug(f'{device.name} | Device Controller {iGPU} | ' +
+    log.debug(f'{device.name} | Device Controller {i_gpu} | ' +
               f'CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR} | ' +
-              f'Processing surface {iSurface}')
+              f'Processing surface {i_surface}')
     # get device attributes to calculate thread dimensions
     nSMs = device.MULTIPROCESSOR_COUNT  # number of SMs
     maxBlockSize = device.MAX_BLOCK_DIM_X / 2  # max number of threads per block in x-dim
@@ -697,7 +689,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         progress_fn(0.9)
 
     log.debug("converting face sets into grid connection set")
-    gcs_list[iSurface] = rqf.GridConnectionSet(
+    gcs_list[i_surface] = rqf.GridConnectionSet(
         grid.model,
         grid = grid,
         k_faces = k_faces,
@@ -719,7 +711,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[rgs_ff.where_true(i_faces)]
         all_tris = np.concatenate((k_tri_list, j_tri_list, i_tri_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
-        assert all_tris.shape == (gcs_list[iSurface].count,)
+        assert all_tris.shape == (gcs_list[i_surface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
@@ -728,7 +720,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         i_depths_list = np.empty((0,)) if i_depths is None else i_depths[rgs_ff.where_true(i_faces)]
         all_depths = np.concatenate((k_depths_list, j_depths_list, i_depths_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
-        assert all_depths.shape == (gcs_list[iSurface].count,)
+        assert all_depths.shape == (gcs_list[i_surface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
@@ -737,7 +729,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[rgs_ff.where_true(i_faces)]
         all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
-        assert all_offsets.shape == (gcs_list[iSurface].count,)
+        assert all_offsets.shape == (gcs_list[i_surface].count,)
 
     if return_flange_bool:
         flange_bool_uuid = surface.model.uuid(title = 'flange bool',
@@ -747,7 +739,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         flange_bool = rqp.Property(surface.model, uuid = flange_bool_uuid)
         flange_array = flange_bool.array_ref()
         all_flange = np.take(flange_array, all_tris)
-        assert all_flange.shape == (gcs_list[iSurface].count,)
+        assert all_flange.shape == (gcs_list[i_surface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
@@ -756,7 +748,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[rgs_ff.where_true(i_faces)]
         all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
-        assert all_normals.shape == (gcs_list[iSurface].count, 3)
+        assert all_normals.shape == (gcs_list[i_surface].count, 3)
 
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
@@ -768,26 +760,24 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     # if returning properties, construct dictionary
     if return_properties:
-        props_dict_list[iSurface] = {}
+        props_dict_list[i_surface] = {}
         if return_triangles:
-            props_dict_list[iSurface]['triangle'] = all_tris
+            props_dict_list[i_surface]['triangle'] = all_tris
         if return_depths:
-            props_dict_list[iSurface]['depth'] = all_depths
+            props_dict_list[i_surface]['depth'] = all_depths
         if return_offsets:
-            props_dict_list[iSurface]['offset'] = all_offsets
+            props_dict_list[i_surface]['offset'] = all_offsets
         if return_normal_vectors:
-            props_dict_list[iSurface]['normal vector'] = all_normals
+            props_dict_list[i_surface]['normal vector'] = all_normals
         if return_bisector:
-            props_dict_list[iSurface]['grid bisector'] = (bisector, is_curtain)
+            props_dict_list[i_surface]['grid bisector'] = (bisector, is_curtain)
         if return_flange_bool:
-            props_dict_list[iSurface]['flange bool'] = all_flange
-
-    return
+            props_dict_list[i_surface]['flange bool'] = all_flange
 
 
 def find_faces_to_represent_surface_regular_cuda_mgpu(
     grid,
-    _surfaces,
+    surface,
     name,
     title = None,
     agitate = False,
@@ -800,7 +790,7 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
     arguments:
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
            must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
-        surface (Surface or list(Surface)): the surface to be intersected with the grid
+        surface (Surface or list(Surface)): the surface(s) to be intersected with the grid
         name (str): the feature name to use in the grid connection set
         title (str, optional): the citation title to use for the grid connection set; defaults to name
         agitate (bool, default False): if True, the points of the surface are perturbed by a small random
@@ -824,38 +814,38 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
         organisational objects for the feature are created if needed
     """
 
-    surfaces = _surfaces if isinstance(_surfaces, list) else [_surfaces]
+    surfaces = surface if isinstance(surface, list) else [surface]
 
-    N_SURFS = len(surfaces)
-    N_GPUs = len(cuda.list_devices())
-    log.debug("distributing %d surface between %d GPUs" % (N_SURFS, N_GPUs))
-    gcs_list = [None] * N_SURFS
-    props_dict_list = [None] * N_SURFS
-    threads = [None] * N_GPUs
-    for iSurface in range(N_SURFS):
-        threads[iSurface % N_GPUs] = threading.Thread(target = find_faces_to_represent_surface_regular_cuda_sgpu,
-                                                      args = (
-                                                          grid,
-                                                          surfaces,
-                                                          name,
-                                                          title,
-                                                          agitate,
-                                                          feature_type,
-                                                          progress_fn,
-                                                          return_properties,
-                                                          iSurface,
-                                                          iSurface % N_GPUs,
-                                                          gcs_list,
-                                                          props_dict_list,
-                                                      ))
-        threads[iSurface % N_GPUs].start()  # start parallel run
+    n_surfs = len(surfaces)
+    n_gpus = len(cuda.list_devices())
+    log.debug("distributing %d surface between %d GPUs" % (n_surfs, n_gpus))
+    gcs_list = [None] * n_surfs
+    props_dict_list = [None] * n_surfs
+    threads = [None] * n_gpus
+    for i_surface in range(n_surfs):
+        threads[i_surface % n_gpus] = threading.Thread(target = find_faces_to_represent_surface_regular_cuda_sgpu,
+                                                       args = (
+                                                           grid,
+                                                           surfaces,
+                                                           name,
+                                                           title,
+                                                           agitate,
+                                                           feature_type,
+                                                           progress_fn,
+                                                           return_properties,
+                                                           i_surface,
+                                                           i_surface % n_gpus,
+                                                           gcs_list,
+                                                           props_dict_list,
+                                                       ))
+        threads[i_surface % n_gpus].start()  # start parallel run
         # if this is the last GPU available or we're at the last array ...
-        if (iSurface + 1) % N_GPUs == 0 or (iSurface + 1) == N_SURFS:
+        if (i_surface + 1) % n_gpus == 0 or (i_surface + 1) == n_surfs:
             # ... sync all the GPUs being used
-            for iGPU in range(iSurface % N_GPUs + 1):  # up to the number of GPUs being used
-                threads[iGPU].join()  # rejoin the main thread (syncthreads)
+            for i_gpu in range(i_surface % n_gpus + 1):  # up to the number of GPUs being used
+                threads[i_gpu].join()  # rejoin the main thread (syncthreads)
 
-    if N_SURFS > 1:
+    if n_surfs > 1:
         return (gcs_list, props_dict_list) if return_properties else gcs_list
     else:
         return (gcs_list[0], props_dict_list[0]) if return_properties else gcs_list[0]

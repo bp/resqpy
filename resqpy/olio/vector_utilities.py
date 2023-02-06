@@ -745,25 +745,6 @@ def mesh_points_in_triangle(triangle: np.ndarray,
     return triangle_points
 
 
-def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
-    """Calculates which points are within which polygons in 2D.
-
-    arguments:
-        points (np.ndarray): array of the points in 2D.
-        polygons (np.ndarray): array of each polygons' vertices in 2D.
-        points_xlen (int): the number of unique x coordinates.
-
-    returns:
-        polygons_points (np.ndarray): 2D array containing only the points within each polygon,
-            with each row being the polygon number, points y index, and points x index.
-
-    note:
-        this function now calls the numba just-in-time compiled version of the function instead
-        of using a multiprocessing pool
-    """
-    return points_in_polygons(points, polygons, points_xlen)
-
-
 @njit
 def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
