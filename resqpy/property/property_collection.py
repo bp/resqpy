@@ -650,29 +650,26 @@ class PropertyCollection():
         """
         return [self.model.uuid_for_part(p) for p in self.dict.keys()]
 
-    def selective_parts_list(
-            self,
-            realization = None,
-            support = None,  # maintained for backward compatibility
-            support_uuid = None,
-            grid = None,  # maintained for backward compatibility
-            continuous = None,
-            points = None,
-            count = None,
-            indexable = None,
-            property_kind = None,
-            facet_type = None,
-            facet = None,
-            citation_title = None,
-            title_mode = None,
-            time_series_uuid = None,
-            time_index = None,
-            uom = None,
-            string_lookup_uuid = None,
-            categorical = None,
-            related_uuid = None,
-            title = None,
-            const_value = None):
+    def selective_parts_list(self,
+                             realization = None,
+                             support_uuid = None,
+                             continuous = None,
+                             points = None,
+                             count = None,
+                             indexable = None,
+                             property_kind = None,
+                             facet_type = None,
+                             facet = None,
+                             citation_title = None,
+                             title_mode = None,
+                             time_series_uuid = None,
+                             time_index = None,
+                             uom = None,
+                             string_lookup_uuid = None,
+                             categorical = None,
+                             related_uuid = None,
+                             title = None,
+                             const_value = None):
         """Returns a list of parts filtered by those arguments which are not None.
 
         All arguments are optional.
@@ -685,17 +682,8 @@ class PropertyCollection():
         returns:
            list of part names (strings) of those parts which match any selection arguments which are not None
 
-        note:
-           the support and grid keyword arguments are maintained for backward compatibility;
-           support_uuid takes precedence over support and both take precedence over grid
-
         :meta common:
         """
-
-        if support is None:
-            support = grid
-        if support_uuid is None and support is not None:
-            support_uuid = support.uuid
 
         if title and not citation_title:
             citation_title = title
@@ -722,31 +710,28 @@ class PropertyCollection():
         parts_list = temp_collection.parts()
         return parts_list
 
-    def singleton(
-            self,
-            realization = None,
-            support = None,  # for backward compatibility
-            support_uuid = None,
-            grid = None,  # for backward compatibility
-            uuid = None,
-            continuous = None,
-            points = None,
-            count = None,
-            indexable = None,
-            property_kind = None,
-            facet_type = None,
-            facet = None,
-            citation_title = None,
-            time_series_uuid = None,
-            time_index = None,
-            uom = None,
-            string_lookup_uuid = None,
-            categorical = None,
-            multiple_handling = 'exception',
-            title = None,
-            title_mode = None,
-            related_uuid = None,
-            const_value = None):
+    def singleton(self,
+                  realization = None,
+                  support_uuid = None,
+                  uuid = None,
+                  continuous = None,
+                  points = None,
+                  count = None,
+                  indexable = None,
+                  property_kind = None,
+                  facet_type = None,
+                  facet = None,
+                  citation_title = None,
+                  time_series_uuid = None,
+                  time_index = None,
+                  uom = None,
+                  string_lookup_uuid = None,
+                  categorical = None,
+                  multiple_handling = 'exception',
+                  title = None,
+                  title_mode = None,
+                  related_uuid = None,
+                  const_value = None):
         """Returns a single part selected by those arguments which are not None.
 
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
@@ -764,11 +749,6 @@ class PropertyCollection():
 
         :meta common:
         """
-
-        if support is None:
-            support = grid
-        if support_uuid is None and support is not None:
-            support_uuid = support.uuid
 
         temp_collection = rqp_c.selective_version_of_collection(self,
                                                                 realization = realization,
@@ -794,41 +774,35 @@ class PropertyCollection():
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
-        if len(parts_list) > 1 and multiple_handling != 'exception' and support is not None:
-            if support is not None:
-                parts_list = [support.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
-            elif self.model is not None:
-                parts_list = [self.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
+        if len(parts_list) > 1 and multiple_handling != 'exception' and self.model is not None:
+            parts_list = [self.model.part(parts_list = parts_list, multiple_handling = multiple_handling)]
         assert len(parts_list) == 1, 'More than one property part matches selection criteria'
         return parts_list[0]
 
-    def single_array_ref(
-            self,
-            realization = None,
-            support = None,  # for backward compatibility
-            support_uuid = None,
-            grid = None,  # for backward compatibility
-            uuid = None,
-            continuous = None,
-            points = None,
-            count = None,
-            indexable = None,
-            property_kind = None,
-            facet_type = None,
-            facet = None,
-            citation_title = None,
-            time_series_uuid = None,
-            time_index = None,
-            uom = None,
-            string_lookup_uuid = None,
-            categorical = None,
-            dtype = None,
-            masked = False,
-            exclude_null = False,
-            multiple_handling = 'exception',
-            title = None,
-            title_mode = None,
-            related_uuid = None):
+    def single_array_ref(self,
+                         realization = None,
+                         support_uuid = None,
+                         uuid = None,
+                         continuous = None,
+                         points = None,
+                         count = None,
+                         indexable = None,
+                         property_kind = None,
+                         facet_type = None,
+                         facet = None,
+                         citation_title = None,
+                         time_series_uuid = None,
+                         time_index = None,
+                         uom = None,
+                         string_lookup_uuid = None,
+                         categorical = None,
+                         dtype = None,
+                         masked = False,
+                         exclude_null = False,
+                         multiple_handling = 'exception',
+                         title = None,
+                         title_mode = None,
+                         related_uuid = None):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -842,7 +816,7 @@ class PropertyCollection():
            title (string, optional): synonym for citation_title argument
 
         Other optional arguments:
-        realization, support, support_uuid, grid, continuous, points, count, indexable, property_kind, facet_type, facet,
+        realization, support_uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
         citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid:
 
         For each of these arguments: if None, then all members of collection pass this filter;
@@ -856,16 +830,9 @@ class PropertyCollection():
         notes:
            returns None if no parts match; if more than one part matches multiple_handling argument determines behaviour;
            multiple calls will return the same cached array so calling code should copy if duplication is needed;
-           support and grid arguments are for backward compatibilty: support_uuid takes precedence over support and
-           both take precendence over grid
 
         :meta common:
         """
-
-        if support is None:
-            support = grid
-        if support_uuid is None and support is not None:
-            support_uuid = support.uuid
 
         part = self.singleton(realization = realization,
                               support_uuid = support_uuid,
@@ -2099,20 +2066,6 @@ class PropertyCollection():
 
         return resqml_a
 
-    def cached_normalized_part_array_ref(self,
-                                         part,
-                                         masked = False,
-                                         use_logarithm = False,
-                                         discrete_cycle = None,
-                                         trust_min_max = False):
-        """DEPRECATED: replaced with normalized_part_array() method."""
-
-        return self.normalized_part_array(part,
-                                          masked = masked,
-                                          use_logarithm = use_logarithm,
-                                          discrete_cycle = discrete_cycle,
-                                          trust_min_max = trust_min_max)
-
     def normalized_part_array(self,
                               part,
                               masked = False,
@@ -2320,7 +2273,12 @@ class PropertyCollection():
         self.remove_cached_imported_arrays()
         self.remove_cached_part_arrays()
 
-    def write_hdf5_for_imported_list(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None):
+    def write_hdf5_for_imported_list(self,
+                                     file_name = None,
+                                     mode = 'a',
+                                     expand_const_arrays = False,
+                                     dtype = None,
+                                     use_int32 = None):
         """Create or append to an hdf5 file, writing datasets for the imported arrays.
 
         arguments:
@@ -2330,7 +2288,11 @@ class PropertyCollection():
               the hdf5 file and the same argument should be used when creating the xml
            dtype (numpy dtype, optional): the required numpy element type to use when writing to hdf5;
               eg. np.float16, np.float32, np.float64, np.uint8, np.int16, np.int32, np.int64 etc.;
-              defaults to the dtype of each individual numpy array in the imported list
+              defaults to the dtype of each individual numpy array in the imported list except for int64
+              for which the use_int32 controls whether to write as 32 bit data
+           use_int32 (bool, optional): if dtype is None, this controls whether 64 bit int arrays are written
+              as 32 bit; if None, the system default is to write as 32 bit; if True, 32 bit is used; if
+              False, 64 bit data is written; ignored if dtype is not None
 
         :meta common:
         """
@@ -2354,7 +2316,7 @@ class PropertyCollection():
                 cached_name = entry[3]
             tail = 'points_patch0' if entry[18] else 'values_patch0'
             h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
-        h5_reg.write(file = file_name, mode = mode)
+        h5_reg.write(file = file_name, mode = mode, use_int32 = use_int32)
 
     def write_hdf5_for_part(self, part, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing dataset for the specified part."""

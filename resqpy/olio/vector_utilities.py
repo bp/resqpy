@@ -12,9 +12,8 @@ log = logging.getLogger(__name__)
 
 import math as maths
 import numpy as np
-import multiprocessing as m_p
 import numba  # type: ignore
-from numba import njit
+from numba import njit  # type: ignore
 from typing import Tuple, Optional
 
 
@@ -566,12 +565,12 @@ def points_in_triangles(p, t, da, projection = 'xy', edged = False):
 def point_in_polygon(x, y, polygon):
     """Calculates if a point in within a polygon in 2D.
     
-    Args:
+    arguments:
         x (float): the point's x-coordinate.
         y (float): the point's y-coordinate.
         polygon (np.ndarray): array of the polygon's vertices in 2D.
     
-    Returns:
+    returns:
         inside (bool): True if point is within the polygon, False otherwise.
     """
     polygon_vertices = len(polygon)
@@ -597,12 +596,12 @@ def point_in_polygon(x, y, polygon):
 def point_in_triangle(x, y, triangle):
     """Calculates if a point in within a triangle in 2D.
 
-    Args:
+    arguments:
         x (float): the point's x-coordinate.
         y (float): the point's y-coordinate.
         triangle (np.ndarray): array of the triangles's vertices in 2D, of shape (3, 2)
 
-    Returns:
+    returns:
         inside (bool): True if point is within the polygon, False otherwise.
     """
     p0x = triangle[0, 0]
@@ -668,22 +667,22 @@ def point_in_triangle(x, y, triangle):
 def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
 
-    Args:
-        points (np.ndarray): array of the points in 2D.
-        polygon (np.ndarray): array of the polygon's vertices in 2D.
-        points_xlen (int): the number of unique x coordinates.
-        polygon_num (int): the polygon number, default is 0.
+    arguments:
+        points (np.ndarray): array of shape (N, 2 or 3), of the points in 2D (xy, any z values are ignored)
+        polygon (np.ndarray): list-like array of the polygon's vertices in 2D
+        points_xlen (int): the original I extent of the now flattened points, use 1 if not applicable
+        polygon_num (int): the polygon number, default is 0, for copying to output
 
-    Returns:
-        polygon_points (np.ndarray): 2D array containing only the points within the polygon,
-            with each row being the polygon number, points y index, and points x index.
+    returns:
+        polygon_points (np.ndarray): list-like 2D array containing only the points within the polygon,
+            with each row being the polygon number (as input), points J index, and points I index
     """
     polygon_points = np.empty((0, 3), dtype = numba.int32)
     for point_num in numba.prange(len(points)):
         p = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
         if p is True:
-            yi, xi = divmod(point_num, points_xlen)
-            polygon_points = np.append(polygon_points, np.array([[polygon_num, yi, xi]], dtype = numba.int32), axis = 0)
+            j, i = divmod(point_num, points_xlen)
+            polygon_points = np.append(polygon_points, np.array([[polygon_num, j, i]], dtype = numba.int32), axis = 0)
 
     return polygon_points
 
@@ -692,13 +691,13 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
 def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: int, triangle_num: int = 0) -> np.ndarray:
     """Calculates which points are within a triangle in 2D.
 
-    Args:
+    arguments:
         points (np.ndarray): array of the points in 2D.
         triangle (np.ndarray): array of the triangle's vertices in 2D, shape (3, 2).
         points_xlen (int): the number of unique x coordinates.
         triangle_num (int): the triangle number, default is 0.
 
-    Returns:
+    returns:
         triangle_points (np.ndarray): 2D array containing only the points within the triangle,
             with each row being the triangle number, points y index, and points x index.
     """
@@ -721,13 +720,13 @@ def mesh_points_in_triangle(triangle: np.ndarray,
                             triangle_num: int = 0) -> np.ndarray:
     """Calculates which implicit mesh points are within a triangle in 2D for normalised triangle.
 
-    Args:
+    arguments:
         triangle (np.ndarray): array of the triangle's vertices in 2D, shape (3, 2).
         points_xlen (int): the number of unique x coordinates, starting at 0.0, spacing 1.0.
         points_ylen (int): the number of unique y coordinates, starting at 0.0, spacing 1.0.
         triangle_num (int): the triangle number, default is 0.
 
-    Returns:
+    returns:
         triangle_points (np.ndarray): 2D array containing only the points within the triangle,
             with each row being the triangle number, points y index, and points x index.
     """
@@ -746,35 +745,16 @@ def mesh_points_in_triangle(triangle: np.ndarray,
     return triangle_points
 
 
-def points_in_polygons_parallel(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
-    """Calculates which points are within which polygons in 2D.
-
-    Args:
-        points (np.ndarray): array of the points in 2D.
-        polygons (np.ndarray): array of each polygons' vertices in 2D.
-        points_xlen (int): the number of unique x coordinates.
-
-    Returns:
-        polygons_points (np.ndarray): 2D array containing only the points within each polygon,
-            with each row being the polygon number, points y index, and points x index.
-    """
-    args = [(points, polygons[polygon_num], points_xlen, polygon_num) for polygon_num in range(len(polygons))]
-    with m_p.Pool() as p:
-        r = p.starmap(points_in_polygon, args)
-
-    return np.vstack(r)
-
-
 @njit
 def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
 
-    Args:
+    arguments:
         points (np.ndarray): array of the points in 2D.
         polygons (np.ndarray): array of each polygons' vertices in 2D.
         points_xlen (int): the number of unique x coordinates.
 
-    Returns:
+    returns:
         polygons_points (np.ndarray): 2D array (list-like) containing only the points within each polygon,
             with each row being the polygon number, points y index, and points x index.
     """
@@ -790,12 +770,12 @@ def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: in
 def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which triangles in 2D.
 
-    Args:
+    arguments:
         points (np.ndarray): array of the points in 2D.
         triangles (np.ndarray): array of each triangles' vertices in 2D, shape (N, 3, 2).
         points_xlen (int): the number of unique x coordinates.
 
-    Returns:
+    returns:
         triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
             with each row being the triangle number, points y index, and points x index.
     """
@@ -811,11 +791,11 @@ def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_x
 def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Returns coordinate matrices from coordinate vectors x and y.
 
-    Args:
+    arguments:
         x (np.ndarray): 1d array of x coordinates.
         y (np.ndarray): 1d array of y coordinates.
 
-    Returns:
+    returns:
         Tuple containing:
 
             - xx (np.ndarray): the elements of x repeated to fill the matrix along the first dimension.
@@ -879,10 +859,10 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
 def triangle_box(triangle: np.ndarray) -> Tuple[float, float, float, float]:
     """Finds the minimum and maximum x and y values of a single traingle.
 
-    Args:
+    arguments:
         triangle (np.ndarray): array of the traingle's vertices' x and y coordinates.
 
-    Returns:
+    returns:
         Tuple containing:
 
             - (float): minimum x value.
@@ -901,12 +881,12 @@ def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> 
     
     If the x value given is not within the x values of the points, returns None.
 
-    Args:
+    arguments:
         x (float): x value at which to determine the y value.
         x_values (np.ndarray): the x coordinates of point 1 and point 2.
         y_values (np.ndarray): the y coordinates of point 1 and point 2.
 
-    Returns:
+    returns:
         y (Optional[float]): y value of the straight line between point 1 and point 2,
             evaluated at x. If x is outside the x_values range, y is None.
     """
@@ -922,7 +902,7 @@ def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> 
 def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
-    Args:
+    arguments:
         nx (int): number of points in x axis
         ny (int): number of points in y axis
         dx (float): spacing of points in x axis (first point is at half dx)
@@ -930,7 +910,7 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
         triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2).
         points_xlen (int): the number of unique x coordinates.
 
-    Returns:
+    returns:
         triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
             with each row being the triangle number, points y index, and points x index.
     """

@@ -119,7 +119,6 @@ class RelPerm(DataFrame):
 
         super().__init__(model,
                          uuid = uuid,
-                         support_root = None,
                          df = df,
                          uom_list = uom_list,
                          realization = realization,

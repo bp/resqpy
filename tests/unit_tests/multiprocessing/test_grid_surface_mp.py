@@ -1,9 +1,9 @@
-from resqpy.multiprocessing.wrappers.grid_surface_mp import find_faces_to_represent_surface_regular_wrapper
 from resqpy.model import Model
 from typing import Tuple
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface
-from resqpy.multiprocessing.multiprocessing import rm_tree
+from resqpy.multi_processing.wrappers.grid_surface_mp import find_faces_to_represent_surface_regular_wrapper
+from resqpy.multi_processing._multiprocessing import rm_tree
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
 

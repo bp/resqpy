@@ -94,7 +94,7 @@ def test_delaunay_triangulation(example_model_and_crs):
     # make another PointSet as random points within a closed polyline
     vertices = np.array(
         ((50.0, 99.0, 13.0), (85.0, 60.0, 17.5), (62.7, 11.0, 10.0), (33.3, 15.3, 19.2), (12.8, 57.8, 15.0)))
-    polygon = rql.Polyline(model, set_crs = crs.uuid, set_bool = True, set_coord = vertices, title = 'the pentagon')
+    polygon = rql.Polyline(model, set_crs = crs.uuid, is_closed = True, set_coord = vertices, title = 'the pentagon')
     polygon.write_hdf5()
     polygon.create_xml()
     ps2 = resqpy.surface.PointSet(model,
@@ -562,7 +562,7 @@ def test_pointset_from_polyline(example_model_and_crs):
                                   set_coord = coords,
                                   title = 'Polylines',
                                   set_crs = crs.uuid,
-                                  set_bool = False)
+                                  is_closed = False)
     lines.write_hdf5()
     lines.create_xml()
     model.store_epc()
@@ -593,13 +593,13 @@ def test_pointset_from_polylineset(example_model_and_crs):
                                   title = 'Polyline1',
                                   set_coord = coords1,
                                   set_crs = crs.uuid,
-                                  set_bool = False)
+                                  is_closed = False)
 
     line2 = resqpy.lines.Polyline(parent_model = model,
                                   title = 'Polyline2',
                                   set_coord = coords2,
                                   set_crs = crs.uuid,
-                                  set_bool = False)
+                                  is_closed = False)
 
     lines = resqpy.lines.PolylineSet(parent_model = model, title = 'Polylines', polylines = [line1, line2])
     lines.write_hdf5()

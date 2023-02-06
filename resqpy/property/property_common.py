@@ -497,36 +497,33 @@ def _guess_uom_gor_ogr(property_kind, from_crs):
     return None
 
 
-def selective_version_of_collection(
-        collection,
-        realization = None,
-        support_uuid = None,
-        grid = None,  # for backward compatibility
-        uuid = None,
-        continuous = None,
-        points = None,
-        count = None,
-        indexable = None,
-        property_kind = None,
-        facet_type = None,
-        facet = None,
-        citation_title = None,
-        time_series_uuid = None,
-        time_index = None,
-        uom = None,
-        string_lookup_uuid = None,
-        categorical = None,
-        title = None,
-        title_mode = None,
-        related_uuid = None,
-        const_value = None):
+def selective_version_of_collection(collection,
+                                    realization = None,
+                                    support_uuid = None,
+                                    uuid = None,
+                                    continuous = None,
+                                    points = None,
+                                    count = None,
+                                    indexable = None,
+                                    property_kind = None,
+                                    facet_type = None,
+                                    facet = None,
+                                    citation_title = None,
+                                    time_series_uuid = None,
+                                    time_index = None,
+                                    uom = None,
+                                    string_lookup_uuid = None,
+                                    categorical = None,
+                                    title = None,
+                                    title_mode = None,
+                                    related_uuid = None,
+                                    const_value = None):
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:
        collection (PropertyCollection): an existing collection from which a subset will be returned as a new object
        realization (int, optional): realization number to filter on
        support_uuid (UUID or str, optional): UUID of supporting representation, to filter on
-       grid (Grid, DEPRECATED): for backward compatibility, use support_uuid instead
        uuid (UUID or str, optional): a property uuid to select a singleton property from the collection
        continuous (bool, optional): if True, continuous properties are selected; if False, discrete and categorical
        points (bool, optional): if True, points properties are selected; if False, they are excluded
@@ -561,15 +558,12 @@ def selective_version_of_collection(
        finally, the filters for all the attributes must be passed for a given member
        to be included in the returned collection; title is a synonym for the citation_title argument;
        related_uuid will pass if any relationship exists ('hard' or 'soft');
-       the grid keyword argument is maintained for backward compatibility: support_uuid argument takes precedence;
        the categorical boolean argument can be used to select only categorical (or non-categorical) properties,
        even though this is not explicitly held as a field in the internal dictionary
     """
 
     assert collection is not None
     view = rqp.PropertyCollection()
-    if support_uuid is None and grid is not None:
-        support_uuid = grid.uuid
     if support_uuid is not None:
         view.set_support(support_uuid = support_uuid, model = collection.model)
     if realization is not None:
@@ -778,9 +772,17 @@ def property_parts(model,
             return True
         assert facet_type and facet is not None
         facets = rqet.list_of_tag(root, 'Facet')
+        if facet_type == 'none' and facets:
+            return False
         for f_node in facets:
             if rqet.find_tag_text(f_node, 'Facet') == facet_type:
+                if facet == 'none':
+                    return False
+                if facet == '*':
+                    return True
                 return rqet.find_tag_text(f_node, 'Value') == str(facet)
+        if facet == 'none':
+            return True
         return False
 
     if not obj_type.endswith('Property'):

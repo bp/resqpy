@@ -79,7 +79,8 @@ def _write_grid(epc_file,
                 geometry = True,
                 time_series_uuid = None,
                 string_lookup_uuid = None,
-                extra_metadata = {}):
+                extra_metadata = {},
+                use_int32 = None):
     """Append to or create epc and h5 files, with grid and optionally property collection.
 
     arguments:
@@ -102,6 +103,8 @@ def _write_grid(epc_file,
           objects are required rather than categorical
        extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to any new
           properties
+       use_int32 (bool, optional): if None, system default of True is used; if True, int64 property arrays are
+          written to hdf5 as int32; if False, int64 data is written
 
     returns:
        list of uuid.UUID, being the uuids of property parts added from the property_collection, if any
@@ -155,7 +158,11 @@ def _write_grid(epc_file,
     hdf5_file = model.h5_file_name(uuid = ext_uuid, file_must_exist = (mode == 'a'))
     if geometry or collection is not None:
         log.debug('writing grid arrays to hdf5 file')
-        grid.write_hdf5_from_caches(hdf5_file, mode = mode, geometry = geometry, imported_properties = collection)
+        grid.write_hdf5_from_caches(hdf5_file,
+                                    mode = mode,
+                                    geometry = geometry,
+                                    imported_properties = collection,
+                                    use_int32 = use_int32)
         model.h5_release()
     if ext_uuid is None:
         ext_uuid = model.h5_uuid()

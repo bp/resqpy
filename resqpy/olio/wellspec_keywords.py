@@ -341,14 +341,14 @@ def get_well_pointers(
 ) -> Dict[str, List[Tuple[int, Union[None, str]]]]:
     """Gets the file locations of each well in the wellspec file for optimised processing of the data.
 
-    Args:
+    arguments:
         wellspec_file (str): file path of ascii input file containing wellspec keywords.
         usa_date_format (bool): if True, the date taken from the wellspec file is in the format
             MM/DD/YYYY, otherwise it is in the format DD/MM/YYYY.
         no_date_replacement (datetime.date, optional): if there is no date given for a well, this
             date is used.
 
-    Returns:
+    returns:
         well_pointers (Dict[str, List[Tuple[int, None/str]]]): mapping each well name found in
             the wellspec file to a list of their file locations and dates as tuples. If there is no
             date before the well data in the file, the date is None. If there is a FileNotFoundError
@@ -428,7 +428,7 @@ def get_well_data(
 
     The pointer argument is used to go to the file location where the well dataset is located.
 
-    Args:
+    arguments:
         file (TextIO): the opened wellspec file object.
         well_name (str): name of the well.
         pointer (int): the file object's start position of the well data represented as number of
@@ -543,7 +543,7 @@ def get_all_well_data(
     This differs from the get_well_data function in that here multiple datasets for a well are
     combined into a single dataframe if they exist.
 
-    Args:
+    arguments:
         file (TextIO): the opened wellspec file object.
         well_name (str): name of the well.
         pointers (List[Tuple[int, None/str]]): a list of the file object's start position of the
@@ -563,7 +563,7 @@ def get_all_well_data(
         last_data_only (bool): If True, only the last entry of well data in the file are used in the
             dataframe, otherwise all of the well data are used at different times.
 
-    Returns:
+    returns:
         Pandas dataframe of all well data for a specific well name or None if all the data are NA.
     """
     if last_data_only:

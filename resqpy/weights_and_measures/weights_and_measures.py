@@ -87,15 +87,15 @@ CASE_INSENSITIVE_UOMS = {'m', 'ft', 'm3', 'ft3', 'm3/m3', 'ft3/ft3', 'bbl', 'bar
 def rq_uom(units, quantity = None):
     """Returns RESQML uom string equivalent to units.
 
-    Args:
+    arguments:
        units (str): unit to coerce
        quantity (str, optional): if given, raise an exception if the uom is not supported
           for this quantity
 
-    Returns:
+    returns:
        str: unit of measure
 
-    Raises:
+    raises:
        InvalidUnitError: if units cannot be coerced into RESQML units for the given quantity
     """
     if not units:
@@ -117,7 +117,7 @@ def rq_uom(units, quantity = None):
 def convert(x, unit_from, unit_to, quantity = None, inplace = False):
     """Convert value between two compatible units.
 
-    Args:
+    arguments:
        x (numeric or np.array): value(s) to convert
        unit_from (str): resqml uom
        unit_to (str): resqml uom
@@ -125,10 +125,10 @@ def convert(x, unit_from, unit_to, quantity = None, inplace = False):
           by this quantity
        inplace (bool): if True, convert arrays in-place. Else, return new value
 
-    Returns:
+    returns:
        Converted value(s)
 
-    Raises:
+    raises:
        InvalidUnitError: if units cannot be coerced into RESQML units
        IncompatibleUnitsError: if units do not have compatible base units
     """
@@ -173,13 +173,13 @@ def convert(x, unit_from, unit_to, quantity = None, inplace = False):
 def valid_uoms(quantity = None, return_attributes = False):
     """Return set of valid RESQML units of measure.
 
-    Args:
+    arguments:
        quantity (str): If given, filter to uoms supported by this quanitity.
        return_attributes (bool): If True, return a dict of all uoms and their
           attributes, such as the full name and dimension. Else, simply return
           the set of valid uoms.
 
-    Returns
+    returns
        set or dict
     """
     uoms = _properties_data()['units']
@@ -197,12 +197,12 @@ def valid_uoms(quantity = None, return_attributes = False):
 def valid_quantities(return_attributes = False):
     """Return set of valid RESQML quantities.
 
-    Args:
+    arguments:
        return_attributes (bool): If True, return a dict of all quantities and their
           attributes, such as the supported units of measure. Else, simply return
           the set of valid properties.
 
-    Returns
+    returns
        set or dict
     """
     quantities = _properties_data()['quantities']

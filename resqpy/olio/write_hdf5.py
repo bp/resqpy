@@ -29,7 +29,7 @@ class H5Register():
         self.hdf5_path_dict = {}  # dictionary optionally mapping from (object_uuid, group_tail) to hdf5 internal path
         self.model = model
 
-    def register_dataset(self, object_uuid, group_tail, a, dtype = None, hdf5_path = None, copy = False):
+    def register_dataset(self, object_uuid, group_tail, a, dtype = None, hdf5_internal_path = None, copy = False):
         """Register an array to be included as a dataset in the hdf5 file.
 
         arguments:
@@ -38,8 +38,8 @@ class H5Register():
               uuid elements)
            a (numpy array): the dataset (array) to be registered for writing
            dtype (type or string): the required type of the individual elements within the dataset
-           hdf5_path (string, optional): if present, a full hdf5 internal path to use instead of
-              the default generated from the uuid
+           hdf5_internal_path (string, optional): if present, a full hdf5 internal path to use
+              instead of the default generated from the uuid
            copy (boolean, default False): if True, a copy of the array will be made at the time of
               registering, otherwise changes made to the array before the write() method is called
               are likely to be in the data that is written
@@ -68,10 +68,10 @@ class H5Register():
         if (object_uuid, group_tail) in self.dataset_dict.keys():
             pass  # todo: warn of re-registration?
         self.dataset_dict[(object_uuid, group_tail)] = (a, dtype)
-        if hdf5_path:
-            self.hdf5_path_dict[(object_uuid, group_tail)] = hdf5_path
+        if hdf5_internal_path:
+            self.hdf5_path_dict[(object_uuid, group_tail)] = hdf5_internal_path
 
-    def write_fp(self, fp):
+    def write_fp(self, fp, use_int32 = None):
         """Write or append to an hdf5 file, writing the pre-registered datasets (arrays).
 
         arguments:
@@ -87,22 +87,24 @@ class H5Register():
         # note: in resqml, an established hdf5 file has a uuid and should therefore be immutable
         #       this function allows appending to any hdf5 file; calling code should set a new uuid when needed
         assert (fp is not None)
+        if use_int32 is None:
+            use_int32 = write_int_as_int32
         for (object_uuid, group_tail) in self.dataset_dict.keys():
             if (object_uuid, group_tail) in self.hdf5_path_dict.keys():
-                hdf5_path = self.hdf5_path_dict[(object_uuid, group_tail)]
+                internal_path = self.hdf5_path_dict[(object_uuid, group_tail)]
             else:
-                hdf5_path = resqml_path_head + str(object_uuid) + '/' + group_tail
+                internal_path = resqml_path_head + str(object_uuid) + '/' + group_tail
             (a, dtype) = self.dataset_dict[(object_uuid, group_tail)]
             if dtype is None:
                 dtype = a.dtype
-                if write_int_as_int32 and str(dtype) == 'int64':
+                if use_int32 and str(dtype) == 'int64':
                     dtype = 'int32'
             if write_bool_as_int8 and str(dtype).lower().startswith('bool'):
                 dtype = 'int8'
-            # log.debug('Writing hdf5 dataset ' + hdf5_path + ' of size ' + str(a.size) + ' type ' + str(dtype))
-            fp.create_dataset(hdf5_path, data = a, dtype = dtype)
+            # log.debug('Writing hdf5 dataset ' + internal_path + ' of size ' + str(a.size) + ' type ' + str(dtype))
+            fp.create_dataset(internal_path, data = a, dtype = dtype)
 
-    def write(self, file = None, mode = 'w', release_after = True):
+    def write(self, file = None, mode = 'w', release_after = True, use_int32 = None):
         """Create or append to an hdf5 file, writing the pre-registered datasets (arrays).
 
         arguments:
@@ -111,6 +113,10 @@ class H5Register():
               functions
            mode (string, default 'w'): the mode to open the file in; only relevant if file is a path;
               must be 'w' or 'a' for (over)write or append
+           release_after (bool, default True): if True, h5_release() is called after the write
+           use_int32 (bool, optional): if True, int64 arrays will be written as int32; if None,
+              global default will be used (currently True); if False, int64 arrays will be
+              written as such
 
         returns:
            None
@@ -129,7 +135,7 @@ class H5Register():
         if mode == 'a' and isinstance(file, str) and not os.path.exists(file):
             mode = 'w'
         assert isinstance(file, h5py._hl.files.File)
-        self.write_fp(file)
+        self.write_fp(file, use_int32 = use_int32)
         if release_after:
             self.model.h5_release()
 

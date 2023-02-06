@@ -12,7 +12,7 @@ from uuid import UUID
 import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.well as rqw
-import resqpy.multiprocessing as rqmp
+import resqpy.multi_processing as rqmp
 
 
 def blocked_well_from_trajectory_wrapper(

@@ -459,7 +459,8 @@ class Grid(BaseResqpy):
                                imported_properties = None,
                                write_active = None,
                                stratigraphy = True,
-                               expand_const_arrays = False):
+                               expand_const_arrays = False,
+                               use_int32 = None):
         """Create or append to an hdf5 file.
         
         Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
@@ -469,7 +470,7 @@ class Grid(BaseResqpy):
         # xml is not created here for property objects
 
         _write_hdf5_from_caches(self, file, mode, geometry, imported_properties, write_active, stratigraphy,
-                                expand_const_arrays)
+                                expand_const_arrays, use_int32)
 
     def write_hdf5(self, expand_const_arrays = False):
         """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().

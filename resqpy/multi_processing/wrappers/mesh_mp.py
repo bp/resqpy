@@ -12,7 +12,7 @@ from uuid import UUID
 import resqpy.model as rq
 import resqpy.grid as grr
 import resqpy.surface as rqs
-from resqpy.multiprocessing import function_multiprocessing
+import resqpy.multi_processing as rqmp
 
 
 def mesh_from_regular_grid_column_property_wrapper(
@@ -121,11 +121,11 @@ def mesh_from_regular_grid_column_property_batch(grid_epc: str,
         }
         kwargs_list.append(d)
 
-    success_list = function_multiprocessing(mesh_from_regular_grid_column_property_wrapper,
-                                            kwargs_list,
-                                            recombined_epc,
-                                            cluster,
-                                            require_success = require_success,
-                                            tmp_dir_path = tmp_dir_path)
+    success_list = rqmp.function_multiprocessing(mesh_from_regular_grid_column_property_wrapper,
+                                                 kwargs_list,
+                                                 recombined_epc,
+                                                 cluster,
+                                                 require_success = require_success,
+                                                 tmp_dir_path = tmp_dir_path)
 
     return success_list

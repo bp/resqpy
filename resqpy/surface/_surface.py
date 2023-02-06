@@ -775,10 +775,10 @@ class Surface(rqsb.BaseSurface):
     def normal_vectors(self, add_as_property: bool = False) -> np.ndarray:
         """Returns the normal vectors for each triangle in the surface.
         
-        Args:
+        arguments:
             add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model.
 
-        Returns:
+        returns:
             normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface.
         """
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)

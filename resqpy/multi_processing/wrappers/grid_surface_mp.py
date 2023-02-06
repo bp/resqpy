@@ -36,7 +36,6 @@ def find_faces_to_represent_surface_regular_wrapper(
         retriangulate: bool = False,
         related_uuid = None,
         progress_fn: Optional[Callable] = None,
-        consistent_side: bool = False,
         extra_metadata = None,
         return_properties: Optional[List[str]] = None,
         raw_bisector: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
@@ -66,8 +65,6 @@ def find_faces_to_represent_surface_regular_wrapper(
            grid bisector and/or shadow property if requested)
         progress_fn (Callable): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
-        consistent_side (bool): if True, the cell pairs will be ordered so that all the first
-           cells in each pair are on one side of the surface, and all the second cells on the other
         extra_metadata (dict, optional): extra metadata items to be added to the grid connection set
         return_properties (list of str): if present, a list of property arrays to calculate and
            return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset', 'normal vector',
@@ -221,19 +218,16 @@ def find_faces_to_represent_surface_regular_wrapper(
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
-    returns = rqgs.find_faces_to_represent_surface_regular_optimised(
-        grid,
-        surface,
-        name,
-        title,
-        None,  # centres
-        agitate,
-        feature_type,
-        is_curtain,
-        progress_fn,
-        consistent_side,
-        return_properties,
-        raw_bisector = raw_bisector)
+    returns = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                                     surface,
+                                                                     name,
+                                                                     title,
+                                                                     agitate,
+                                                                     feature_type,
+                                                                     is_curtain,
+                                                                     progress_fn,
+                                                                     return_properties,
+                                                                     raw_bisector = raw_bisector)
 
     success = False
 

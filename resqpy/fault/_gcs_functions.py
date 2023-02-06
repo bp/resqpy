@@ -195,12 +195,12 @@ def add_connection_set_and_tmults(model, fault_incl, tmult_dict = None):
 
     Grid connection set added to resqml model, with extra_metadata on the fault interpretation containing the MULTFL values
 
-    Args:
+    arguments:
        model: resqml model object
        fault_incl: fullpath to fault include file or list of fullpaths to fault include files
        tmult_dict: dictionary of fault name/transmissibility multiplier pairs (must align with faults in include file).
           Optional, if blank values in the fault.include file will be used instead
-    Returns:
+    returns:
        grid connection set uuid
     """
 

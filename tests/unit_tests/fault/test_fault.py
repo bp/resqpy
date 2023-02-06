@@ -286,12 +286,12 @@ def test_feature_inheritance(tmp_path):
     crs_uuid = model.uuid(obj_type = 'LocalDepth3dCrs')
     assert crs_uuid is not None
     line_a = rql.Polyline(model,
-                          set_bool = False,
+                          is_closed = False,
                           set_crs = crs_uuid,
                           title = 'line a',
                           set_coord = np.array([[200.0, -50.0, 0.0], [200.0, 450.0, 0.0]]))
     line_b = rql.Polyline(model,
-                          set_bool = False,
+                          is_closed = False,
                           set_crs = crs_uuid,
                           title = 'line b',
                           set_coord = np.array([[-50.0, 200.0, 0.0], [350.0, 200.0, 0.0]]))

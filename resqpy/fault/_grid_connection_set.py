@@ -1336,12 +1336,12 @@ class GridConnectionSet(BaseResqpy):
     def get_column_edge_list_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
         """Extracts a list of cell faces for a given feature index, over a given range of layers in the grid.
 
-        Args:
+        arguments:
            feature - feature index
            gridindex - index of grid to be used in grid connection set gridlist, default 0
            min_k - minimum k layer, default 0
            max_k - maximum k layer, default 0
-        Returns:
+        returns:
            list of cell faces for the feature (j_col, i_col, face_axis, face_polarity)
         """
         subgcs = self.filtered_by_layer_range(min_k0 = min_k, max_k0 = max_k, pare_down = False)
@@ -1375,15 +1375,15 @@ class GridConnectionSet(BaseResqpy):
     def get_column_edge_bool_array_for_feature(self, feature, gridindex = 0, min_k = 0, max_k = 0):
         """Generate a boolean aray defining which column edges are present for a given feature and k-layer range.
 
-        Args:
+        arguments:
            feature - feature index
            gridindex - index of grid to be used in grid connection set gridlist, default 0
            min_k - minimum k layer
            max_k - maximum k layer
-        Returns:
+        returns:
            boolean fault_by_column_edge_mask array (shape nj,ni,2,2)
 
-        Note: the indices for the final two axes define the edges:
+        note: the indices for the final two axes define the edges:
            the first defines j or i (0 or 1)
            the second negative or positive face (0 or 1)
 
@@ -1442,7 +1442,7 @@ class GridConnectionSet(BaseResqpy):
                                                 ref_k = None):
         """Generate a float value aray defining the property values for different column edges present for a given feature.
 
-        Args:
+        arguments:
            feature - feature index
            fault_by_column_edge_mask - fault_by_column_edge_mask with True on edges where feature is present
            property_name - name of property, should be present within the FaultInterpreation feature metadata;
@@ -1451,10 +1451,10 @@ class GridConnectionSet(BaseResqpy):
            ref_k - reference k_layer to use where property has variable value for a feature;
               if None, no property array will be used and None will be returned for variable properties
 
-        Returns:
+        returns:
            float property_value_by_column_edge array (shape nj,ni,2,2) based on extra metadata
 
-        Note: the indices for the final two axes define the edges:
+        note: the indices for the final two axes define the edges:
            the first defines j or i (0 or 1)
            the second negative or positive face (0 or 1)
 
@@ -1524,7 +1524,7 @@ class GridConnectionSet(BaseResqpy):
                                                    ref_k = None):
         """Generate combined mask, index and value arrays for all column edges across a k-layer range, for a defined feature_list.
 
-        Args:
+        arguments:
            gridindex - index of grid to be used in grid connection set gridlist, default 0
            min_k - minimum k_layer
            max_k - maximum k_layer
@@ -1533,7 +1533,7 @@ class GridConnectionSet(BaseResqpy):
            feature_list - list of feature index numbers to run for, default to all features
            ref_k - reference k_layer to use where property has variable value for a feature;
               if None defaults to min_k
-        Returns:
+        returns:
            bool array mask showing all column edges within features (shape nj,ni,2,2)
            int array showing the feature index for all column edges within features (shape nj,ni,2,2)
            float array showing the property value for all column edges within features (shape nj,ni,2,2)
@@ -1879,13 +1879,13 @@ class GridConnectionSet(BaseResqpy):
                                     uom: str = 'm') -> np.ndarray:
         """Returns an array of the surface normal vectors corresponding to each GCS face.
 
-        Args:
+        arguments:
             triangle_per_face (np.ndarray): an array of the surface triangle index corresponding to each face.
             surface_normal_vectors (np.ndarray): an array of the normal vectors for each triangle in the surface.
             add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model.
             uom (str): the unit of measure of the normal vectors. It is used if add_as_property is True.
 
-        Returns:
+        returns:
             face_surface_normal_vectors_array (np.ndarray): the surface normal vectors corresponding to each GCS face.
 
         note:

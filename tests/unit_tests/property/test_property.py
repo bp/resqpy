@@ -45,6 +45,8 @@ def test_property(tmp_path):
                                  keyword = 'jiggle shared nodes',
                                  support_uuid = grid.uuid,
                                  property_kind = 'length',
+                                 facet_type = 'jiggle strength',
+                                 facet = 'strong',
                                  indexable_element = 'nodes',
                                  uom = 'm3')
     a4 = np.random.random((grid.nk, grid.nj, grid.ni, 2, 2, 2))
@@ -79,6 +81,46 @@ def test_property(tmp_path):
     model.store_epc()
     model = rq.Model(epc)
     assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'length')) == 2
+    jiggle_uuid = model.uuid_for_part(
+        rqp.property_part(model,
+                          obj_type = 'ContinuousProperty',
+                          property_kind = 'length',
+                          facet_type = 'jiggle strength',
+                          facet = 'strong'))
+    assert bu.matching_uuids(jiggle_uuid, p3.uuid)
+    assert rqp.property_part(model,
+                             obj_type = 'ContinuousProperty',
+                             property_kind = 'length',
+                             facet_type = 'jiggle strength',
+                             facet = 'weak') is None
+    jiggle_uuid = model.uuid_for_part(
+        rqp.property_part(model,
+                          obj_type = 'ContinuousProperty',
+                          property_kind = 'length',
+                          facet_type = 'jiggle strength',
+                          facet = '*'))
+    assert bu.matching_uuids(jiggle_uuid, p3.uuid)
+    jiggle_uuid = model.uuid_for_part(
+        rqp.property_part(model,
+                          obj_type = 'ContinuousProperty',
+                          property_kind = 'length',
+                          facet_type = 'none',
+                          facet = 'none'))
+    assert bu.matching_uuids(jiggle_uuid, p4.uuid)
+    jiggle_uuid = model.uuid_for_part(
+        rqp.property_part(model,
+                          obj_type = 'ContinuousProperty',
+                          property_kind = 'length',
+                          facet_type = 'jiggle strength',
+                          facet = 'none'))
+    assert bu.matching_uuids(jiggle_uuid, p4.uuid)
+    jiggle_uuid = model.uuid_for_part(
+        rqp.property_part(model,
+                          obj_type = 'ContinuousProperty',
+                          property_kind = 'length',
+                          facet_type = 'none',
+                          facet = 'none'))
+    assert bu.matching_uuids(jiggle_uuid, p4.uuid)
     facies_uuid = model.uuid_for_part(rqp.property_part(model, obj_type = 'Categorical', property_kind = 'facies'))
     assert bu.matching_uuids(facies_uuid, p2.uuid)
     ntg_uuid = model.uuid(obj_type = p1.resqml_type, title = 'NETGRS')

@@ -38,7 +38,7 @@ class BaseResqpy(metaclass = ABCMeta):
     def __init__(self, model, uuid = None, title = None, originator = None, extra_metadata = None):
         """Load an existing resqml object, or create new.
 
-        Args:
+        arguments:
             model (resqpy.model.Model): Parent model
             uuid (str, optional): Load from existing uuid (if given), else create new.
             title (str, optional): Citation title
@@ -128,7 +128,7 @@ class BaseResqpy(metaclass = ABCMeta):
             extend this method to complete the XML representation, and then finally ensure the node
             is added as a part to the model.
 
-        Args:
+        arguments:
             title (string): used as the citation Title text
             originator (string, optional): the name of the human being who created the deviation survey part;
                 default is to use the login name
@@ -136,7 +136,7 @@ class BaseResqpy(metaclass = ABCMeta):
             add_as_part (boolean): if True, the newly created xml node is added as a part
                 in the model
 
-        Returns:
+        returns:
             node: the newly created root node
         """
 

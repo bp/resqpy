@@ -33,6 +33,7 @@ def add_one_grid_property_array(epc_file,
                                 expand_const_arrays = False,
                                 points = False,
                                 extra_metadata = {},
+                                use_int32 = True,
                                 new_epc_file = None):
     """Adds a grid property from a numpy array to an existing resqml dataset.
 
@@ -69,6 +70,8 @@ def add_one_grid_property_array(epc_file,
        points (bool, default False): if True, this is a points property with an extra dimension of extent 3
        extra_metadata (dict, optional): any items in this dictionary are added as extra metadata to the new
           property
+       use_int32 (bool, default True): if True, and the array a has int64 bit elements, they are written as 32 bit data
+          to hdf5; if False, 64 bit data is written in that situation
        new_epc_file (string, optional): if None, the source epc_file is extended with the new property object; if present,
           a new epc file (& associated h5 file) is created to contain a copy of the grid and the new property
 
@@ -137,7 +140,8 @@ def add_one_grid_property_array(epc_file,
                                        mode = 'w',
                                        time_series_uuid = time_series_uuid,
                                        string_lookup_uuid = string_lookup_uuid,
-                                       extra_metadata = extra_metadata)
+                                       extra_metadata = extra_metadata,
+                                       use_int32 = use_int32)
     else:
         # add arrays to hdf5 file holding source grid geometry
         uuid_list = rqdm_c._write_grid(epc_file,
@@ -147,7 +151,8 @@ def add_one_grid_property_array(epc_file,
                                        geometry = False,
                                        time_series_uuid = time_series_uuid,
                                        string_lookup_uuid = string_lookup_uuid,
-                                       extra_metadata = extra_metadata)
+                                       extra_metadata = extra_metadata,
+                                       use_int32 = use_int32)
 
     if uuid_list is None or len(uuid_list) == 0:
         return None

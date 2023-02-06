@@ -17,7 +17,7 @@ def test_lines(example_model_and_crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = True,
+                                 is_closed = True,
                                  set_coord = np.array([[0, 0, 0], [1, 1, 1]]))
     line.write_hdf5()
     line.create_xml()
@@ -48,13 +48,13 @@ def test_lineset(example_model_and_crs, tmp_path):
     line1 = resqpy.lines.Polyline(parent_model = model,
                                   title = title,
                                   set_crs = crs.uuid,
-                                  set_bool = True,
+                                  is_closed = True,
                                   set_coord = np.array([[0, 0, 0], [1, 1, 1]], dtype = float))
 
     line2 = resqpy.lines.Polyline(parent_model = model,
                                   title = title,
                                   set_crs = crs.uuid,
-                                  set_bool = True,
+                                  is_closed = True,
                                   set_coord = np.array([[2, 2, 2], [3, 3, 3]], dtype = float))
 
     lines = resqpy.lines.PolylineSet(parent_model = model, title = title, polylines = [line1, line2])
@@ -134,7 +134,7 @@ def test_is_clockwise(example_model_and_crs):
         parent_model = model,
         title = title,
         set_crs = crs.uuid,
-        set_bool = True,
+        is_closed = True,
         set_coord = np.array([
             (3.0, 2.0, 4.3),  # z values are ignored for clockwise test
             (2.0, 1.0, -13.5),
@@ -159,7 +159,7 @@ def test_is_convex(example_model_and_crs):
         parent_model = model,
         title = title,
         set_crs = crs.uuid,
-        set_bool = True,
+        is_closed = True,
         set_coord = np.array([
             (3.0, 2.0, 4.3),  # z values are ignored for convexity
             (2.0, 1.0, -13.5),
@@ -184,7 +184,7 @@ def test_from_scaled_polyline(example_model_and_crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = True,
+                                 is_closed = True,
                                  set_coord = np.array([(0.0, 0.0, 10.0), (0.0, 3.0, 10.0), (12.0, 3.0, 10.0),
                                                        (12.0, 0.0, 10.0)]))
     assert line is not None
@@ -212,7 +212,7 @@ def test_point_is_inside_and_balanced_centre_and_segment_normal(example_model_an
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = True,
+                                 is_closed = True,
                                  set_coord = np.array([(0.0, 0.0, 10.0), (0.0, 3.0, 10.0), (4.0, 3.0, 10.0),
                                                        (2.0, 1.5, 10.0), (4.0, 0.0, 10.0)]))
     assert line is not None
@@ -251,7 +251,7 @@ def test_segment_methods(example_model_and_crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = 'angled',
                                  set_crs = crs.uuid,
-                                 set_bool = False,
+                                 is_closed = False,
                                  set_coord = coords)
     # check midpoint
     assert_array_almost_equal(line.interpolated_point(0.5), (7.5, 2.5, 0.0))
@@ -362,7 +362,7 @@ def test_hull(example_model_and_crs):
     coords = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 10.0, 0.0], [5.0, 5.0, 0.0], [7.0, 9.0, 0.0],
                        [10.0, 10.0, 0.0], [11.0, 5.0, 0.0], [10.0, 0.0, 0.0], [3.0, 1.0, 0.0]],
                       dtype = float)
-    plo = resqpy.lines.Polyline(model, set_bool = True, set_coord = coords, set_crs = crs.uuid, title = 'plo')
+    plo = resqpy.lines.Polyline(model, is_closed = True, set_coord = coords, set_crs = crs.uuid, title = 'plo')
     plo.write_hdf5()
     plo.create_xml()
     hull = resqpy.lines.Polyline.convex_hull_from_closed_polyline(plo, 'hull')
@@ -377,7 +377,7 @@ def __zig_zag(model, crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = False,
+                                 is_closed = False,
                                  set_coord = coords)
     return line
 
@@ -389,7 +389,7 @@ def __octagon(model, crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = True,
+                                 is_closed = True,
                                  set_coord = coords)
     return line
 
@@ -402,7 +402,7 @@ def __concave_octagon(model, crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = True,
+                                 is_closed = True,
                                  set_coord = coords)
     return line
 
@@ -413,6 +413,6 @@ def __square(model, crs):
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = title,
                                  set_crs = crs.uuid,
-                                 set_bool = True,
+                                 is_closed = True,
                                  set_coord = coords)
     return line

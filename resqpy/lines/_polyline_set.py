@@ -455,7 +455,7 @@ class PolylineSet(rql_c._BasePolyline):
             subtitle = f"{self.title} {i+1}"
             polys.append(
                 Polyline(self.model,
-                         set_bool = isclosed,
+                         is_closed = isclosed,
                          set_coord = subset,
                          set_crs = crs_uuid,
                          title = subtitle,
