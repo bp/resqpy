@@ -27,7 +27,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                  extra_metadata = None):
         """ Instantiate a GeobodyBoundaryInterpretation object.
 
-        Args:
+        arguments:
             parent_model(model.Model): Model to which the feature belongs
             uuid(UUID, Optional): The UUID of an existing Geobody Boundary Interpretation object; if present,
                 all the other optional arguments are ignored

@@ -6,6 +6,7 @@ log = logging.getLogger(__name__)
 
 import math as maths
 import numpy as np
+import warnings
 
 import resqpy.olio.intersection as meet
 import resqpy.lines
@@ -23,28 +24,31 @@ class Polyline(rql_c._BasePolyline):
 
     resqml_type = 'PolylineRepresentation'
 
-    def __init__(self,
-                 parent_model,
-                 uuid = None,
-                 set_bool = None,
-                 set_coord = None,
-                 set_crs = None,
-                 title = None,
-                 rep_int_root = None,
-                 originator = None,
-                 extra_metadata = None):
+    def __init__(
+            self,
+            parent_model,
+            uuid = None,
+            set_bool = None,  #: DEPRECATED
+            set_coord = None,
+            set_crs = None,
+            is_closed = None,
+            title = None,
+            rep_int_root = None,
+            originator = None,
+            extra_metadata = None):
         """Initialises a new polyline object.
 
         arguments:
             parent_model (model.Model object): the model which the new PolylineRepresentation belongs to
             uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineRepresentation from which
                 to initialise the resqpy Polyline
-            set_bool (boolean, optional): if True, a new polyline created from coordinates is flagged as
-                a closed polyline (polygon); ignored if uuid is not None
+            set_bool (boolean, optional): DEPRECATED: synonym for is_closed argument
             set_coord (numpy float array, optional): an ordered set of xyz values used to define a new polyline;
                 last dimension of array must have extent 3; ignored if uuid is not None
             set_crs (uuid.UUID, optional): the uuid of a crs to be used when initialising from coordinates;
                 ignored if uuid is not None
+            is_closed (boolean, optional): if True, a new polyline created from coordinates is flagged as
+                a closed polyline (polygon); ignored if uuid is not None
             title (str, optional): the citation title to use for a new polyline;
                 ignored if uuid is not None
             rep_int_root
@@ -60,7 +64,11 @@ class Polyline(rql_c._BasePolyline):
         """
 
         self.model = parent_model
-        self.isclosed = set_bool
+        if set_bool is not None:
+            warnings.warn('DEPRECATED: use is_closed argument instead of set_bool, in Polyline initialisation')
+            if is_closed is None:
+                is_closed = set_bool
+        self.isclosed = is_closed
         self.nodepatch = None
         self.crs_uuid = set_crs
         self.coordinates = None
@@ -72,7 +80,7 @@ class Polyline(rql_c._BasePolyline):
                          originator = originator,
                          extra_metadata = extra_metadata)
 
-        if self.root is None and all(i is not None for i in [set_bool, set_coord, set_crs, title]):
+        if self.root is None and all(i is not None for i in [is_closed, set_coord, set_crs, title]):
             # Using data from a polyline set
             assert set_coord.ndim > 1 and 2 <= set_coord.shape[-1] <= 3
             # allow for x,y or x,y,z incoming coordinates but use x,y,z internally
@@ -154,7 +162,7 @@ class Polyline(rql_c._BasePolyline):
 
         polyline = cls(original.model,
                        set_crs = original.crs_uuid,
-                       set_bool = original.isclosed,
+                       is_closed = original.isclosed,
                        title = title if title else original.title,
                        originator = originator if originator else original.originator,
                        extra_metadata = extra_metadata)
@@ -202,7 +210,7 @@ class Polyline(rql_c._BasePolyline):
 
         polyline = cls(original.model,
                        set_crs = original.crs_uuid,
-                       set_bool = False,
+                       is_closed = False,
                        title = title if title else original.title,
                        originator = originator if originator else original.originator,
                        extra_metadata = extra_metadata)
@@ -244,7 +252,7 @@ class Polyline(rql_c._BasePolyline):
             theta = i * 2.0 * maths.pi / float(n)
             coords[i] = np.array((radius * maths.sin(theta), radius * maths.cos(theta), 0.0), dtype = float) +  \
                         np.array(centre_xyz, dtype = float)
-        polyline = cls(model, set_bool = True, set_coord = coords, set_crs = crs_uuid, title = title)
+        polyline = cls(model, is_closed = True, set_coord = coords, set_crs = crs_uuid, title = title)
 
         return polyline
 
@@ -283,7 +291,7 @@ class Polyline(rql_c._BasePolyline):
                 oc = oc[hull_mask]
             assert len(coords) >= 3
 
-        polyline = cls(original.model, set_bool = True, set_coord = coords, set_crs = original.crs_uuid, title = title)
+        polyline = cls(original.model, is_closed = True, set_coord = coords, set_crs = original.crs_uuid, title = title)
         assert polyline.is_convex(trust_metadata = False)
 
         return polyline
@@ -757,7 +765,7 @@ class Polyline(rql_c._BasePolyline):
             rep_int_root = self.rep_int_root  # todo: check whether it is legal to have 2 representations for 1 interpretation
 
         return Polyline(self.model,
-                        set_bool = self.isclosed,
+                        is_closed = self.isclosed,
                         set_coord = spline_coords,
                         set_crs = self.crs_uuid,
                         title = title,

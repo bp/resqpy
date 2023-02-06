@@ -2122,20 +2122,20 @@ class Model():
     def iter_objs(self, cls):
         """Iterate over all available objects of given resqpy class within the model.
 
-        Note:
+        note:
 
            The resqpy class must expose a class attribute `resqml_type`, and must support
            being created with the signature: `obj = cls(model, uuid=uuid)`.
 
-        Example use::
+        example use::
 
            for well in model.iter_objs(cls=resqpy.well.WellboreFeature):
               print(well.title, well.uuid)
 
-        Args:
+        arguments:
            cls: resqpy class to iterate
 
-        Yields:
+        yields:
            list of instances of cls
 
         :meta common:
@@ -2153,7 +2153,7 @@ class Model():
     def iter_wellbore_interpretations(self):
         """Iterable of all WellboreInterpretations associated with the model.
 
-        Yields:
+        yields:
            wellbore: instance of :class:`resqpy.organize.WellboreInterpretation`
 
         :meta common:
@@ -2165,7 +2165,7 @@ class Model():
     def iter_trajectories(self):
         """Iterable of all trajectories associated with the model.
 
-        Yields:
+        yields:
            trajectory: instance of :class:`resqpy.well.Trajectory`
 
         :meta common:
@@ -2177,7 +2177,7 @@ class Model():
     def iter_md_datums(self):
         """Iterable of all MdDatum objects associated with the model.
 
-        Yields:
+        yields:
            md_datum: instance of :class:`resqpy.well.MdDatum`
 
         :meta common:
@@ -2189,7 +2189,7 @@ class Model():
     def iter_crs(self):
         """Iterable of all CRS objects associated with the model.
 
-        Yields:
+        yields:
            crs: instance of :class:`resqpy.crs.CRS`
 
         :meta common:
@@ -2221,14 +2221,14 @@ class Model():
     def as_graph(self, uuids_subset = None):
         """Return representation of model as nodes and edges, suitable for plotting in a graph.
 
-        Note:
+        note:
            The graph can be most readily visualised with other packages such as
            NetworkX and HoloViews, which are not part of resqpy.
 
            For a guide to plotting graphs interactively, see:
            http://holoviews.org/user_guide/Network_Graphs.html
 
-        Example::
+        example::
 
            # Create the nodes and edges
            nodes, edges = model.as_graph()
@@ -2249,11 +2249,11 @@ class Model():
               tools=['hover'], node_color='resqml_type', cmap='Category10'
            )
 
-        Args:
+        arguments:
            uuids_subset (iterable): If present, only consider uuids in this list.
               By default, use all uuids in the model.
 
-        Returns:
+        returns:
            2-tuple of nodes and edges:
 
            - nodes: dict mapping uuid to attributes (e.g. citation title)

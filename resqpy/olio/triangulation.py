@@ -570,12 +570,11 @@ def voronoi(p, t, b, aoi: rql.Polyline):
     assert aoi.is_clockwise()
 
     # create temporary polyline for hull of triangulation
-    hull = rql.Polyline(
-        aoi.model,
-        set_bool = True,  # polyline is closed
-        set_coord = p[b],
-        set_crs = aoi.crs_uuid,
-        title = 'triangulation hull')
+    hull = rql.Polyline(aoi.model,
+                        is_closed = True,
+                        set_coord = p[b],
+                        set_crs = aoi.crs_uuid,
+                        title = 'triangulation hull')
     hull_count = len(b)
 
     # check for concavities in hull
@@ -711,7 +710,7 @@ def triangulated_polygons(p, v, centres = None):
         if centres is None:
             polygon = rql.Polyline(model,
                                    set_coord = p[np.array(poly_vertices, dtype = int)],
-                                   set_bool = True,
+                                   is_closed = True,
                                    set_crs = crs.uuid,
                                    title = 'v cell')
             poly_centre = polygon.balanced_centre()

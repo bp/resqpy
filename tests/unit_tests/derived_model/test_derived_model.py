@@ -313,9 +313,9 @@ def test_extract_box(tmp_path):
     # introduce a couple of faults
     fault_lines = []
     fl1 = np.array([(2600.0, 2900.0, 0.0), (2600.0, 4100.0, 0.0)])
-    fault_lines.append(rql.Polyline(model, set_bool = False, set_coord = fl1, set_crs = crs.uuid, title = 'fault 1'))
+    fault_lines.append(rql.Polyline(model, is_closed = False, set_coord = fl1, set_crs = crs.uuid, title = 'fault 1'))
     fl2 = np.array([(1900.0, 3500.0, 0.0), (3300.0, 3500.0, 0.0)])
-    fault_lines.append(rql.Polyline(model, set_bool = False, set_coord = fl2, set_crs = crs.uuid, title = 'fault 2'))
+    fault_lines.append(rql.Polyline(model, is_closed = False, set_coord = fl2, set_crs = crs.uuid, title = 'fault 2'))
     for fl in fault_lines:
         fl.write_hdf5()
         fl.create_xml()
@@ -820,7 +820,7 @@ def test_add_faults(tmp_path):
             fp.write(f'{nines:8.3f} {nines:8.3f} {nines:8.3f}\n')
 
     def make_poly(model, a, title, crs):
-        return [rql.Polyline(model, set_bool = False, set_coord = a, set_crs = crs.uuid, title = title)]
+        return [rql.Polyline(model, is_closed = False, set_coord = a, set_crs = crs.uuid, title = title)]
 
     epc = os.path.join(tmp_path, 'tic_tac_toe.epc')
 
@@ -998,12 +998,12 @@ def test_add_faults_and_scaling(tmp_path):
 
     # prepare some polylines to define faults
     pla = rql.Polyline(model,
-                       set_bool = False,
+                       is_closed = False,
                        set_crs = crs.uuid,
                        title = 'line_a',
                        set_coord = np.array([(50.0, -10.0, 0.0), (450.0, 760.0, 0.0)]))
     plb = rql.Polyline(model,
-                       set_bool = False,
+                       is_closed = False,
                        set_crs = crs.uuid,
                        title = 'line_b',
                        set_coord = np.array([(-10.0, 530.0, 0.0), (510.0, 330.0, 0.0)]))

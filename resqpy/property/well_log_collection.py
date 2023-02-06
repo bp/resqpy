@@ -57,7 +57,7 @@ class WellLogCollection(rqp_pc.PropertyCollection):
               logs.write_hdf5_for_imported_list()
               logs.create_xml_for_imported_list_and_add_parts_to_model()
 
-        Args:
+        arguments:
            title (str): Name of log, typically the mnemonic
            data (array-like): log data to write. Must have same length as frame MDs
            unit (str): Unit of measure
@@ -66,7 +66,7 @@ class WellLogCollection(rqp_pc.PropertyCollection):
            write (bool): If True, write XML and HDF5.
            source_info (str): curve description or other human readable text
 
-        Returns:
+        returns:
            uuids: list of uuids of newly added properties. Only returned if write=True.
         """
         # Validate
@@ -116,7 +116,7 @@ class WellLogCollection(rqp_pc.PropertyCollection):
     def to_df(self, include_units = False):
         """Return pandas dataframe of log data.
 
-        Args:
+        arguments:
            include_units (bool): include unit in column names
         """
 

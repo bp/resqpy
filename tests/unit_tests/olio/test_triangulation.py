@@ -56,13 +56,13 @@ def test_voronoi():
     aoi_xyz[1, 1] = 1.0
     aoi_xyz[2, :2] = 1.0
     aoi_xyz[3, 0] = 1.0
-    aoi = rql.Polyline(model, set_coord = aoi_xyz, set_bool = True, set_crs = crs.uuid, title = 'aoi')
+    aoi = rql.Polyline(model, set_coord = aoi_xyz, is_closed = True, set_crs = crs.uuid, title = 'aoi')
     # and an alternative area of interest
     aoi_heptagon_xyz = np.zeros((7, 3))
     aoi_heptagon_xyz[:, :2] = ((-0.5, -1.0), (-1.5, 0.5), (-1.0, 1.7), (0.5, 2.0), (2.0, 1.7), (2.5, 0.5), (1.5, -1.0))
     aoi_heptagon = rql.Polyline(model,
                                 set_coord = aoi_heptagon_xyz,
-                                set_bool = True,
+                                is_closed = True,
                                 set_crs = crs.uuid,
                                 title = 'heptagon')
     aoi_heptagon_area = aoi_heptagon.area()
@@ -75,7 +75,7 @@ def test_voronoi():
         # compute the Delauney triangulation
         t, b = tri.dt(p, plot_fn = None, progress_fn = None, return_hull = True)
         # dt function can return triangulation with a slightly concave hull, which voronoi function cannot handle
-        hull = rql.Polyline(model, set_coord = p[b], set_bool = True, set_crs = crs.uuid, title = 'v cell')
+        hull = rql.Polyline(model, set_coord = p[b], is_closed = True, set_crs = crs.uuid, title = 'v cell')
         if not hull.is_convex():
             continue
         # test the Voronoi diagram with the unit square area of interest
@@ -84,7 +84,7 @@ def test_voronoi():
         # check that the areas of the Voronoi cells sum to the area of interest
         area = 0.0
         for nodes in v:
-            v_cell = rql.Polyline(model, set_coord = c[nodes], set_bool = True, set_crs = crs.uuid, title = 'v cell')
+            v_cell = rql.Polyline(model, set_coord = c[nodes], is_closed = True, set_crs = crs.uuid, title = 'v cell')
             area += v_cell.area()
         assert maths.isclose(area, 1.0, rel_tol = 0.001)
         # test the Voronoi diagram with the heptagonal area of interest
@@ -94,7 +94,7 @@ def test_voronoi():
         for nodes in v_hept:
             v_cell = rql.Polyline(model,
                                   set_coord = c_hept[nodes],
-                                  set_bool = True,
+                                  is_closed = True,
                                   set_crs = crs.uuid,
                                   title = 'v cell')
             area += v_cell.area()
@@ -111,7 +111,7 @@ def test_voronoi():
         for cell in range(n):
             v_cell = rql.Polyline(model,
                                   set_coord = c_hept[v_hept[cell]],
-                                  set_bool = True,
+                                  is_closed = True,
                                   set_crs = crs.uuid,
                                   title = 'v cell')
             assert v_cell.point_is_inside_xy(points_2[len(c_hept) + cell])

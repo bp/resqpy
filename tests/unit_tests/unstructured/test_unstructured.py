@@ -501,7 +501,7 @@ def test_vertical_prism_grid_from_seed_points_and_surfaces(tmp_path):
         boundary_points[i] = (2.0 * radius * maths.cos(theta), radius * maths.sin(theta), 0.0)
     boundary = rql.Polyline(model,
                             set_coord = boundary_points,
-                            set_bool = True,
+                            is_closed = True,
                             set_crs = crs.uuid,
                             title = 'rough ellipse')
     boundary.write_hdf5()

@@ -164,8 +164,8 @@ def find_nested_tags_cast(root, tag_list, dtype = None):
 def find_nested_tags_text(root, tag_list):
     """Return stripped text of node at deepest level of xml hierarchy.
     
-    Args:
-        tag_list: list of tags in a nested xml hierarchy
+    arguments:
+        tag_list (list of str): list of tags in a nested xml hierarchy
     """
 
     node = find_nested_tags(root, tag_list)
@@ -175,8 +175,8 @@ def find_nested_tags_text(root, tag_list):
 def find_nested_tags_bool(root, tag_list):
     """Return stripped text of node at deepest level of xml hierarchy as a bool.
     
-    Args:
-        tag_list: list of tags in a nested xml hierarchy
+    arguments:
+        tag_list (list of str): list of tags in a nested xml hierarchy
     """
     node = find_nested_tags(root, tag_list)
     return node_bool(node)
@@ -185,8 +185,8 @@ def find_nested_tags_bool(root, tag_list):
 def find_nested_tags_int(root, tag_list):
     """Return stripped text of node at deepest level of xml hierarchy as an int.
     
-    Args:
-        tag_list: list of tags in a nested xml hierarchy
+    arguments:
+        tag_list (list of str): list of tags in a nested xml hierarchy
     """
     node = find_nested_tags(root, tag_list)
     return node_int(node)
@@ -195,8 +195,8 @@ def find_nested_tags_int(root, tag_list):
 def find_nested_tags_float(root, tag_list):
     """Return stripped text of node at deepest level of xml hierarchy as a float.
     
-    Args:
-        tag_list: list of tags in a nested xml hierarchy
+    arguments:
+        tag_list (list of str): list of tags in a nested xml hierarchy
     """
     node = find_nested_tags(root, tag_list)
     return node_float(node)
@@ -625,8 +625,8 @@ def xyz_handedness(xy_axes: str, z_inc_down: bool):
 def ijk_handedness(geom_node):
     """Returns ijk true handedness as 'left', 'right' or 'unknown'.
     
-    Args:
-        GridIsRightHanded node in grid geometry node.
+    arguments:
+        geom_node: GridIsRightHanded node in grid geometry node.
     """
 
     if geom_node is None:

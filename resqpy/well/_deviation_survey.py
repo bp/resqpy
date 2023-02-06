@@ -135,7 +135,7 @@ class DeviationSurvey(BaseResqpy):
                         angle_uom = 'dega'):
         """Load MD, aximuth & inclination data from a pandas data frame.
 
-        Args:
+        arguments:
            parent_model (model.Model): the parent resqml model
            data_frame: a pandas dataframe holding the deviation survey data
            md_datum (MdDatum object): the datum that the depths for this survey are measured from
@@ -151,10 +151,10 @@ class DeviationSurvey(BaseResqpy):
            angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
               the azimuth and inclination data
 
-        Returns:
+        returns:
            DeviationSurvey
 
-        Note:
+        note:
            The X, Y & Z columns are only used to set the first station location (from the first row)
         """
 
