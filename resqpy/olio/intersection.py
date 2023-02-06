@@ -87,17 +87,17 @@ def line_triangle_intersect_numba(
 ) -> Union[None, np.ndarray]:
     """Find the intersection of a line within a triangle in 3D space.
 
-    Args:
+    arguments:
         line_p (np.ndarray): a point on the line.
         line_v (np.ndarray): vector being the direction of the line.
-        triangle (np.ndarray): three corners of the triangle (second index is xyz).
+        triangle (np.ndarray): shape (3, 3); three corners of the triangle (second index is xyz).
         line_segment (bool): if True, returns None if intersection is outwith (line_p .. line_p + line_v).
         l_tol (float, default 0.0): a fraction of the line length to allow for an intersection to be found
             just outside the segment.
         t_tol (float, default 0.0): a fraction of the triangle size to allow for an intersection to be found
             just outside the triangle.
 
-    Returns:
+    returns:
         point (np.ndarray) of intersection of the line within the triangle,
         or None if line is parallel to plane of triangle or intersection with the plane is
         outside the triangle.

@@ -253,6 +253,8 @@ class TriMesh(rqs.Mesh):
             other triangles must be in the same crs as this tri mesh; they do not need to be equilateral
         """
 
+        assert triangles.ndim == 3 and triangles.shape[1] == 3 and triangles.shape[2] == 2
+
         tp = triangles.copy()
         if self.origin is not None:
             tp[:] -= np.expand_dims(np.expand_dims(self.origin[:2], axis = 0), axis = 0)
