@@ -95,6 +95,43 @@ def test_bisector_from_faces_flat_surface_k():
     assert bounds['i_max'] == 2
 
 
+def test_where_true_and_get_boundary():
+    grid_extent_kji = (7, 8, 9)
+    nk, nj, ni = grid_extent_kji
+    k_faces = np.zeros((nk - 1, nj, ni), dtype = bool)
+    j_faces = np.zeros((nk, nj - 1, ni), dtype = bool)
+    i_faces = np.zeros((nk, nj, ni - 1), dtype = bool)
+    k_faces[3, 3:7, 4:6] = True
+    j_faces[4:6, 2, 4] = True
+    i_faces[2:5, 3:6, 5] = True
+
+    w_k, w_j, w_i = rqgs.where_true(k_faces)
+    assert len(w_k) == 8
+    assert np.all(np.unique(w_k) == (3,))
+    assert np.all(np.unique(w_j) == (3, 4, 5, 6))
+    assert np.all(np.unique(w_i) == (4, 5))
+    w_k, w_j, w_i = rqgs.where_true(j_faces)
+    assert len(w_k) == 2
+    assert np.all(np.unique(w_k) == (4, 5))
+    assert np.all(np.unique(w_j) == (2,))
+    assert np.all(np.unique(w_i) == (4,))
+    w_k, w_j, w_i = rqgs.where_true(i_faces)
+    assert len(w_k) == 9
+    assert np.all(np.unique(w_k) == (2, 3, 4))
+    assert np.all(np.unique(w_j) == (3, 4, 5))
+    assert np.all(np.unique(w_i) == (5,))
+
+    bounds = rqgs.get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
+
+    # note: get_boundary() includes a buffer slice where faces do not reach edge of grid
+    assert bounds['k_min'] == 1
+    assert bounds['k_max'] == 6
+    assert bounds['j_min'] == 2
+    assert bounds['j_max'] == 7
+    assert bounds['i_min'] == 3
+    assert bounds['i_max'] == 6
+
+
 def test_bisector_from_faces_flat_surface_j():
     # Arrange
     grid_extent_kji = (3, 3, 3)

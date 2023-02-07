@@ -857,7 +857,7 @@ def bisector_from_faces(  # type: ignore
     """
     assert len(grid_extent_kji) == 3
 
-    # Finding the surface boundary.
+    # Finding the surface boundary (includes a buffer slice where surface does not reach edge of grid).
     boundary = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
 
     # Setting up the bisector array for the bounding box.
@@ -1060,13 +1060,17 @@ def get_boundary(  # type: ignore
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
 
     arguments:
-        k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension.
-        j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension.
-        i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension.
-        grid_extent_kji (Tuple[int, int, int]): the shape of the grid.
+        k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension
+        j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
+        i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension
+        grid_extent_kji (Tuple[int, int, int]): the shape of the grid
 
     returns:
-        boundary (Dict[str, int]): a dictionary of the indices that bound the surface.
+        boundary (Dict[str, int]): a dictionary of the indices that bound the surface
+
+    note:
+        input faces arrays are for internal grid faces (ie. extent reduced by 1 in axis of faces);
+        a buffer slice is included where the surface does not reach the edge of the grid
     """
 
     boundary = {
@@ -1080,25 +1084,47 @@ def get_boundary(  # type: ignore
 
     starting = True
 
-    for i, faces in enumerate([k_faces, j_faces, i_faces]):
+    for f_i, faces in enumerate([k_faces, j_faces, i_faces]):
+
+        # NB. k, j & i for rest of loop refer to indices of faces, regardless of which face set is being processed
 
         where_k, where_j, where_i = where_true(faces)
+
         if len(where_k) == 0:
             continue
 
-        min_k = where_k[0]
+        min_k = where_k[0]  # optimisation if np.where() guaranteed to return results in natural order
         max_k = where_k[-1]
+        # min_k = np.amin(where_k)
+        # max_k = np.amax(where_k)
         min_j = np.amin(where_j)
         max_j = np.amax(where_j)
         min_i = np.amin(where_i)
         max_i = np.amax(where_i)
 
-        if i == 0:
+        # include cells on both sides of internal faces
+        # and add buffer slice where edge of grid not reached by surface faces
+        if f_i == 0:
             max_k += 1
-        elif i == 1:
+        else:
+            if min_k > 0:
+                min_k -= 1
+            if max_k < j_faces.shape[0] - 1:
+                max_k += 1
+        if f_i == 1:
             max_j += 1
         else:
+            if min_j > 0:
+                min_j -= 1
+            if max_j < k_faces.shape[1] - 1:
+                max_j += 1
+        if f_i == 2:
             max_i += 1
+        else:
+            if min_i > 0:
+                min_i -= 1
+            if max_i < k_faces.shape[2] - 1:
+                max_i += 1
 
         if starting:
             boundary['k_min'] = min_k
@@ -1111,15 +1137,15 @@ def get_boundary(  # type: ignore
         else:
             if min_k < boundary['k_min']:
                 boundary['k_min'] = min_k
-            if max_k < boundary['k_max']:
+            if max_k > boundary['k_max']:
                 boundary['k_max'] = max_k
             if min_j < boundary['j_min']:
                 boundary['j_min'] = min_j
-            if max_j < boundary['j_max']:
+            if max_j > boundary['j_max']:
                 boundary['j_max'] = max_j
             if min_i < boundary['i_min']:
                 boundary['i_min'] = min_i
-            if max_i < boundary['i_max']:
+            if max_i > boundary['i_max']:
                 boundary['i_max'] = max_i
 
     return boundary  # type: ignore
