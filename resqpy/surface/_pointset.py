@@ -333,8 +333,8 @@ class PointSet(rqsb.BaseSurface):
         """
 
         def try_angle(pset, theta):
-            p = pset.full_array_ref().copy()
-            m = vec.rotation_matrix_3d_axial(0, theta)
+            p = pset.full_array_ref()
+            m = vec.rotation_matrix_3d_axial(2, theta)
             p = vec.rotate_array(m, p)[:, :2]
             dxy = np.nanmax(p, axis = 0) - np.nanmin(p, axis = 0)
             return dxy
@@ -342,16 +342,19 @@ class PointSet(rqsb.BaseSurface):
         assert self.patch_count > 0
         theta = 0.0
         min_dxy = try_angle(self, theta)
-        min_area = np.sum(min_dxy * min_dxy)
+        min_area = min_dxy[0] * min_dxy[1]
+        min_theta = theta
         while theta < 180.0 - delta_theta:
             theta += delta_theta
             dxy = try_angle(self, theta)
-            area = np.sum(dxy * dxy)
+            area = dxy[0] * dxy[1]
             if area < min_area:
-                min_dxy = dxy
-        if dxy[0] <= dxy[1]:
-            return dxy[0], dxy[1], theta
-        return dxy[1], dxy[0], theta + 90.0 if theta < 90.0 else theta - 90.0
+                min_dxy = dxy.copy()
+                min_area = area
+                min_theta = theta
+        if min_dxy[0] <= min_dxy[1]:
+            return min_dxy[0], min_dxy[1], min_theta
+        return min_dxy[1], min_dxy[0], min_theta + 90.0 if min_theta < 90.0 else min_theta - 90.0
 
     def full_array_ref(self):
         """Return a single numpy float array of shape (N, 3) containing all points from all patches.

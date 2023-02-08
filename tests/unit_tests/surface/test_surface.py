@@ -1,3 +1,4 @@
+import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import os
@@ -620,6 +621,19 @@ def test_pointset_from_polylineset(example_model_and_crs):
     reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
 
     assert_array_almost_equal(reload.full_array_ref(), np.concatenate((coords1, coords2), axis = 0))
+
+
+def test_pointset_minimum_xy_area_rectangle(example_model_and_crs):
+    model, crs = example_model_and_crs
+    r3_2 = maths.sqrt(3.0) / 2.0
+    coords = np.array([(0.0, 0.0, 0.0), (140.0 * r3_2, 70.0, -12.7), (-17.0, 34.0 * r3_2, 5.6),
+                       (140.0 * r3_2 - 17.0, 34.0 * r3_2 + 70.0, 923.0)],
+                      dtype = float)
+    ps = resqpy.surface.PointSet(model, points_array = coords, crs_uuid = crs.uuid, title = 'oblong')
+    d1, d2, theta = ps.minimum_xy_area_rectangle(delta_theta = 3.0)
+    assert 33.0 < d1 < 35.0
+    assert 138.0 < d2 < 142.0
+    assert 56.9 < theta < 63.1
 
 
 def test_tripatch_set_to_triangle(example_model_and_crs):
