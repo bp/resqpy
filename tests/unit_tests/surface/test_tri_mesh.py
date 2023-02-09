@@ -236,21 +236,27 @@ def test_tri_mesh_nodes_in_triangles_with_origin(example_model_and_crs):
     trim = rqs.TriMesh(model,
                        t_side = 10.0,
                        nj = 5,
-                       ni = 5,
+                       ni = 6,
                        origin = origin,
                        crs_uuid = crs.uuid,
                        title = 'test tri mesh')
-    other_t = np.array([[(7.0, 5.0), (7.0, 25.0), (37.0, 5.0)], [(37.0, 25.0), (7.0, 25.0), (37.0, 5.0)]],
+    other_t = np.array([[(7.0, 5.0), (7.0, 25.0),
+                         (37.0, 5.0)], [(37.0, 25.0), (7.0, 25.0),
+                                        (37.0, 5.0)], [(42.0, 15.0), (55.0, 15.0),
+                                                       (51.0, 3.0)], [(43.0, 25.0), (47.0, 25.0), (45.0, 28.0)]],
                        dtype = float)
     other_t += np.expand_dims(np.expand_dims(np.array(origin[:2], dtype = float), axis = 0), axis = 0)
     nit = trim.tri_nodes_in_triangles(other_t)
     assert nit.ndim == 2 and nit.shape[1] == 3
-    assert len(nit) == 6
-    assert np.all(np.logical_or(nit[:, 0] == 0, nit[:, 0] == 1))  # other triangle number
-    assert np.all(np.logical_and(nit[:, 1] > 0, nit[:, 1] < 3))  # node j index
-    assert np.all(np.logical_and(nit[:, 2] > 0, nit[:, 2] < 4))  # node i index
+    assert len(nit) == 7
+    assert np.all(np.logical_or(np.logical_or(nit[:, 0] == 0, nit[:, 0] == 1), nit[:, 0] == 3))  # other triangle number
+    assert np.all(np.logical_and(nit[:-1, 1] > 0, nit[:-1, 1] < 3))  # node j index
+    assert np.all(np.logical_and(nit[:-1, 2] > 0, nit[:-1, 2] < 4))  # node i index
+    assert np.all(nit[-1] == (3, 3, 4))  # other triangle number, node j, node i; here assumed to be last in return list
     assert np.count_nonzero(nit[:, 0] == 0) == 3
     assert np.count_nonzero(nit[:, 0] == 1) == 3
+    assert np.count_nonzero(nit[:, 0] == 2) == 0
+    assert np.count_nonzero(nit[:, 0] == 3) == 1
     for i in range(6):
         ji = tuple(nit[i, 1:])
         if nit[i, 0] == 0:
