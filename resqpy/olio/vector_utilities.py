@@ -892,9 +892,12 @@ def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> 
     """
     y = None
     if x >= min(x_values) and x <= max(x_values):
-        m = (y_values[1] - y_values[0]) / (x_values[1] - x_values[0])
-        c = y_values[1] - m * x_values[1]
-        y = m * x + c
+        if x_values[0] == x_values[1]:
+            y = y_values[0]
+        else:
+            m = (y_values[1] - y_values[0]) / (x_values[1] - x_values[0])
+            c = y_values[1] - m * x_values[1]
+            y = m * x + c
     return y
 
 
@@ -907,30 +910,29 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
         ny (int): number of points in y axis
         dx (float): spacing of points in x axis (first point is at half dx)
         dy (float): spacing of points in y axis (first point is at half dy)
-        triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2).
-        points_xlen (int): the number of unique x coordinates.
+        triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2)
 
     returns:
         triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
-            with each row being the triangle number, points y index, and points x index.
+            with each row being the triangle number, points y index, and points x index
     """
-    grid_x = np.arange(dx / 2, dx / 2 + dx * nx, dx)
-    grid_y = np.arange(dy / 2, dy / 2 + dy * ny, dy)
+    grid_x = dx * (0.5 + np.arange(nx).astype(np.float64))
+    grid_y = dy * (0.5 + np.arange(ny).astype(np.float64))
     triangles_points_list = []
     for triangle_num in range(len(triangles)):
         triangle = triangles[triangle_num]
         min_x, max_x, min_y, max_y = triangle_box(triangle)
-        x_values = grid_x[np.logical_and(grid_x > min_x, grid_x < max_x)]
-        y_values = grid_y[np.logical_and(grid_y > min_y, grid_y < max_y)]
+        x_values = grid_x[np.logical_and(grid_x >= min_x, grid_x < max_x)]
+        y_values = grid_y[np.logical_and(grid_y >= min_y, grid_y < max_y)]
         for x in x_values:
             ys = []
             ys.append(vertical_intercept(x, triangle[1:, 0], triangle[1:, 1]))
             ys.append(vertical_intercept(x, triangle[:2, 0], triangle[:2, 1]))
             ys.append(vertical_intercept(x, triangle[::2, 0], triangle[::2, 1]))
-            ys = [x for x in ys if x is not None]
+            ys = [u for u in ys if u is not None]
             valid_y = y_values[np.logical_and(y_values >= min(ys), y_values <= max(ys))]
-            x_idx = int(x / dx - 0.5)
-            triangles_points_list.extend([[triangle_num, int(y / dy - 0.5), x_idx] for y in valid_y])
+            x_idx = int(x / dx)
+            triangles_points_list.extend([[triangle_num, int(y / dy), x_idx] for y in valid_y])
 
     if len(triangles_points_list) == 0:
         triangles_points = np.empty((0, 3), dtype = np.int32)

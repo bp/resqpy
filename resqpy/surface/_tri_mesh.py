@@ -10,7 +10,8 @@ import numpy as np
 import resqpy.surface as rqs
 import resqpy.olio.vector_utilities as vec
 
-root_3_by_2 = maths.sqrt(3.0) / 2.0
+root_3 = maths.sqrt(3.0)
+root_3_by_2 = root_3 / 2.0
 
 
 class TriMesh(rqs.Mesh):
@@ -262,7 +263,7 @@ class TriMesh(rqs.Mesh):
         # test odd node j rows of tri mesh points; note that vec function assumes a half 'cell' offset!
         tn_b = vec.points_in_triangles_aligned_optimised(self.ni, self.nj // 2, self.t_side,
                                                          2.0 * root_3_by_2 * self.t_side, tp)
-        tn_b[:, 1] *= 2
+        tn_b[:, 1] *= 2  # node j
         tn_b[:, 1] += 1
 
         # shift other triangles' points so as to compensate for half cell offset, for even j node rows
@@ -270,8 +271,8 @@ class TriMesh(rqs.Mesh):
         tp[:] += np.expand_dims(np.expand_dims(offset, axis = 0), axis = 0)
 
         # test even node j rows of tri mesh points
-        tn_a = vec.points_in_triangles_aligned_optimised(self.ni, (self.nj + 1) // 2, self.t_side,
-                                                         2.0 * root_3_by_2 * self.t_side, tp)
-        tn_a[:, 1] *= 2
+        tn_a = vec.points_in_triangles_aligned_optimised(self.ni, (self.nj + 1) // 2, self.t_side, root_3 * self.t_side,
+                                                         tp)
+        tn_a[:, 1] *= 2  # node j
 
         return np.concatenate((tn_a, tn_b), axis = 0)
