@@ -572,6 +572,9 @@ def point_in_polygon(x, y, polygon):
     
     returns:
         inside (bool): True if point is within the polygon, False otherwise.
+
+    note:
+        the polygon is assumed closed, the closing point should not be repeated
     """
     polygon_vertices = len(polygon)
     inside = False
@@ -676,6 +679,9 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     returns:
         polygon_points (np.ndarray): list-like 2D array containing only the points within the polygon,
             with each row being the polygon number (as input), points J index, and points I index
+
+    note:
+        the polygon is assumed closed, the closing point should not be repeated
     """
     polygon_points = np.empty((0, 3), dtype = numba.int32)
     for point_num in numba.prange(len(points)):
