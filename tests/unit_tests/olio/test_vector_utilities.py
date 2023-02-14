@@ -286,3 +286,21 @@ def test_unit_vector_from_azimuth_and_inclination():
     assert_array_almost_equal(v, (-root_three_over_two, 0.0, 0.5))
     v = vec.unit_vector_from_azimuth_and_inclination(45.0, 90.0)
     assert_array_almost_equal(v, (one_over_root_two, one_over_root_two, 0.0))
+
+
+def test_xy_sort():
+    py = np.array([(5.0, 4.0, 1.0), (3.0, 7.0, 2.0), (1.0, 0.0, 3.0)], dtype = float)
+    spy, ay = vec.xy_sorted(py)
+    espy = np.array([(1.0, 0.0, 3.0), (5.0, 4.0, 1.0), (3.0, 7.0, 2.0)], dtype = float)
+    px = py.copy()
+    px[0, 0] = 10.0
+    espx = np.array([(1.0, 0.0, 3.0), (3.0, 7.0, 2.0), (10.0, 4.0, 1.0)], dtype = float)
+    spx, ax = vec.xy_sorted(px)
+    espxy = np.array([(1.0, 0.0, 3.0), (10.0, 4.0, 1.0), (3.0, 7.0, 2.0)], dtype = float)
+    spxy, axy = vec.xy_sorted(px, axis = 1)
+    assert ax == 0
+    assert ay == 1
+    assert axy == 1
+    assert_array_almost_equal(spx, espx)
+    assert_array_almost_equal(spy, espy)
+    assert_array_almost_equal(spxy, espxy)

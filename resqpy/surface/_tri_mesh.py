@@ -110,6 +110,27 @@ class TriMesh(rqs.Mesh):
             else:
                 self.origin = origin
 
+    @classmethod
+    def from_tri_mesh_and_z_values(cls, tri_mesh, z_values, z_uom = None, title = None, surface_role = 'map'):
+        """Create a new tri mesh with the same xy pattern as an existing one, updating z."""
+        assert z_values.shape == (tri_mesh.nj, tri_mesh.ni)
+        if not z_uom:
+            z_uom = tri_mesh.z_uom
+        if not title:
+            title = tri_mesh.title
+        tm = cls(tri_mesh.model,
+                 uuid = None,
+                 t_side = tri_mesh.t_side,
+                 nj = tri_mesh.nj,
+                 ni = tri_mesh.ni,
+                 origin = tri_mesh.origin,
+                 z_values = z_values,
+                 z_uom = z_uom,
+                 surface_role = surface_role,
+                 crs_uuid = tri_mesh.crs_uuid,
+                 title = title)
+        return tm
+
     def tji_for_xy(self, xy):
         """Return (tj, ti) indices of triangle containing point xy (x, y).
 
@@ -276,3 +297,56 @@ class TriMesh(rqs.Mesh):
         tn_a[:, 1] *= 2  # node j
 
         return np.concatenate((tn_a, tn_b), axis = 0)
+
+    def edge_zero_crossings(self, z_values = None):
+        """Returns numpy list of points from edges where z values cross zero (or given value).
+
+        arguments:
+            z_values (numpy float array of shape (nj, ni), optional): if present, these values
+                are used to determine the crossing points, though returned xyz values are from
+                the tri mesh's array
+
+        returns:
+            numpy float array of shape (N, 3) being points on tri mesh triangle edges where
+            z values cross zero
+        """
+
+        xyz = self.full_array_ref()
+        if z_values is None:
+            z_values = xyz[..., 2]
+        else:
+            assert z_values.shape == (self.nj, self.ni)
+        abs_ze = np.expand_dims(np.abs(z_values), axis = -1)
+        p = np.empty((0, 3), dtype = float)
+
+        # i edges
+        crossing = np.where(z_values[:, :-1] * z_values[:, 1:] < 0.0)  # zero crossing i edge indices
+        if len(crossing[0]):
+            s = abs_ze[:, :-1, :] + abs_ze[:, 1:, :]
+            # TODO: ignore divide by zero
+            w = (xyz[:, :-1, :] * abs_ze[:, 1:, :] + xyz[:, 1:, :] * abs_ze[:, :-1, :]) / s
+            # TODO: unignore
+            p = np.concatenate((p, w[crossing]))
+
+        # one set of j edges
+        crossing = np.where(z_values[:-1, :] * z_values[1:, :] < 0.0)  # zero crossing j edge indices
+        if len(crossing[0]):
+            s = abs_ze[:-1, :, :] + abs_ze[1:, :, :]
+            w = (xyz[:-1, :, :] * abs_ze[1:, :, :] + xyz[1:, :, :] * abs_ze[:-1, :, :]) / s
+            p = np.concatenate((p, w[crossing]))
+
+        # other set of j edges (even j base)
+        crossing = np.where(z_values[:-1:2, 1:] * z_values[1::2, :-1] < 0.0)  # zero crossing j edge indices
+        if len(crossing[0]):
+            s = abs_ze[:-1:2, 1:, :] + abs_ze[1::2, :-1, :]
+            w = (xyz[:-1:2, 1:, :] * abs_ze[1::2, :-1, :] + xyz[1::2, :-1, :] * abs_ze[:-1:2, 1:, :]) / s
+            p = np.concatenate((p, w[crossing]))
+
+        # other set of j edges (odd j base)
+        crossing = np.where(z_values[1:-1:2, :-1] * z_values[2::2, 1:] < 0.0)  # zero crossing j edge indices
+        if len(crossing[0]):
+            s = abs_ze[1:-1:2, :-1, :] + abs_ze[2::2, 1:, :]
+            w = (xyz[1:-1:2, :-1, :] * abs_ze[2::2, 1:, :] + xyz[2::2, 1:, :] * abs_ze[1:-1:2, :-1, :]) / s
+            p = np.concatenate((p, w[crossing]))
+
+        return p

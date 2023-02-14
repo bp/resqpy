@@ -97,6 +97,8 @@ def uuid_from_string(uuid_str):
         return None
     if isinstance(uuid_str, uuid.UUID):
         return uuid_str  # resilience to accidentally passing a uuid object
+    if isinstance(uuid_str, int):
+        return uuid_from_int(uuid_str)
     try:
         if uuid_str[0] == '_':  # tolerate one of the fesapi quirks
             if len(uuid_str) < 37:
