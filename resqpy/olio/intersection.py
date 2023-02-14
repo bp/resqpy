@@ -184,7 +184,7 @@ def line_set_triangles_intersects(line_ps, line_vs, triangles, line_segment = Fa
 
     arguments:
        line_ps ((c, 3) numpy array): a point on each of c lines
-       line_vs ((c, 3) numpy array): vectors being the direction of each of the c lines
+       line_vs ((c, 3) numpy array): vectors being the direction of each of the c lines (or 1 common vector)
        triangles ((n, 3, 3) numpy array): three corners of each of the n triangles (final index is xyz)
        line_segment (boolean, default False): if True, each line is treated as a finite segment between
           p and p + v, and only intersections within the segment are included
@@ -200,6 +200,9 @@ def line_set_triangles_intersects(line_ps, line_vs, triangles, line_segment = Fa
 
     c = line_ps.shape[0]  # number of lines
     n = triangles.shape[0]  # number of triangles
+
+    if line_vs.ndim == 1:  # single common direction vector; for now simply replicate
+        line_vs = np.repeat(np.expand_dims(line_vs, axis = 0), c, axis = 0)
 
     p01s = triangles[:, 1, :] - triangles[:, 0, :]  # p01s has shape (n, 3)
     p02s = triangles[:, 2, :] - triangles[:, 0, :]  # p02s has shape (n, 3)

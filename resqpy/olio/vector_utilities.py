@@ -572,6 +572,9 @@ def point_in_polygon(x, y, polygon):
     
     returns:
         inside (bool): True if point is within the polygon, False otherwise.
+
+    note:
+        the polygon is assumed closed, the closing point should not be repeated
     """
     polygon_vertices = len(polygon)
     inside = False
@@ -676,6 +679,9 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     returns:
         polygon_points (np.ndarray): list-like 2D array containing only the points within the polygon,
             with each row being the polygon number (as input), points J index, and points I index
+
+    note:
+        the polygon is assumed closed, the closing point should not be repeated
     """
     polygon_points = np.empty((0, 3), dtype = numba.int32)
     for point_num in numba.prange(len(points)):
@@ -1096,6 +1102,29 @@ def clockwise_sorted_indices(p, b):
         azi = azimuth(p[i] - centre)
         hull_list.append((azi, i))
     return np.array([i for (_, i) in sorted(hull_list)], dtype = int)
+
+
+def xy_sorted(p, axis = None):
+    """Returns copy of points p sorted according to x or y (whichever has greater range).
+
+    arguments:
+        p (numpy float array of shape (..., 2) or (..., 3)): points to be sorted
+        axis (int, optional): 0 for x sort; 1 for y sort; None for whichever has greater range
+
+    returns:
+        p', axis where p' is a list-like (2D) version of p, sorted by either x or y and axis is 0
+        if the sort was by x, 1 if it were by y
+
+    note:
+       returned array is always 2D, ie. list of points
+    """
+    assert p.ndim >= 2 and p.shape[-1] >= 2
+    p = p.reshape((-1, p.shape[-1]))
+    xy_range = np.nanmax(p, axis = 0) - np.nanmin(p, axis = 0)
+    if axis is None:
+        axis = (1 if xy_range[1] > xy_range[0] else 0)
+    spi = np.argsort(p[:, axis])
+    return p[spi], axis
 
 
 def _projected_xyz_axes(projection):

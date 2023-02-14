@@ -59,7 +59,7 @@ def new_uuid():
     global test_latest_int
     if test_mode:
         test_latest_int += 1
-        return uuid.UUID(bytes = test_latest_int.to_bytes(16, byte_order = 'big'))
+        return uuid.UUID(bytes = test_latest_int.to_bytes(16, byteorder = 'big'))
     else:
         return uuid.uuid1()  # time to 100ns & MAC address
 
@@ -71,7 +71,7 @@ def string_from_uuid(uuid_obj):
        uuid_obj (uuid.UUID object): the uuid which is required in hexadecimal string format
 
     returns:
-       string (40 characters: 36 lowercase hexadecimals and 4 hyphens)
+       string (36 characters: 32 lowercase hexadecimals and 4 hyphens)
     """
 
     return str(uuid_obj)
@@ -97,6 +97,8 @@ def uuid_from_string(uuid_str):
         return None
     if isinstance(uuid_str, uuid.UUID):
         return uuid_str  # resilience to accidentally passing a uuid object
+    if isinstance(uuid_str, int):
+        return uuid_from_int(uuid_str)
     try:
         if uuid_str[0] == '_':  # tolerate one of the fesapi quirks
             if len(uuid_str) < 37:
@@ -143,7 +145,7 @@ def uuid_as_int(uuid_obj):
        uuid_obj (uuid.UUID object): the uuid for which a bytes representation is required
 
     returns:
-       bytes (16 bytes long)
+       int (128 bit, though python no longer differentiates int precision)
     """
 
     if uuid_obj is None:
@@ -181,6 +183,14 @@ def matching_uuids(uuid_a, uuid_b):
     if not isinstance(uuid_b, int):
         uuid_b = uuid_b.int
     return uuid_a == uuid_b
+
+
+def uuid_in_list(uuid, uuid_list):
+    """Returns True if the uuid is in the list of uuids."""
+    for uuid_b in uuid_list:
+        if matching_uuids(uuid, uuid_b):
+            return True
+    return False
 
 
 def version_string(uuid_obj):
