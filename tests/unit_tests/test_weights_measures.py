@@ -238,6 +238,20 @@ def test_flow_rate_conversion():
                     wam.convert_flow_rates(wam.convert_flow_rates(rate, from_units, to_units), to_units, from_units))
 
 
+def test_transmissibility_conversion():
+    assert maths.isclose(wam.convert_transmissibilities(1000.0, 'm3.cP/(kPa.d)', 'm3.cP/(kPa.d)'), 1000.0)
+    assert maths.isclose(wam.convert_transmissibilities(1000.0, 'm3.cP/(kPa.d)', 'm3.cP/(kPa.h)'),
+                         41.66666667,
+                         rel_tol = 1.0e-5)
+    assert maths.isclose(wam.convert_transmissibilities(1000.0, 'm3.cP/(kPa.d)', 'bbl.cP/(psi.d)'),
+                         43366.71868,
+                         rel_tol = 1.0e-5)
+    a = np.array([103.45, 0.024], dtype = float)
+    b = wam.convert_transmissibilities(a, 'ft3.cP/(psi.d)', 'm3.cP/(kPa.d)')
+    assert_array_almost_equal(a, b)
+    assert_array_almost_equal(a, np.array([0.424870917, 9.8567036e-05], dtype = float))
+
+
 def test_nexus_units():
     assert wam.nexus_uom_for_quantity('METRIC', 'length') == 'm'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'length') == 'ft'
