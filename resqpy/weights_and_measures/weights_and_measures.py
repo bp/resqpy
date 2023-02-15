@@ -318,6 +318,72 @@ def convert_flow_rates(a, from_units, to_units):
     return convert(a, from_units, to_units, quantity = 'volume per time', inplace = True)
 
 
+def convert_transmissibilities(a, from_units, to_units):
+    """Converts values in numpy array (or a scalar) from one transmissibility unit to another, in situ if array.
+
+    arguments:
+       a (numpy float array, or float): array of transmissibility values to undergo unit conversion in situ, or a scalar
+       from_units (string): units of the data before conversion, eg. 'm3.cP/(kPa.d)'; see notes for acceptable units
+       to_units (string): required units of the data after conversion, eg. 'bbl.cP/(psi.d)'; see notes for acceptable units
+
+    returns:
+       a after unit conversion
+
+    note:
+       for transmissibility data, resqpy expects a viscosity term in the units of measure (unlike the Energistics standard
+       at the time of RESQML 2.0.1); examples are: 'm3.cP/(kPa.d)' or 'bbl.cP/(psi.d)';
+       the general form of the units strings must be A.B/(C.D) where A is a valid unit of volume, B is a valid unit of
+       dynamic viscosty, C is a valid unit of pressure, and D is a valid unit of time;
+       use wam.valid_uoms(quantity = 'dynamic viscosity') etc. to discover the allowed components of the unit strings
+    """
+
+    def uom_components(units):
+        # decomposes units string into A, B, C, D as outlined in the docstring
+        pAB = units.find('.')
+        pBC = units.find('/(')
+        pCD = units.rfind('.')
+        assert 0 < pAB < pBC - 1 and pBC < pCD - 2 and units[
+            -1] == ')', f'transmissibility units not of form A.B/(C.D): {units}'
+        return units[:pAB], units[pAB + 1:pBC], units[pBC + 2:pCD], units[pCD + 1:-1]
+
+    def check_vol_unit(u):
+        hint = ' (use bbl not rb)' if 'rb' in u else ''
+        assert u in valid_uoms(quantity = 'volume'), f'bad volume component {u} in transmissibility units{hint}'
+
+    def check_visc_unit(u):
+        assert u in valid_uoms(
+            quantity = 'dynamic viscosity'), f'bad viscosity component {u} in transmissibility units (usually cP)'
+
+    def check_press_unit(u):
+        assert u in valid_uoms(
+            quantity = 'pressure'), f'bad pressure component {u} in transmissibility units (often kPa, bar, or psi)'
+
+    def check_time_unit(u):
+        assert u in valid_uoms(quantity = 'time'), f'bad time component {u} in transmissibility units (usually d)'
+
+    from_vol, from_visc, from_press, from_time = uom_components(from_units)
+    to_vol, to_visc, to_press, to_time = uom_components(to_units)
+    factor = 1.0
+    check_vol_unit(from_vol)
+    if from_vol != to_vol:
+        check_vol_unit(to_vol)
+        factor *= convert(1.0, from_vol, to_vol)
+    check_visc_unit(from_visc)
+    if from_visc != to_visc:
+        check_visc_unit(to_visc)
+        factor *= convert(1.0, from_visc, to_visc)
+    check_press_unit(from_press)
+    if from_press != to_press:
+        check_press_unit(to_press)
+        factor /= convert(1.0, from_press, to_press)
+    check_time_unit(from_time)
+    if from_time != to_time:
+        check_time_unit(to_time)
+        factor /= convert(1.0, from_time, to_time)
+    a *= factor
+    return a
+
+
 @lru_cache(None)
 def get_conversion_factors(uom):
     """Return base unit and conversion factors (A, B, C, D) for a given uom.
