@@ -94,7 +94,7 @@ def set_face_set_gcs_list_from_dict(grid, face_set_dict = None, create_organizin
         face_set_dict = grid.face_set_dict
     grid.face_set_gcs_list = []
     for feature, kelp_values in face_set_dict.items():
-        gcs = rqf.GridConnectionSet(grid.model, grid = grid)
+        gcs = rqf.GridConnectionSet(grid.model, grid = grid, title = feature)
         if len(kelp_values) == 2:
             kelp_j, kelp_i = kelp_values
             axis = 'K'
