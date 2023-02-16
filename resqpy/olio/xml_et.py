@@ -67,10 +67,14 @@ def colon_prefixed(curly_prefixed):
 
 def match(xml_name, name):
     """Returns True if the xml_name stripped of prefix matches name."""
-    if xml_name.endswith(name):
-        i = len(xml_name) - len(name) - 1
-        if i == -1 or xml_name[i] == '}' or xml_name[i] == ':':
-            return True
+    i = len(xml_name) - len(name)
+    if i > 0:
+        ch = xml_name[i - 1]
+        if ch != '}' and ch != ':':
+            return False
+        return xml_name[i:] == name
+    elif i == 0:
+        return xml_name == name
     return False
 
 
