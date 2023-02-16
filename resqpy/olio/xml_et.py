@@ -65,13 +65,22 @@ def colon_prefixed(curly_prefixed):
     return pre_colon + ':' + curly_prefixed[pre_end + 1:], pre_colon
 
 
+def match(xml_name, name):
+    """Returns True if the xml_name stripped of prefix matches name."""
+    if xml_name.endswith(name):
+        i = len(xml_name) - len(name) - 1
+        if i == -1 or xml_name[i] == '}' or xml_name[i] == ':':
+            return True
+    return False
+
+
 def find_tag(root, tag_name, must_exist = False):
     """Finds the first child in xml node with a (prefix-stripped) tag matching given tag name."""
 
     if root is None:
         return None
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             return child
     if must_exist:
         raise ValueError(f"Expected tag {tag_name} not found in root {root}")
@@ -84,7 +93,7 @@ def find_tag_text(root, tag_name, must_exist = False):
     if root is None:
         return None
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             return node_text(child)
     if must_exist:
         raise ValueError(f"Expected tag {tag_name} not found in root {root}")
@@ -97,7 +106,7 @@ def find_tag_bool(root, tag_name, must_exist = False):
     if root is None:
         return None
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             return node_bool(child)
     if must_exist:
         raise ValueError(f"Expected tag {tag_name} not found in root {root}")
@@ -110,7 +119,7 @@ def find_tag_int(root, tag_name, must_exist = False):
     if root is None:
         return None
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             return node_int(child)
     if must_exist:
         raise ValueError(f"Expected tag {tag_name} not found in root {root}")
@@ -123,7 +132,7 @@ def find_tag_float(root, tag_name, must_exist = False):
     if root is None:
         return None
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             return node_float(child)
     if must_exist:
         raise ValueError(f"Expected tag {tag_name} not found in root {root}")
@@ -209,7 +218,7 @@ def count_tag(root, tag_name):
         return None
     count = 0
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             count += 1
     return count
 
@@ -221,7 +230,7 @@ def list_of_tag(root, tag_name):
         return None
     results = []
     for child in root:
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             results.append(child)
     return results
 
@@ -233,7 +242,7 @@ def list_of_descendant_tag(root, tag_name):
         return None
     results = []
     for child in root.iterdescendants():
-        if stripped_of_prefix(child.tag) == tag_name:
+        if match(child.tag, tag_name):
             results.append(child)
     return results
 
@@ -244,7 +253,7 @@ def list_obj_references(root, skip_hdf5 = True):
     if root is None:
         return None
     results = []
-    if node_type(root) == 'DataObjectReference' and not (skip_hdf5 and stripped_of_prefix(root.tag) == 'HdfProxy'):
+    if node_type(root) == 'DataObjectReference' and not (skip_hdf5 and match(root.tag, 'HdfProxy')):
         results.append(root)
     for child in root:
         results += list_obj_references(child, skip_hdf5 = skip_hdf5)
@@ -313,9 +322,7 @@ def node_type(node, is_rels = False, strip_obj = False):
         result = type_str[type_str.rfind('/') + 1:]
     else:
         for key in node.attrib.keys():
-            if stripped_of_prefix(key) == 'type':
-                #           type_str = node.attrib[key]
-                #           return type_str[type_str.rfind(':') + 1:]
+            if match(key, 'type'):
                 type_str = stripped_of_prefix(node.attrib[key])
                 result = type_str
     if result and strip_obj and result.startswith('obj_'):
@@ -701,7 +708,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         colon_attrib_key, pre_colon_attrib = colon_prefixed(key)
         if pre_colon_attrib and pre_colon_attrib not in ns_keys:
             attrib_ns_list.append(pre_colon_attrib)
-        if stripped_of_prefix(key) == 'type':
+        if match(key, 'type'):
             type_attr, type_pre_colon = colon_prefixed(root.attrib[key])
             attrib_list.append(colon_attrib_key + '="' + type_attr + '"')
         elif ct_special and colon_attrib_key == 'PartName' and root.attrib[key].startswith('obj_'):
