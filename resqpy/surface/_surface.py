@@ -772,6 +772,51 @@ class Surface(rqsb.BaseSurface):
             return None
         return intersects[indices[0]]
 
+    def sample_z_at_xy_points(self, points, multiple_handling = 'any'):
+        """Returns interpolated z values for an array of xy values.
+
+        arguments:
+            points (numpy float array of shape (..., 2 or 3)): xy points to sample surface at (z values ignored)
+            multiple_handling (str, default 'any'): one of 'any', 'minimum', 'maximum', 'exception'
+
+        returns:
+            numpy float array of shape points.shape[:-1] being z values interpolated from the surface z values
+
+        notes:
+            points must be in the same crs as the surface;
+            NaN will be set for any points that do not intersect with the surface in the xy projection;
+            multiple_handling argument controls behaviour when one sample point intersects surface more than
+            once: 'any' a random one of the intersection z values is returned; 'minimum' or 'maximum': the
+            numerical min or max of the z values is returned; 'exception': a ValueError is raised
+        """
+
+        assert points.ndim > 1 and 2 <= points.shape[-1] <= 3
+        assert multiple_handling in ['any', 'minimum', 'maximum', 'exception'],  \
+            f'invalid multiple handling mode: {multiple_handling}'
+        if points.shape[-1] == 3:
+            sample_xy = points.reshape((-1, 3))
+        else:
+            sample_xy = np.zeros((points.size // 2, 3), dtype = float)
+            sample_xy[:, :2] = points.reshape((-1, 2))
+        t, p = self.triangles_and_points()
+        p_list = vec.points_in_triangles_njit(sample_xy, p[t], 1)
+        vertical = np.array((0.0, 0.0, 1.0), dtype = float)
+        z = np.full(sample_xy.shape[0], np.NaN, dtype = float)
+        for triangle_index, p_index, _ in p_list:
+            # todo: replace following with cheaper trilinear interpolation, given vertical intersection line
+            xyz = meet.line_triangle_intersect_numba(sample_xy[p_index], vertical, p[t[triangle_index]], t_tol = 0.05)
+            if np.isnan(z[p_index]) or multiple_handling == 'any':
+                z[p_index] = xyz[2]
+            elif multiple_handling == 'minimum':
+                if xyz[2] < z[p_index]:
+                    z[p_index] = xyz[2]
+            elif multiple_handling == 'maximum':
+                if xyz[2] > z[p_index]:
+                    z[p_index] = xyz[2]
+            else:
+                raise ValueError(f'multiple {self.title} surface intersections at xy: {sample_xy[p_index]}')
+        return z.reshape(points.shape[:-1])
+
     def normal_vectors(self, add_as_property: bool = False) -> np.ndarray:
         """Returns the normal vectors for each triangle in the surface.
         

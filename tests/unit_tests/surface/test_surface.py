@@ -862,4 +862,23 @@ def test_surface_normal_vectors(tmp_model):
     normal_vectors = surface.normal_vectors()
 
     # Assert
-    np.testing.assert_array_almost_equal(normal_vectors, normal_vectors_expected)
+    # NB: this assumes that the triangulation has returned the triangles in a particular order!
+    assert_array_almost_equal(normal_vectors, normal_vectors_expected)
+
+
+def test_sample_z_at_xy_points(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    s1 = resqpy.surface.Surface(model, crs_uuid = crs.uuid, title = 'test 1')
+    s1.set_to_horizontal_plane(1066.0, box_xyz = np.array([[0.0, 0.0, 0.0], [100.0, 100.0, 0.0]], dtype = float))
+    p3 = np.array([(30.0, 50.0, 12345.0), (20.0, 80.0, -1234.0), (50.0, 50.0, 0.0)], dtype = float)
+    p2 = p3[:, :2]
+    ez1 = np.full(len(p3), 1066.0, dtype = float)
+
+    # Act
+    z1_2 = s1.sample_z_at_xy_points(p2)
+    z1_3 = s1.sample_z_at_xy_points(p3, multiple_handling = 'exception')
+
+    # Assert
+    assert_array_almost_equal(z1_2, ez1)
+    assert_array_almost_equal(z1_2, z1_3)
