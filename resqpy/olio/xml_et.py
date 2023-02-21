@@ -256,11 +256,16 @@ def list_obj_references(root, skip_hdf5 = True):
 
     if root is None:
         return None
+    for v in root.attrib.values():
+        if match(v, 'DataObjectReference'):
+            if skip_hdf5 and match(root.tag, 'HdfProxy'):
+                return None
+            return [root]
     results = []
-    if node_type(root) == 'DataObjectReference' and not (skip_hdf5 and match(root.tag, 'HdfProxy')):
-        results.append(root)
     for child in root:
-        results += list_obj_references(child, skip_hdf5 = skip_hdf5)
+        result = list_obj_references(child, skip_hdf5 = skip_hdf5)
+        if result is not None:
+            results += result
     return results
 
 
@@ -316,19 +321,19 @@ def content_type(content_type_str):
 def node_type(node, is_rels = False, strip_obj = False):
     """Returns the type as held in attributes of xml node; defining authority is stripped out."""
 
-    result = None
     if node is None:
         return None
+    result = None
     if is_rels:
         if 'Type' not in node.attrib.keys():
             return None
         type_str = node.attrib['Type']
         result = type_str[type_str.rfind('/') + 1:]
     else:
-        for key in node.attrib.keys():
+        for key, value in node.attrib.items():
             if match(key, 'type'):
-                type_str = stripped_of_prefix(node.attrib[key])
-                result = type_str
+                result = stripped_of_prefix(value)
+                break
     if result and strip_obj and result.startswith('obj_'):
         result = result[4:]
     return result
