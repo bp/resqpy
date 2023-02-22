@@ -202,7 +202,7 @@ def _add_uuid_soft_relations(model, uuid_int, part):
                 if 'Target' not in relation_node.attrib.keys():
                     return
                 relation_part_name = relation_node.attrib['Target']
-                relation_uuid_str = rqet.uuid_in_part_name(relation_part_name, return_uuid_str=True)
+                relation_uuid_str = rqet.uuid_in_part_name(relation_part_name, return_uuid_str = True)
                 if relation_uuid_str is None:
                     return  # probably HDF5 external resource
                 relation_uuid_int = _hex_to_int(relation_uuid_str)

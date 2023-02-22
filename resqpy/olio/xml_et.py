@@ -70,7 +70,7 @@ def match(xml_name, name):
     """Returns True if the xml_name stripped of prefix matches name."""
     len_name = len(name)
     try:
-        ch = xml_name[-len_name-1]
+        ch = xml_name[-len_name - 1]
     except IndexError:
         try:
             return xml_name[-len_name:] == name
