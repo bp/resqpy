@@ -21,6 +21,7 @@ class BoundaryFeatureInterpretation(BaseResqpy):
                  title = None,
                  boundary_feature = None,
                  domain = 'depth',
+                 originator = None,
                  extra_metadata = None):
         """Initialises a boundary feature interpretation organisational object."""
 
@@ -32,7 +33,11 @@ class BoundaryFeatureInterpretation(BaseResqpy):
         if (not title) and self.boundary_feature is not None:
             title = self.boundary_feature.feature_name
         self.has_occurred_during = (None, None)
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root

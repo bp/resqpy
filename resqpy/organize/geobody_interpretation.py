@@ -41,6 +41,7 @@ class GeobodyInterpretation(BaseResqpy):
                  composition = None,
                  material_implacement = None,
                  geobody_shape = None,
+                 originator = None,
                  extra_metadata = None):
         """Initialise a new geobody interpretation object, either from xml or explicitly."""
 
@@ -51,7 +52,11 @@ class GeobodyInterpretation(BaseResqpy):
         self.composition = composition
         self.implacement = material_implacement
         self.geobody_shape = geobody_shape
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root
