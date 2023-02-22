@@ -5,6 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import os
+import uuid
 
 # import xml element tree parse method and classes here to allow single point for switching between lxml and etree
 # alternative to lxml.etree: xml.etree.ElementTree
@@ -67,15 +68,17 @@ def colon_prefixed(curly_prefixed):
 
 def match(xml_name, name):
     """Returns True if the xml_name stripped of prefix matches name."""
-    i = len(xml_name) - len(name)
-    if i > 0:
-        ch = xml_name[i - 1]
-        if ch != '}' and ch != ':':
+    len_name = len(name)
+    try:
+        ch = xml_name[-len_name-1]
+    except IndexError:
+        try:
+            return xml_name[-len_name:] == name
+        except IndexError:
             return False
-        return xml_name[i:] == name
-    elif i == 0:
-        return xml_name == name
-    return False
+    if ch != '}' and ch != ':':
+        return False
+    return xml_name[-len_name:] == name
 
 
 def find_tag(root, tag_name, must_exist = False):
@@ -254,19 +257,17 @@ def list_of_descendant_tag(root, tag_name):
 def list_obj_references(root, skip_hdf5 = True):
     """Returns list of nodes of type DataObjectReference."""
 
-    if root is None:
-        return None
+    if skip_hdf5 and match(root.tag, 'HdfProxy'):
+        return []
     for v in root.attrib.values():
         if match(v, 'DataObjectReference'):
-            if skip_hdf5 and match(root.tag, 'HdfProxy'):
-                return None
             return [root]
-    results = []
+
+    refs = []
     for child in root:
-        result = list_obj_references(child, skip_hdf5 = skip_hdf5)
-        if result is not None:
-            results += result
-    return results
+        refs.extend(list_obj_references(child, skip_hdf5))
+
+    return refs
 
 
 def cut_obj_references(root, uuids_to_be_cut):
@@ -418,17 +419,22 @@ def print_xml_tree(root,
     return line_count
 
 
-def uuid_in_part_name(part_name):
+def uuid_in_part_name(part_name, return_uuid_str = False):
     """Returns uuid as embedded in part name."""
 
     # This might not always work
     if part_name is None:
         return None
-    if part_name.endswith('.xml') and len(part_name) >= 40:
-        return bu.uuid_from_string(part_name[-40:-4])
-    elif part_name.endswith('.xml.rels') and len(part_name) >= 45:
-        return bu.uuid_from_string(part_name[-45:-9])
-    return None
+    hex = None
+    if part_name[-4:] == '.xml' and len(part_name) >= 40:
+        hex = part_name[-40:-4]
+    elif part_name[-9:] == '.xml.rels' and len(part_name) >= 45:
+        hex = part_name[-45:-9]
+    if hex is None:
+        return None
+    if return_uuid_str:
+        return hex
+    return uuid.UUID(hex)
 
 
 def part_name_for_object(obj_type, uuid, prefixed = False, epc_subdir = None):
