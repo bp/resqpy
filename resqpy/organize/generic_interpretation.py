@@ -22,6 +22,7 @@ class GenericInterpretation(BaseResqpy):
                  composition = None,
                  material_implacement = None,
                  geobody_shape = None,
+                 originator = None,
                  extra_metadata = None):
         """Initialise a new geobody interpretation object, either from xml or explicitly."""
 
@@ -33,7 +34,11 @@ class GenericInterpretation(BaseResqpy):
         self.domain = domain
         self.has_occurred_during = (None, None)
 
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
         if not self.title and feature_uuid is not None:
             title = parent_model.title_for_root(parent_model.root_for_uuid(feature_uuid))

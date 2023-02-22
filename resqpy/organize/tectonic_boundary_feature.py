@@ -15,10 +15,20 @@ class TectonicBoundaryFeature(BaseResqpy):
     feature_name = ou.alias_for_attribute("title")
     valid_kinds = ('fault', 'fracture')
 
-    def __init__(self, parent_model, uuid = None, kind = None, feature_name = None, extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 kind = None,
+                 feature_name = None,
+                 originator = None,
+                 extra_metadata = None):
         """Initialises a tectonic boundary feature (fault or fracture) organisational object."""
         self.kind = kind
-        super().__init__(model = parent_model, uuid = uuid, title = feature_name, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = feature_name,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         self.kind = rqet.find_tag_text(self.root, 'TectonicBoundaryKind')

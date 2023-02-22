@@ -36,6 +36,7 @@ class FaultInterpretation(BaseResqpy):
                  maximum_throw = None,
                  mean_azimuth = None,
                  mean_dip = None,
+                 originator = None,
                  extra_metadata = None):
         """Initialises a Fault interpretation organisational object."""
 
@@ -61,7 +62,11 @@ class FaultInterpretation(BaseResqpy):
         self.mean_dip = mean_dip
         self.throw_interpretation_list = None  # list of (list of throw kind, (base chrono uuid, top chrono uuid)))
 
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
     @property
     def feature_uuid(self):

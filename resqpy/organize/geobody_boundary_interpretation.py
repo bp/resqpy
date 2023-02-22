@@ -24,6 +24,7 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
                  genetic_boundary_feature = None,
                  domain = 'depth',
                  boundary_relation_list = None,
+                 originator = None,
                  extra_metadata = None):
         """ Instantiate a GeobodyBoundaryInterpretation object.
 
@@ -46,7 +47,11 @@ class GeobodyBoundaryInterpretation(BaseResqpy):
         if (not title) and self.genetic_boundary_feature is not None:
             title = self.genetic_boundary_feature.feature_name
         self.has_occurred_during = (None, None)
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root_node = self.root

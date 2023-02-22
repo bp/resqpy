@@ -25,6 +25,7 @@ class EarthModelInterpretation(BaseResqpy):
                  title = None,
                  organization_feature = None,
                  domain = 'depth',
+                 originator = None,
                  extra_metadata = None):
         """Initialises an earth model interpretation organisational object."""
         self.domain = domain
@@ -33,7 +34,11 @@ class EarthModelInterpretation(BaseResqpy):
         self.has_occurred_during = (None, None)
         if (not title) and organization_feature is not None:
             title = organization_feature.feature_name
-        super().__init__(model = parent_model, uuid = uuid, title = title, extra_metadata = extra_metadata)
+        super().__init__(model = parent_model,
+                         uuid = uuid,
+                         title = title,
+                         originator = originator,
+                         extra_metadata = extra_metadata)
 
     def _load_from_xml(self):
         root = self.root
