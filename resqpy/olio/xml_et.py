@@ -704,9 +704,9 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
             type_attr, type_pre_colon = colon_prefixed(val)
             attrib_list.append(colon_attrib_key + '="' + type_attr + '"')
         elif ct_special and colon_attrib_key == 'PartName' and val.startswith('obj_'):
-            attrib_list.append(colon_attrib_key + '="/' + root.attrib[key] + '"')
+            attrib_list.append(colon_attrib_key + '="/' + val + '"')
         else:
-            attrib_list.append(colon_attrib_key + '="' + root.attrib[key] + '"')
+            attrib_list.append(colon_attrib_key + '="' + val + '"')
 
     for attrib_ns in attrib_ns_list:
         line += ' xmlns:' + attrib_ns + '="' + ns[attrib_ns] + '"'
@@ -715,7 +715,8 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         line += ' xmlns:' + type_pre_colon + '="' + ns[type_pre_colon] + '"'
         ns_keys.append(type_pre_colon)
 
-    line += ' ' + ' '.join(attrib_list)
+    if attrib_list:
+        line += ' ' + ' '.join(attrib_list)
 
     node_count = 1
     len_root = len(root)
