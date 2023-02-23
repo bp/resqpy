@@ -158,17 +158,6 @@ def find_faces_to_represent_surface_regular_wrapper(
         surf.create_xml()
         inherit_interpretation_relationship(model, surface_uuid, surf.uuid)
         surface_uuid = surf.uuid
-        if flange_bool is not None:
-            flange_p = rqp.Property.from_array(parent_model = model,
-                                               cached_array = flange_bool,
-                                               source_info = 'flange bool array',
-                                               keyword = 'flange bool',
-                                               support_uuid = surface_uuid,
-                                               property_kind = 'flange bool',
-                                               find_local_property_kind = True,
-                                               indexable_element = 'faces',
-                                               discrete = True)
-            uuid_list.append(flange_p.uuid)
 
     surface = rqs.Surface(parent_model = model, uuid = str(surface_uuid))
     surf_title = surface.title
