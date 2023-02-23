@@ -202,10 +202,10 @@ def _add_uuid_soft_relations(model, uuid_int, part):
                 if 'Target' not in relation_node.attrib.keys():
                     return
                 relation_part_name = relation_node.attrib['Target']
-                relation_uuid_str = str(rqet.uuid_in_part_name(relation_part_name))
-                if len(relation_uuid_str) != 36:
+                relation_uuid_str = rqet.uuid_in_part_name(relation_part_name, return_uuid_str = True)
+                if relation_uuid_str is None:
                     return  # probably HDF5 external resource
-                relation_uuid_int = bu.uuid_from_string(relation_uuid_str).int
+                relation_uuid_int = _hex_to_int(relation_uuid_str)
                 value = model.uuid_rels_dict.get(uuid_int)
                 if value is not None and relation_uuid_int not in value[0] and relation_uuid_int not in value[1]:
                     value[2].add(relation_uuid_int)
@@ -218,7 +218,7 @@ def _add_uuid_relations(model, uuid_int, part):
     for ref_node in rqet.list_obj_references(root):
         if "EpcExternalPart" in rqet.find_tag_text(ref_node, "ContentType"):
             continue
-        ref_uuid_int = bu.uuid_from_string(rqet.find_tag_text(ref_node, "UUID")).int
+        ref_uuid_int = _hex_to_int(rqet.find_tag_text(ref_node, "UUID"))
 
         # Adding reference uuid to the uuid key.
         value = model.uuid_rels_dict.get(uuid_int)
@@ -779,3 +779,7 @@ def _del_uuid_to_part(model, part_name):
         del model.uuid_part_dict[bu.uuid_as_int(uuid)]
     except Exception:
         pass
+
+
+def _hex_to_int(hex):
+    return int(hex.replace('-', ''), 16)
