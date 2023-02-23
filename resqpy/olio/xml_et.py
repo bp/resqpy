@@ -5,6 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import os
+from functools import lru_cache
 
 # import xml element tree parse method and classes here to allow single point for switching between lxml and etree
 # alternative to lxml.etree: xml.etree.ElementTree
@@ -19,7 +20,6 @@ from resqpy.olio.xml_namespaces import namespace as ns
 
 pretend_to_be_fesapi = False
 use_fesapi_quirks = True
-use_tabs = False
 
 if use_fesapi_quirks:
     null_xml_text = '\n'
@@ -47,14 +47,14 @@ def stripped_of_prefix(s):
     return s[s.rfind(':') + 1:]
 
 
+@lru_cache()
 def colon_prefixed(curly_prefixed):
     """Returns a version of an xml tag with {url} prefix replaced with nsi: equivalent; also returns the nsi prefix."""
-
     if not curly_prefixed:
         return None, None
     if curly_prefixed[0] != '{':
         colon = curly_prefixed.find(':')
-        if colon < 0:
+        if colon == -1:
             return curly_prefixed, None
         return curly_prefixed, curly_prefixed[:colon]
     pre_end = curly_prefixed.rfind('}')
@@ -65,6 +65,7 @@ def colon_prefixed(curly_prefixed):
     return pre_colon + ':' + curly_prefixed[pre_end + 1:], pre_colon
 
 
+@lru_cache()
 def match(xml_name, name):
     """Returns True if the xml_name stripped of prefix matches name."""
     i = len(xml_name) - len(name)
@@ -669,40 +670,22 @@ def creation_date_for_node(node):
 
 def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     """Recursively write an xml node to an open file; return number of nodes written."""
-
-    def _escaped_text(text):
-        # todo: include quotes if needed
-        e = ''
-        for ch in str(text):
-            if ch == '<':
-                e += '&lt;'
-            elif ch == '>':
-                e += '&gt;'
-            elif ch == '&':
-                e += '&amp;'
-            else:
-                e += ch
-        return e
-
     if root is None:
         return 0
-
     ns_keys = namespace_keys.copy()
 
-    type_attr = None
     tag, pre_colon = colon_prefixed(root.tag)
 
-    if pre_colon in ['content_types', 'rels']:
-        tag = tag[len(pre_colon) + 1:]
+    if pre_colon == 'content_types':
+        tag = tag[14:]
+        ct_special = True
+    elif pre_colon == 'rels':
+        tag = tag[5:]
         ct_special = True
     else:
         ct_special = False
 
-    if use_tabs:
-        line = (level * '\t')
-    else:
-        line = (3 * level * ' ')
-    line += '<' + tag  # todo: if any tags involve special characters, use _escaped_text(tag)
+    line = 3 * level * ' ' + '<' + tag  # todo: if any tags involve special characters, use _escaped_text(tag)
     if pre_colon and pre_colon not in ns_keys:
         line += ' xmlns'
         if not ct_special:
@@ -713,14 +696,14 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     attrib_ns_list = []
     attrib_list = []
     type_pre_colon = None
-    for key in root.attrib.keys():
+    for key, val in root.attrib.items():
         colon_attrib_key, pre_colon_attrib = colon_prefixed(key)
         if pre_colon_attrib and pre_colon_attrib not in ns_keys:
             attrib_ns_list.append(pre_colon_attrib)
         if match(key, 'type'):
-            type_attr, type_pre_colon = colon_prefixed(root.attrib[key])
+            type_attr, type_pre_colon = colon_prefixed(val)
             attrib_list.append(colon_attrib_key + '="' + type_attr + '"')
-        elif ct_special and colon_attrib_key == 'PartName' and root.attrib[key].startswith('obj_'):
+        elif ct_special and colon_attrib_key == 'PartName' and val.startswith('obj_'):
             attrib_list.append(colon_attrib_key + '="/' + root.attrib[key] + '"')
         else:
             attrib_list.append(colon_attrib_key + '="' + root.attrib[key] + '"')
@@ -732,42 +715,28 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         line += ' xmlns:' + type_pre_colon + '="' + ns[type_pre_colon] + '"'
         ns_keys.append(type_pre_colon)
 
-    for attrib in attrib_list:
-        line += ' ' + attrib
+    line += ' ' + ' '.join(attrib_list)
 
     node_count = 1
-
-    if ct_special and len(root) == 0:
-
+    len_root = len(root)
+    if ct_special and len_root == 0:
         line += '/>\n'
         xml_fp.write(line.encode())
-    #      print(line, end = '') # debug
-
     else:
-
         line += '>'
-
         if root.text and not root.text.isspace():
-            line += _escaped_text(root.text)
-
+            line += root.text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         xml_fp.write(line.encode())
-        #      print(line, end = '') # debug
-        indentation = ''
 
-        if len(root):
+        indentation = ''
+        if len_root:
             xml_fp.write(b'\n')
-            #         print()  # debug
-            if use_tabs:
-                indentation = (level * '\t')
-            else:
-                indentation = (3 * level * ' ')
+            indentation = 3 * level * ' '
             for child in root:
                 node_count += write_xml_node(xml_fp, child, level = level + 1, namespace_keys = ns_keys)
 
         line = indentation + '</' + tag + '>\n'
         xml_fp.write(line.encode())
-
-    #      print(line, end = '') # debug
 
     return node_count
 
