@@ -138,7 +138,7 @@ def find_faces_to_represent_surface_regular_wrapper(
             f'boundary {name} representation {pset.title} has no xyz overlap with grid'
         pset_points = pset.full_array_ref()
         log.debug(f'trimmed point set {pset.title} contains {len(pset_points)} points; about to triangulate')
-        if len(pset_points) > 1000:
+        if len(pset_points) > 50_000:
             log.warning(
                 f'trimmed point set {pset.title} has {len(pset_points)} points, which might take a while to triangulate'
             )
