@@ -141,6 +141,16 @@ class TriMesh(rqs.Mesh):
         tji, _ = self.tji_tc_for_xy(xy)
         return tji
 
+    def tji_for_xy_array(self, xy_array):
+        """Return array of (tj, ti) indices of triangles containing points xy_array (..., 2 or 3).
+
+        note:
+            tj triangle indices are in the range 0..nj - 2 inclusive
+            ti triangle indices are in the range 0..(ni - 2) * 2 + 1 inclusive
+        """
+        tji, _ = self.tji_tc_for_xy_array(xy_array)
+        return tji
+
     def tji_tc_for_xy(self, xy):
         """Return indices of triangle containing point xy (x, y), and trilinear coordinates within triangle.
 
@@ -177,6 +187,44 @@ class TriMesh(rqs.Mesh):
             fy = 1.0 - fy
         return ((j, i), (1.0 - (fx + fy), fx, fy))
 
+    def tji_tc_for_xy_array(self, xy_array):
+        """Return indices of triangles containing array of points xy, and trilinear coordinates within triangles.
+
+        arguments:
+            xy_array (numpy float array of shape (..., 2 or 3)): coordinates x, y of points of interest
+
+        returns:
+            pair of numpy arrays of shape (..., 2) and (..., 3); the first has int elements, being
+            (tj, ti) indices of the triangles containing each point xy; the second has float elements,
+            being the trilinear coordinates of the points within the triangles; f2 is component from
+            base edge towards point 2; f1 is component towards point 1; f0 is component towards point 0;
+            the trilinear coordinates sum to one and can be used as weights to interpolate z values at points
+        """
+        x = xy_array[..., 0]
+        y = xy_array[..., 1]
+        if self.origin is not None:
+            x -= self.origin[0]
+            y -= self.origin[1]
+        jp = y / (self.t_side * root_3_by_2)
+        j = np.floor(jp)
+        mask = np.logical_or(j < 0, j >= self.nj - 1)
+        fy = np.where(j % 2, (j + 1).astype(float) - jp, jp - j.astype(float))
+        ip = x / self.t_side - 0.5 * fy
+        i = np.floor(ip)
+        mask = np.logical_or(mask, np.logical_or(i < 0, i >= self.ni - 1))
+        fx = ip - i.astype(float)
+        i *= 2
+        am = np.where(fx > 1.0 - fy)
+        i[am] += 1
+        fx[am] -= 1.0 - fy[am]
+        fy[am] = 1.0 - fy[am]
+        j[mask] = -1
+        i[mask] = -1
+        fx[mask] = np.NaN
+        fy[mask] = np.NaN
+
+        return (np.stack((j, i), axis = -1), np.stack((1.0 - (fx + fy), fx, fy), axis = -1))
+
     def ji_and_weights_for_xy(self, xy):
         """Returns triplet of point ji indices and triplet of weights for interpolation at point xy.
 
@@ -194,6 +242,21 @@ class TriMesh(rqs.Mesh):
         ji = self.tri_nodes_for_tji(tji)
         return (ji, tc)
 
+    def ji_and_weights_for_xy_array(self, xy_array):
+        """Returns arrays of triplet of point ji indices and triplet of weights for interpolation at points xy_array.
+
+        arguments:
+            xy_array (numpy float array of shape(..., 2 or 3)): coordinates x, y of points of interest
+
+        returns:
+            numpy int array of shape (..., 3, 2) and numpy float array of shape (..., 3); int array holds mesh ji indices
+            of three vertices of triangles containing xy points; float triplets contain corresponding weights (summing to
+            one per triangle) which can be used to interpolate z values at points xy_array
+        """
+        tji, tc = self.tji_tc_for_xy_array(xy_array)
+        ji = self.tri_nodes_for_tji_array(tji)
+        return (ji, tc)
+
     def interpolated_z(self, xy):
         """Returns z value interpolated trilinearly at point xy."""
         ji, tc = self.ji_and_weights_for_xy(xy)
@@ -204,6 +267,16 @@ class TriMesh(rqs.Mesh):
         for vertex in range(3):
             z[vertex] = p[ji[vertex, 0], ji[vertex, 1], 2]
         return np.sum(tc * z)
+
+    def interpolated_z_array(self, xy_array):
+        """Returns z values interpolated trilinearly at points xy_array."""
+        ji, tc = self.ji_and_weights_for_xy_array(xy_array)
+        p = self.full_array_ref()
+        z = np.empty(ji.shape[:-1], dtype = float)
+        for vertex in range(3):
+            # note: ji may have value -1 at some points; p should evaluate to arbitrary last point for that; tc will be NaN
+            z[..., vertex] = p[ji[..., vertex, 0], ji[..., vertex, 1], 2]
+        return np.sum(tc * z, axis = -1)
 
     def tri_nodes_for_tji(self, tji):
         """Return mesh node indices, shape (3, 2), for triangle tji (tj, ti)."""
@@ -224,6 +297,26 @@ class TriMesh(rqs.Mesh):
         tn[0, 1] = i2
         tn[1, 1] = i2 + 1
         tn[2, 1] = i2 + i_odd
+        return tn
+
+    def tri_nodes_for_tji_array(self, tji_array):
+        """Return mesh node indices, shape (..., 3, 2), for triangles tji_array (..., 2) being (tj, ti)."""
+        j = tji_array[..., 0]
+        i = tji_array[..., 1]
+        tn_shape = tuple(list(tji_array.shape[:-1]) + [3, 2])
+        tn = np.zeros(tn_shape, dtype = int)
+        j_odd = j % 2
+        i2, i_odd = np.divmod(i, 2)
+        mask = np.logical_or(np.logical_or(j < 0, j >= self.nj - 1), np.logical_or(i < 0, i >= 2 * (self.ni - 1)))
+        base_j = np.where(i_odd, j + 1 - j_odd, j + j_odd)
+        tip_j = np.where(i_odd, j + j_odd, j + 1 - j_odd)
+        tn[..., 0, 0] = base_j
+        tn[..., 1, 0] = base_j
+        tn[..., 2, 0] = tip_j
+        tn[..., 0, 1] = i2
+        tn[..., 1, 1] = i2 + 1
+        tn[..., 2, 1] = i2 + i_odd
+        tn[mask] = -1
         return tn
 
     def all_tri_nodes(self):

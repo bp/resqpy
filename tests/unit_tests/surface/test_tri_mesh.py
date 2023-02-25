@@ -84,6 +84,19 @@ def test_tri_mesh_tji_for_xy(example_model_and_crs):
     assert trim.tji_for_xy((30.0, 26.0)) is None
 
 
+def test_tri_mesh_tji_for_xy_array(example_model_and_crs):
+    model, crs = example_model_and_crs
+    trim = rqs.TriMesh(model, t_side = 10.0, nj = 4, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
+    xy = np.array([(0.0, 5.0), (5.0, 5.0), (10.0, 5.0), (15.0, 5.0), (25.0, 5.0), (30.0, 5.0), (35.0, 5.0), (5.0, 9.0),
+                   (6.0, 9.0), (30.0, 17.0), (29.0, 17.0), (5.0, 25.5), (30.0, 25.5), (30.0, 26.0)])
+    etji = np.array([(-1, -1), (0, 0), (0, 1), (0, 2), (0, 4), (0, 5), (-1, -1), (1, 0), (1, 1), (1, 5), (1, 4), (2, 0),
+                     (2, 5), (-1, -1)],
+                    dtype = int)
+    tji = trim.tji_for_xy_array(xy)
+    assert tji.shape == (14, 2)
+    assert np.all(tji == etji)
+
+
 def test_tri_mesh_tri_nodes_for_tji(example_model_and_crs):
     model, crs = example_model_and_crs
     trim = rqs.TriMesh(model, t_side = 37.1, nj = 5, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
@@ -94,6 +107,23 @@ def test_tri_mesh_tri_nodes_for_tji(example_model_and_crs):
     assert np.all(trim.tri_nodes_for_tji((3, 0)) == [(4, 0), (4, 1), (3, 0)])
     assert np.all(trim.tri_nodes_for_tji((3, 1)) == [(3, 0), (3, 1), (4, 1)])
     assert np.all(trim.tri_nodes_for_tji((3, 5)) == [(3, 2), (3, 3), (4, 3)])
+
+
+def test_tri_mesh_tri_nodes_for_tji_array(example_model_and_crs):
+    model, crs = example_model_and_crs
+    trim = rqs.TriMesh(model, t_side = 37.1, nj = 5, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
+    tji = np.array([(0, 0), (0, 1), (0, 2), (0, 5), (3, 0), (3, 1), (3, 5)], dtype = int)
+    e_tn = np.array([[(0, 0), (0, 1), (1, 0)], [(1, 0), (1, 1),
+                                                (0, 1)], [(0, 1), (0, 2),
+                                                          (1, 1)], [(1, 2), (1, 3),
+                                                                    (0, 3)], [(4, 0), (4, 1),
+                                                                              (3, 0)], [(3, 0), (3, 1),
+                                                                                        (4, 1)], [(3, 2), (3, 3),
+                                                                                                  (4, 3)]],
+                    dtype = int)
+    tn = trim.tri_nodes_for_tji_array(tji)
+    assert tn.shape == (7, 3, 2)
+    assert np.all(tn == e_tn)
 
 
 def test_tri_mesh_all_tri_nodes(example_model_and_crs):
@@ -207,6 +237,26 @@ def test_tri_mesh_z_interpolation(example_model_and_crs):
     assert maths.isclose(z, 450.0)
     z = trim.interpolated_z((25.0, 50.0))
     assert z is None
+
+
+def test_tri_mesh_z_interpolation_array(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(200.0, 250.0, 300.0), (400.0, 450.0, 500.0), (300.0, 350.0, 400.0)], dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 3,
+                       ni = 3,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    xy = np.array([(50.0, 100.0 * maths.sqrt(3.0) / 6.0), (100.0, 100.0 * maths.sqrt(3.0) * 2.0 / 3.0),
+                   (150.0, 100.0 * maths.sqrt(3.0) - 1.0e-10), (175.0, 100.0 * maths.sqrt(3.0) / 4.0),
+                   (50.0, 100.0 * maths.sqrt(3.0) / 2.0 - 1.0e-10), (150.0, 100.0 * maths.sqrt(3.0) / 2.0 + 1.0e-10),
+                   (25.0, 50.0)],
+                  dtype = float)
+    z = trim.interpolated_z_array(xy)
+    ez = np.array([850.0 / 3.0, 400.0, 375.0, 375.0, 400.0, 450.0, np.NaN], dtype = float)
+    assert_array_almost_equal(z, ez)
 
 
 def test_tri_mesh_nodes_in_triangles(example_model_and_crs):
