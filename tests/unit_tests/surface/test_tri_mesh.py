@@ -88,7 +88,8 @@ def test_tri_mesh_tji_for_xy_array(example_model_and_crs):
     model, crs = example_model_and_crs
     trim = rqs.TriMesh(model, t_side = 10.0, nj = 4, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
     xy = np.array([(0.0, 5.0), (5.0, 5.0), (10.0, 5.0), (15.0, 5.0), (25.0, 5.0), (30.0, 5.0), (35.0, 5.0), (5.0, 9.0),
-                   (6.0, 9.0), (30.0, 17.0), (29.0, 17.0), (5.0, 25.5), (30.0, 25.5), (30.0, 26.0)])
+                   (6.0, 9.0), (30.0, 17.0), (29.0, 17.0), (5.0, 25.5), (30.0, 25.5), (30.0, 26.0)],
+                  dtype = float)
     etji = np.array([(-1, -1), (0, 0), (0, 1), (0, 2), (0, 4), (0, 5), (-1, -1), (1, 0), (1, 1), (1, 5), (1, 4), (2, 0),
                      (2, 5), (-1, -1)],
                     dtype = int)
@@ -113,14 +114,15 @@ def test_tri_mesh_tri_nodes_for_tji_array(example_model_and_crs):
     model, crs = example_model_and_crs
     trim = rqs.TriMesh(model, t_side = 37.1, nj = 5, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')
     tji = np.array([(0, 0), (0, 1), (0, 2), (0, 5), (3, 0), (3, 1), (3, 5)], dtype = int)
-    e_tn = np.array([[(0, 0), (0, 1), (1, 0)], [(1, 0), (1, 1),
-                                                (0, 1)], [(0, 1), (0, 2),
-                                                          (1, 1)], [(1, 2), (1, 3),
-                                                                    (0, 3)], [(4, 0), (4, 1),
-                                                                              (3, 0)], [(3, 0), (3, 1),
-                                                                                        (4, 1)], [(3, 2), (3, 3),
-                                                                                                  (4, 3)]],
-                    dtype = int)
+    # yapf: disable
+    e_tn = np.array([[(0, 0), (0, 1), (1, 0)],
+                     [(1, 0), (1, 1), (0, 1)],
+                     [(0, 1), (0, 2), (1, 1)],
+                     [(1, 2), (1, 3), (0, 3)],
+                     [(4, 0), (4, 1), (3, 0)],
+                     [(3, 0), (3, 1), (4, 1)],
+                     [(3, 2), (3, 3), (4, 3)]], dtype = int)
+    # yapf: enable
     tn = trim.tri_nodes_for_tji_array(tji)
     assert tn.shape == (7, 3, 2)
     assert np.all(tn == e_tn)
@@ -313,3 +315,47 @@ def test_tri_mesh_nodes_in_triangles_with_origin(example_model_and_crs):
             assert ji in [(1, 1), (1, 2), (2, 1)]
         else:
             assert ji in [(1, 3), (2, 2), (2, 3)]
+
+
+def test_tri_mesh_axial_edge_crossing(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(-100.0, -100.0, -100.0, -100.0), (100.0, 100.0, 100.0, 100.0), (500.0, 500.0, 500.0, 500.0)],
+                        dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 3,
+                       ni = 4,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    # z axis
+    z_cross = trim.axial_edge_crossings(2)
+    assert z_cross.shape == (7, 3)
+    xi = np.argsort(z_cross[:, 0])
+    assert_array_almost_equal(z_cross[:, 2], 0.0)
+    assert_array_almost_equal(z_cross[:, 1], 50.0 * maths.sqrt(3.0) / 2.0)
+    assert_array_almost_equal(z_cross[xi[1:], 0] - z_cross[xi[:-1], 0], 50.0)
+    assert maths.isclose(z_cross[xi[0], 0], 25.0)
+    z_cross = trim.axial_edge_crossings(2, value = 300.0)
+    assert z_cross.shape == (7, 3)
+    xi = np.argsort(z_cross[:, 0])
+    assert_array_almost_equal(z_cross[:, 2], 300.0)
+    assert_array_almost_equal(z_cross[:, 1], 150.0 * maths.sqrt(3.0) / 2.0)
+    assert_array_almost_equal(z_cross[xi[1:], 0] - z_cross[xi[:-1], 0], 50.0)
+    assert maths.isclose(z_cross[xi[0], 0], 25.0)
+    # y axis
+    z_cross = trim.axial_edge_crossings(1, value = 150.0 * maths.sqrt(3.0) / 2.0)
+    assert z_cross.shape == (7, 3)
+    xi = np.argsort(z_cross[:, 0])
+    assert_array_almost_equal(z_cross[:, 2], 300.0)
+    assert_array_almost_equal(z_cross[:, 1], 150.0 * maths.sqrt(3.0) / 2.0)
+    assert_array_almost_equal(z_cross[xi[1:], 0] - z_cross[xi[:-1], 0], 50.0)
+    assert maths.isclose(z_cross[xi[0], 0], 25.0)
+    # x axis
+    z_cross = trim.axial_edge_crossings(0, value = 125.0)
+    assert z_cross.shape == (5, 3)
+    yi = np.argsort(z_cross[:, 1])
+    assert_array_almost_equal(z_cross[yi, 2], (-100.0, 0.0, 100.0, 300.0, 500.0))
+    assert_array_almost_equal(z_cross[yi[1:], 1] - z_cross[yi[:-1], 1], 50.0 * maths.sqrt(3.0) / 2.0)
+    maths.isclose(z_cross[yi[0], 1], 0.0)
+    assert_array_almost_equal(z_cross[:, 0], 125.0)
