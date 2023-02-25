@@ -69,17 +69,15 @@ def colon_prefixed(curly_prefixed):
 @lru_cache()
 def match(xml_name, name):
     """Returns True if the xml_name stripped of prefix matches name."""
-    len_name = len(name)
-    try:
-        ch = xml_name[-len_name - 1]
-    except IndexError:
-        try:
-            return xml_name[-len_name:] == name
-        except IndexError:
+    i = len(xml_name) - len(name)
+    if i > 0:
+        ch = xml_name[i - 1]
+        if ch != '}' and ch != ':':
             return False
-    if ch != '}' and ch != ':':
-        return False
-    return xml_name[-len_name:] == name
+        return xml_name[i:] == name
+    elif i == 0:
+        return xml_name == name
+    return False
 
 
 def find_tag(root, tag_name, must_exist = False):
@@ -258,16 +256,16 @@ def list_of_descendant_tag(root, tag_name):
 def list_obj_references(root, skip_hdf5 = True):
     """Returns list of nodes of type DataObjectReference."""
 
-    if skip_hdf5 and match(root.tag, 'HdfProxy'):
+    if root is None:
         return []
     for v in root.attrib.values():
         if match(v, 'DataObjectReference'):
+            if skip_hdf5 and match(root.tag, 'HdfProxy'):
+                return []
             return [root]
-
     refs = []
     for child in root:
-        refs.extend(list_obj_references(child, skip_hdf5))
-
+        refs += list_obj_references(child, skip_hdf5 = skip_hdf5)
     return refs
 
 
