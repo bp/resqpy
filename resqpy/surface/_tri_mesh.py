@@ -418,7 +418,7 @@ class TriMesh(rqs.Mesh):
             s = abs_ze[:, :-1, :] + abs_ze[:, 1:, :]
             # TODO: ignore divide by zero
             w = (xyz[:, :-1, :] * abs_ze[:, 1:, :] + xyz[:, 1:, :] * abs_ze[:, :-1, :]) / s
-            # TODO: unignore
+            # TODO: unignore, and use midpoint of those edges?
             p = np.concatenate((p, w[crossing]))
 
         # one set of j edges
@@ -441,5 +441,105 @@ class TriMesh(rqs.Mesh):
             s = abs_ze[1:-1:2, :-1, :] + abs_ze[2::2, 1:, :]
             w = (xyz[1:-1:2, :-1, :] * abs_ze[2::2, 1:, :] + xyz[2::2, 1:, :] * abs_ze[1:-1:2, :-1, :]) / s
             p = np.concatenate((p, w[crossing]))
+
+        return p
+
+    def axial_edge_crossings(self, axis, value = 0.0):
+        """Returns list-like array of points interpolated from edges that cross value in axis.
+
+        arguments:
+            axis (int): xyz axis for crossings; 0: x, 1: y, 2: z
+            value (float, default 0.0): the value to detect crossings for
+
+        returns:
+            numpy float array of shape (N, 3) being the points on tri mesh edges at which the axial crossing
+            occurs
+        """
+
+        xyz = self.full_array_ref()
+        zero = xyz[..., axis] - value
+        abs_zero = np.expand_dims(np.abs(zero), axis = -1)
+        p = np.empty((0, 3), dtype = float)
+
+        if axis == 0:  # x axis
+
+            xi, xr = divmod(value, self.t_side)
+            if xi >= 0.0 and xi + xr < (float(self.ni) - 0.5) * self.t_side:
+                i = round(xi)
+                xrf = xr / self.t_side
+                if xi + xr < float(self.ni - 1) * self.t_side:
+                    # I edges, even node j
+                    p = xyz[::2, i] * (1.0 - xrf) + xyz[::2, i + 1] * xrf
+                if i or xrf > 0.5:
+                    vp = value - 0.5 * self.t_side
+                    xip, xrp = divmod(vp, self.t_side)
+                    xrp /= self.t_side
+                    # i edges, odd node j
+                    ip = round(xip)
+                    pp = xyz[1::2, ip] * (1.0 - xrp) + xyz[1::2, ip + 1] * xrp
+                    p = np.concatenate((p, pp))
+                if xr != 0.0 and xrf != 0.5:
+                    # j edges of one sort ot the other
+                    if xrf < 0.5:
+                        xrp = 2.0 * xrf
+                        pp = xyz[:-1:2, i] * (1.0 - xrp) + xyz[1::2, i] * xrp
+                        p = np.concatenate((p, pp))
+                        pp = xyz[1:-1:2, i] * xrp + xyz[2::2, i] * (1.0 - xrp)
+                        p = np.concatenate((p, pp))
+                    else:
+                        xrp = 2.0 * (1.0 - xrf)
+                        pp = xyz[:-1:2, i + 1] * (1.0 - xrp) + xyz[1::2, i] * xrp
+                        p = np.concatenate((p, pp))
+                        pp = xyz[1:-1:2, i] * xrp + xyz[2::2, i + 1] * (1.0 - xrp)
+                        p = np.concatenate((p, pp))
+
+        elif axis == 1:
+
+            yi, yr = divmod(value, self.t_side * root_3_by_2)
+
+            if yi >= 0 and yi + yr <= (self.nj - 1) * self.t_side * root_3_by_2:
+                j = round(yi)
+                if yr == 0.0:  # add first and last points from in-line edges
+                    p = np.array([xyz[j, 0], xyz[j, -1]], dtype = float)
+                else:
+                    yrp = yr / (self.t_side * root_3_by_2)
+                    p = xyz[j, :] * (1.0 - yrp) + xyz[j + 1, :] * yrp
+                    if j % 2:
+                        pp = xyz[j, 1:] * (1.0 - yrp) + xyz[j + 1, :-1] * yrp
+                    else:
+                        pp = xyz[j, :-1] * (1.0 - yrp) + xyz[j + 1, 1:] * yrp
+                p = np.concatenate((p, pp))
+
+        else:  # z axis
+
+            # i edges
+            crossing = np.where(zero[:, :-1] * zero[:, 1:] < 0.0)  # zero crossing i edge indices
+            if len(crossing[0]):
+                s = abs_zero[:, :-1] + abs_zero[:, 1:]
+                # TODO: ignore divide by zero
+                w = (xyz[:, :-1, :] * abs_zero[:, 1:] + xyz[:, 1:, :] * abs_zero[:, :-1]) / s
+                # TODO: unignore, and use midpoint of those edges?
+                p = np.concatenate((p, w[crossing]))
+
+            # one set of j edges
+            crossing = np.where(zero[:-1, :] * zero[1:, :] < 0.0)  # zero crossing j edge indices
+            if len(crossing[0]):
+                s = abs_zero[:-1, :] + abs_zero[1:, :]
+                w = (xyz[:-1, :, :] * abs_zero[1:, :] + xyz[1:, :, :] * abs_zero[:-1, :]) / s
+                p = np.concatenate((p, w[crossing]))
+
+            # other set of j edges (even j base)
+            crossing = np.where(zero[:-1:2, 1:] * zero[1::2, :-1] < 0.0)  # zero crossing j edge indices
+            if len(crossing[0]):
+                s = abs_zero[:-1:2, 1:] + abs_zero[1::2, :-1]
+                w = (xyz[:-1:2, 1:, :] * abs_zero[1::2, :-1] + xyz[1::2, :-1, :] * abs_zero[:-1:2, 1:]) / s
+                p = np.concatenate((p, w[crossing]))
+
+            # other set of j edges (odd j base)
+            crossing = np.where(zero[1:-1:2, :-1] * zero[2::2, 1:] < 0.0)  # zero crossing j edge indices
+            if len(crossing[0]):
+                s = abs_zero[1:-1:2, :-1] + abs_zero[2::2, 1:]
+                w = (xyz[1:-1:2, :-1, :] * abs_zero[2::2, 1:] + xyz[2::2, 1:, :] * abs_zero[1:-1:2, :-1]) / s
+                p = np.concatenate((p, w[crossing]))
 
         return p
