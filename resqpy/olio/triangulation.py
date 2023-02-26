@@ -8,6 +8,8 @@ from typing import Tuple
 import math as maths
 import numpy as np
 from scipy.spatial import Delaunay  # type: ignore
+from numba import njit  # type: ignore
+from typing import Optional
 
 import resqpy.crs as rqc
 import resqpy.lines as rql
@@ -865,3 +867,113 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
         theta = float(i) * delta_theta
         ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
     return ring
+
+
+def edges(t):
+    """Returns unique edges as pairs of point indices, and a count of uses of each edge.
+
+    arguments:
+        t (numpy int array of shape (N, 3)): the points indices defining a set of triangles
+
+    returns:
+        (numpy int array of shape (N, 2), numpy int array of shape (N,))
+        where 2D array is list-like sorted points index pairs for unique edges
+        and 1D array contains corresponding edge usage count (usually 1 or 2)
+
+    notes:
+        first entry in each pair is always the lower of the two point indices;
+        for well formed surfaces, the count should everywhere be zero or one;
+        the function does not attempt to detect coincident points
+    """
+
+    assert t.ndim == 2 and t.shape[1] == 3
+    all_edges = np.empty((len(t), 3, 2), dtype = int)
+    all_edges[:, :, 0] = t
+    all_edges[:, :2, 1] = t[:, 1:]
+    all_edges[:, 2, 1] = t[:, 0]
+    all_edges = all_edges.reshape((-1, 2))
+    all_edges.sort(axis = -1)  # first of pair now lower points index
+    return np.unique(all_edges, axis = 0, return_counts = True)
+
+
+def rim_edges(all_edges, edge_counts):
+    """Returns a subset of all edges where the edge count is 1."""
+
+    assert all_edges.ndim == 2 and all_edges.shape[1] == 2
+    assert edge_counts.ndim == 1 and edge_counts.size == len(all_edges)
+    return all_edges[edge_counts == 1, :]
+
+
+def rims(all_rim_edges):
+    """Returns edge index and points index lists of distinct rims.
+
+    arguments:
+        all_rim_edges (numpy int array of shape (N, 2)): edge point indices; as returned by rim_edges()
+
+    returns:
+        (list of arrays of rim edge indices, list of arrays of corresponding points indices)
+        where arrays are 1D numpy int arrays; those of first list hold indices into rows of all_rim_edges;
+        those of second list hold the corresponding points indices, both ordered in sequence of rim
+    """
+
+    assert all_rim_edges.ndim == 2 and all_rim_edges.shape[1] == 2
+    edge_count = len(all_rim_edges)
+    edges_used_count = 0
+    used_mask = np.zeros(edge_count, dtype = bool)
+    rim_edges_list = []
+    rim_points_list = []
+
+    while edges_used_count < edge_count:
+
+        index = _first_false(used_mask)
+        assert index < edge_count
+        start = all_rim_edges[index, 0]
+        next = all_rim_edges[index, 1]
+        used_mask[index] = True
+        edges_used_count += 1
+        rei = [index]
+        rpi = [start]
+
+        while next != start:
+            rpi.append(next)
+            index, next_next = _find_unused(all_rim_edges, used_mask, next)
+            assert index < edge_count, 'loop not closed when following rim edges'
+            used_mask[index] = True
+            edges_used_count += 1
+            rei.append(index)
+            next = next_next
+
+        rim_edges_list.append(np.array(rei, dtype = int))
+        rim_points_list.append(np.array(rpi, dtype = int))
+
+    return rim_edges_list, rim_points_list
+
+
+@njit
+def _find_unused(ap: np.ndarray, used_mask: np.ndarray, v: int):  # type: ignore
+    """Finds the first unused occurence of v in pair list ap, returning index and paired value."""
+    for idx, val in np.ndenumerate(ap[:, 0]):
+        if val == v and not used_mask[idx[0]]:
+            return idx[0], ap[idx[0], 1]
+    for idx, val in np.ndenumerate(ap[:, 1]):
+        if val == v and not used_mask[idx[0]]:
+            return idx[0], ap[idx[0], 0]
+    return ap.shape[0], -1
+
+
+@njit
+def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
+    """Returns the index of the first False value in the array."""
+    for idx, val in np.ndenumerate(array):
+        if not val:
+            return idx[0]
+    return array.size
+
+
+@njit
+def _first_match(array: np.ndarray, v: int) -> Optional[int]:  # type: ignore
+    """Returns the index of the first True value in the array."""
+    for idx, val in np.ndenumerate(array):
+        if val == v:
+            return idx[0]
+    return array.size

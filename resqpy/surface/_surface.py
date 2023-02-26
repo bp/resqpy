@@ -356,12 +356,26 @@ class Surface(rqsb.BaseSurface):
 
         triangles, _ = self.triangles_and_points()
         assert triangles is not None
-        tri_count = len(triangles)
-        all_edges = np.empty((tri_count, 3, 2))
-        for i in range(3):
-            all_edges[:, i, 0] = triangles[:, i - 1]
-            all_edges[:, i, 1] = triangles[:, i]
-        return np.unique(np.sort(all_edges.reshape((-1, 2)), axis = 1), axis = 0)
+        unique_edges, _ = triangulate.edges(triangles)
+        return unique_edges
+
+    def distinct_edges_and_counts(self):
+        """Returns unique edges as pairs of point indices, and a count of uses of each edge.
+
+        returns:
+            numpy int array of shape (N, 2), numpy int array of shape (N,)
+            where 2D array is list-like sorted points index pairs for unique edges
+            and 1D array contains corresponding edge usage count (usually 1 or 2)
+
+        notes:
+            first entry in each pair is always the lower of the two point indices;
+            for well formed surfaces, the count should everywhere be zero or one;
+            the function does not attempt to detect coincident points
+        """
+
+        triangles, _ = self.triangles_and_points()
+        assert triangles is not None
+        return triangulate.edges(triangles)
 
     def set_from_triangles_and_points(self, triangles, points):
         """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
@@ -853,6 +867,38 @@ class Surface(rqsb.BaseSurface):
             pc.write_hdf5_for_imported_list()
             pc.create_xml_for_imported_list_and_add_parts_to_model(find_local_property_kinds = True)
         return normal_vectors_array
+
+    def axial_edge_crossings(self, axis, value = 0.0):
+        """Returns list-like array of points interpolated from triangle edges that cross value in axis.
+
+        arguments:
+            axis (int): xyz axis; 0 for crossings in x axis, 1 for y, 2 for z
+            value (float, default 0.0): the value in axis at which crossing points are sought
+
+        returns:
+            numpy float array of shape (N, 3) being interpolated triangle edge points with the crossing
+                value in axis; or None if no crossings found
+        """
+
+        t, p = self.triangles_and_points()
+        zero = p[:, axis] - value  # +ve one side of value, -ve the other side
+        abs_zero = np.expand_dims(np.abs(zero), axis = -1)  # used to weight ends of crossing edges to interpolate
+        e, _ = triangulate.edges(t)  # list-like pairs of p indices for ends of distinct edges
+
+        # find crossing edges
+        crossing = np.where(zero[e[:, 0]] * zero[e[:, 1]] < 0.0)  # zero crossing edge indices in e
+
+        if not len(crossing[0]):
+            return None
+
+        ec = e[crossing]
+
+        s = abs_zero[ec[:, 0]] + abs_zero[ec[:, 1]]
+        # TODO: ignore divide by zero
+        ep = (p[ec[:, 0]] * abs_zero[ec[:, 1]] + p[ec[:, 1]] * abs_zero[ec[:, 0]]) / s
+        # TODO: unignore, and use midpoint of those edges?
+
+        return ep
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.

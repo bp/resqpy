@@ -177,3 +177,62 @@ def test_reorient():
     if d_azi > 180.0:
         d_azi = 360.0 - d_azi
     assert d_azi < 5.0
+
+
+def test_edges_and_rims():
+    p = np.zeros((5, 6, 3), dtype = float)
+    p[:, :, 0] = np.expand_dims(100.0 * np.arange(6, dtype = int).astype(float), axis = 0)
+    p[:, :, 1] = np.expand_dims(100.0 * np.arange(5, dtype = int).astype(float), axis = 1)
+    p = p.reshape((-1, 3))
+    t = np.empty((4, 5, 2, 3), dtype = int)
+    for j in range(4):
+        for i in range(5):
+            t[j, i, 0, 0] = 6 * j + i
+            t[j, i, 0, 1] = 6 * j + i + 1
+            t[j, i, 0, 2] = 6 * (j + 1) + i
+            t[j, i, 1, 0] = 6 * (j + 1) + i + 1
+            t[j, i, 1, 1] = 6 * j + i + 1
+            t[j, i, 1, 2] = 6 * (j + 1) + i
+    assert np.all(t >= 0) and np.all(t < len(p))
+    t = t.reshape((-1, 2, 3))
+    mask = np.ones((4, 5), dtype = bool)
+    mask[1, 1] = False
+    mask[2, 1] = False
+    mask[1, 3] = False
+    t = t[mask.flatten()].reshape((-1, 3))
+    assert t.shape == (34, 3)
+
+    e, c = tri.edges(t)
+    assert e.shape == (6 * 4 + 5 * 5 + 20 - 4, 2)
+    assert c.ndim == 1 and len(c) == len(e)
+    assert np.all((c - 1) * (c - 2) == 0)  # each edge is used once or twice
+    assert np.count_nonzero(c == 1) == 4 * 2 + 5 * 2 + 6 + 4
+
+    re = tri.rim_edges(e, c)
+    assert re.shape == (4 * 2 + 5 * 2 + 6 + 4, 2)
+
+    rims_edge_list, rims_points_list = tri.rims(re)
+    assert len(rims_edge_list) == 3
+    assert len(rims_points_list) == 3
+    for rer, rp in zip(rims_edge_list, rims_points_list):
+        assert rer.ndim == 1 and rp.ndim == 1
+        assert len(rer) == len(rp)
+        assert not np.any(rp == 21) and not np.any(rp == 22)
+        count = len(rp)
+        assert count in (4, 6, 18)
+        if count == 4:
+            assert set(rp) == set((9, 10, 15, 16))
+            trp = tuple(rp)
+            if rp[0] == 9:
+                assert trp == (9, 10, 16, 15) or trp == (9, 15, 16, 10)
+            elif rp[0] == 10:
+                assert trp == (10, 16, 15, 9) or trp == (10, 9, 15, 16)
+            elif rp[0] == 15:
+                assert trp == (15, 9, 10, 16) or trp == (15, 16, 10, 9)
+            else:
+                assert trp == (16, 15, 9, 10) or trp == (16, 10, 9, 15)
+        elif count == 6:
+            assert set(rp) == set((7, 8, 13, 14, 19, 20))
+        else:
+            assert set(rp) == (set(np.arange(6, dtype = int)) | set(24 + np.arange(6, dtype = int)) | set(
+                (6, 12, 18, 11, 17, 23)))
