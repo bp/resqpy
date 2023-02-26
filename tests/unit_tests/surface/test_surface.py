@@ -882,3 +882,49 @@ def test_sample_z_at_xy_points(example_model_and_crs):
     # Assert
     assert_array_almost_equal(z1_2, ez1)
     assert_array_almost_equal(z1_2, z1_3)
+
+
+def test_axial_edge_crossings(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(-100.0, -100.0, -100.0, -100.0), (100.0, 100.0, 100.0, 100.0), (500.0, 500.0, 500.0, 500.0)],
+                        dtype = float)
+    trim = resqpy.surface.TriMesh(model,
+                                  t_side = 100.0,
+                                  nj = 3,
+                                  ni = 4,
+                                  z_values = z_values,
+                                  crs_uuid = crs.uuid,
+                                  title = 'test tri mesh')
+    surf = resqpy.surface.Surface.from_tri_mesh(trim)
+
+    # z axis
+    z_cross = surf.axial_edge_crossings(2)
+    assert z_cross.shape == (7, 3)
+    xi = np.argsort(z_cross[:, 0])
+    assert_array_almost_equal(z_cross[:, 2], 0.0)
+    assert_array_almost_equal(z_cross[:, 1], 50.0 * maths.sqrt(3.0) / 2.0)
+    assert_array_almost_equal(z_cross[xi[1:], 0] - z_cross[xi[:-1], 0], 50.0)
+    assert maths.isclose(z_cross[xi[0], 0], 25.0)
+    z_cross = surf.axial_edge_crossings(2, value = 300.0)
+    assert z_cross.shape == (7, 3)
+    xi = np.argsort(z_cross[:, 0])
+    assert_array_almost_equal(z_cross[:, 2], 300.0)
+    assert_array_almost_equal(z_cross[:, 1], 150.0 * maths.sqrt(3.0) / 2.0)
+    assert_array_almost_equal(z_cross[xi[1:], 0] - z_cross[xi[:-1], 0], 50.0)
+    assert maths.isclose(z_cross[xi[0], 0], 25.0)
+    # y axis
+    z_cross = surf.axial_edge_crossings(1, value = 150.0 * maths.sqrt(3.0) / 2.0)
+    assert z_cross.shape == (7, 3)
+    xi = np.argsort(z_cross[:, 0])
+    assert_array_almost_equal(z_cross[:, 2], 300.0)
+    assert_array_almost_equal(z_cross[:, 1], 150.0 * maths.sqrt(3.0) / 2.0)
+    assert_array_almost_equal(z_cross[xi[1:], 0] - z_cross[xi[:-1], 0], 50.0)
+    assert maths.isclose(z_cross[xi[0], 0], 25.0)
+    # x axis
+    z_cross = surf.axial_edge_crossings(0, value = 125.0)
+    assert z_cross.shape == (5, 3)
+    yi = np.argsort(z_cross[:, 1])
+    assert_array_almost_equal(z_cross[yi, 2], (-100.0, 0.0, 100.0, 300.0, 500.0))
+    assert_array_almost_equal(z_cross[yi[1:], 1] - z_cross[yi[:-1], 1], 50.0 * maths.sqrt(3.0) / 2.0)
+    maths.isclose(z_cross[yi[0], 1], 0.0)
+    assert_array_almost_equal(z_cross[:, 0], 125.0)
