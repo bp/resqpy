@@ -19,6 +19,11 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 from resqpy.olio.xml_namespaces import namespace as ns_url
 
 
+def _add_to_object_parts(model, part):
+    if m_c._obj_part(part) is not None:
+        model.object_parts[part] = None
+
+
 def _load_part(model, epc, part_name, is_rels = None):
     """Load and parse xml tree for given part name, storing info in parts forest (or rels forest)."""
 
@@ -58,6 +63,7 @@ def _load_part(model, epc, part_name, is_rels = None):
                 elif uuid_from_tree is not None:
                     assert bu.matching_uuids(part_uuid, uuid_from_tree)
                 model.parts_forest[part_name] = (part_type, part_uuid, part_tree)
+                _add_to_object_parts(model, part_name)
                 _set_uuid_to_part(model, part_name, part_uuid)
                 if model.crs_uuid is None and part_type == 'obj_LocalDepth3dCrs':  # randomly assign first crs as primary crs for model
                     model.crs_uuid = part_uuid
@@ -83,6 +89,7 @@ def _fell_part(model, part_name):
         pass
     try:
         del model.parts_forest[part_name]
+        model.object_parts.pop(part_name)
     except Exception:
         pass
     try:
@@ -122,6 +129,7 @@ def _tidy_up_forests(model, tidy_main_tree = True, tidy_others = False, remove_e
             _remove_part_from_main_tree(model, part)
         _del_uuid_to_part(model, part)
         del model.parts_forest[part]
+        model.object_parts.pop(part)
     deletion_list = []
     for part, info in model.rels_forest.items():
         if info == (None, None):
@@ -277,6 +285,7 @@ def _set_part_names_in_forests(model, epc_subdir, names):
                     model.rels_forest[name] = (part_uuid, None)
                 else:
                     model.parts_forest[name] = (None, part_uuid, None)
+                    _add_to_object_parts(model, name)
                     _set_uuid_to_part(model, name, part_uuid)
 
 
@@ -299,6 +308,7 @@ def _complete_forest_entry_for_part(epc, model, epc_subdir, full_load, child):
                 return
             part_uuid = model.parts_forest[part_name][1]
             model.parts_forest[part_name] = (part_type, part_uuid, None)
+            _add_to_object_parts(model, part_name)
         if full_load:
             load_success = _load_part(model, epc, part_name)
             if not load_success:
@@ -428,6 +438,7 @@ def _add_part(model,
         model.other_forest[part_name] = (content_type, part_tree)
     else:
         model.parts_forest[part_name] = (content_type, uuid, part_tree)
+        _add_to_object_parts(model, part_name)
         _set_uuid_to_part(model, part_name, uuid)
     main_ref = rqet.SubElement(model.main_root, ns['content_types'] + 'Override')
     main_ref.set('PartName', part_name)
@@ -453,6 +464,7 @@ def _patch_root_for_part(model, part, root):
     assert bu.matching_uuids(uuid, rqet.uuid_for_part_root(root))
     part_tree = rqet.ElementTree(element = root)
     model.parts_forest[part] = (content_type, uuid, part_tree)
+    _add_to_object_parts(model, part)
 
 
 def _remove_part(model, part_name, remove_relationship_part):
@@ -477,6 +489,7 @@ def _remove_part(model, part_name, remove_relationship_part):
     _del_uuid_to_part(model, part_name)
     _del_uuid_relations(model, part_name)
     model.parts_forest.pop(part_name)
+    model.object_parts.pop(part_name)
     _remove_part_from_main_tree(model, part_name)
     model.set_modified()
 

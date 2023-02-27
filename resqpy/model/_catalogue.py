@@ -327,19 +327,18 @@ def _parts_list_of_type(model, type_of_interest = None, uuid = None):
     return parts_list
 
 
+def _obj_part(part):
+    dir_place = part.rfind('/')
+    dir_free_part = part[dir_place + 1:]
+    if dir_free_part[:4] == 'obj_' and dir_free_part[:7] != 'obj_Epc':
+        return part
+
+
 def _list_of_parts(model, only_objects = True):
     """Return a complete list of parts."""
-
-    pl = list(model.parts_forest.keys())
     if not only_objects:
-        return pl
-    obj_list = []
-    for part in pl:
-        dir_place = part.rfind('/')
-        dir_free_part = part[dir_place + 1:]
-        if dir_free_part.startswith('obj_') and not dir_free_part.startswith('obj_Epc'):
-            obj_list.append(part)
-    return obj_list
+        return list(model.parts_forest.keys())
+    return list(model.object_parts.keys())
 
 
 def _number_of_parts(model):
