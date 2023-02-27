@@ -156,7 +156,7 @@ def _create_ref_node(model, flavour, title, uuid, content_type = None, root = No
     if not title:
         title = model.title(uuid = uuid)
         if title is None:
-            title = ''
+            title = 'untitled'
     title_node = rqet.SubElement(ref_node, ns['eml'] + 'Title')
     title_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
     title_node.text = title
