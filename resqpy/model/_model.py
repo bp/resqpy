@@ -172,6 +172,7 @@ class Model():
         ]  # todo: mapping from reservoir name (citation title) to list of grids for that reservoir
         self.consolidation = None  # Consolidation object for mapping equivalent uuids
         self.modified = False
+        self.object_parts = {}  # Dictionary for model object parts that aren't epc refs.
 
     def parts(self,
               parts_list = None,
