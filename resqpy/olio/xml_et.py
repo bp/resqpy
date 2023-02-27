@@ -729,8 +729,11 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
         xml_fp.write(line.encode())
     else:
         line += '>'
-        if root.text and not root.text.isspace():
-            line += root.text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        text = root.text
+        if (not text or text.isspace()) and tag == 'Title':
+            text = 'untitled'
+        if text and not text.isspace():
+            line += text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         xml_fp.write(line.encode())
 
         indentation = ''
