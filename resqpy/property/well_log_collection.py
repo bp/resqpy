@@ -45,7 +45,16 @@ class WellLogCollection(rqp_pc.PropertyCollection):
            it may be of use
         """
 
-        super().__init__(support = frame, property_set_root = property_set_root, realization = realization)
+        if property_set_root is not None:
+            super().__init__(support = frame, property_set_root = property_set_root, realization = realization)
+        else:
+            super().__init__()
+            if frame is not None:
+                self.set_wellbore_frame(frame)
+                fpc = frame.extract_property_collection()
+                self.inherit_parts_selectively_from_other_collection(fpc,
+                                                                     realization = realization,
+                                                                     indexable = 'nodes')
 
     def add_log(self, title, data, unit, discrete = False, realization = None, write = True, source_info = ''):
         """Add a well log to the collection, and optionally save to HDF / XML.
