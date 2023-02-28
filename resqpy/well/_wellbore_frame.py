@@ -174,7 +174,7 @@ class WellboreFrame(BaseResqpy):
                                                                       wellbore_feature = self.wellbore_feature)
             self.feature_and_interpretation_to_be_written = True
         else:
-            log.info("WellboreInterpretation already exists")
+            log.debug("WellboreInterpretation for {self.title} already exists")
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the measured depths."""

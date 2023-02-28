@@ -171,7 +171,7 @@ def property_kind_and_facet_from_keyword(keyword):
     # elif lk == 'sal':    # todo: salinity; local property kind needed; various units possible in Nexus
     elif lk == 'livecell' or lk.startswith('act'):
         property_kind = 'active'  # local property kind, see RESQML (2.0.1) usage guide, section 11.17
-    elif lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg'):
+    elif len(lk) <= 8 and (lk[0] == 'i' or lk.startswith('reg') or lk.startswith('creg')):
         property_kind = 'region initialization'  # local property kind, see RESQML (2.0.1) usage guide, section 11.18
         if lk[0] == 'i':
             facet_type = 'what'
