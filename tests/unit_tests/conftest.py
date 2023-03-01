@@ -115,7 +115,7 @@ def example_model_with_logs(example_model_with_well):
     frame.write_hdf5()
     frame.create_xml(title = 'Log run A')
 
-    log_collection = frame.logs
+    log_collection = frame.extract_log_collection()
     log_collection.add_log("GR", [1, 2, 1, 2], 'gAPI')
     log_collection.add_log("NPHI", [0.1, 0.1, np.NaN, np.NaN], 'v/v')
 

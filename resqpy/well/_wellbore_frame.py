@@ -73,11 +73,11 @@ class WellboreFrame(BaseResqpy):
         :meta common:
         """
 
-        #: Associated wellbore trajectory, an instance of :class:`resqpy.well.Trajectory`.
+        #: associated wellbore trajectory, an instance of :class:`resqpy.well.Trajectory`.
         self.trajectory = trajectory
         self.trajectory_uuid = None if trajectory is None else trajectory.uuid
 
-        #: Instance of :class:`resqpy.organize.WellboreInterpretation`
+        #: instance of :class:`resqpy.organize.WellboreInterpretation`
         self.wellbore_interpretation = represented_interp
         self.wellbore_feature = None
         self.feature_and_interpretation_to_be_written = False
@@ -88,7 +88,9 @@ class WellboreFrame(BaseResqpy):
         #: node_count measured depths (in same units and datum as trajectory) of cell entry and/or exit points
         self.node_mds = None
 
-        #: All logs associated with the wellbore frame; an instance of :class:`resqpy.property.WellLogCollection`
+        #: all properties, including indexable of nodes or intervals; an instance of :class:`resqpy.property.PropertyCollection`
+        self.property_collection = None
+        #: all logs associated with the wellbore frame; an instance of :class:`resqpy.property.WellLogCollection`
         self.logs = None
 
         super().__init__(model = parent_model,
@@ -101,10 +103,6 @@ class WellboreFrame(BaseResqpy):
             self.node_count = len(mds)
             self.node_mds = np.array(mds)
             assert self.node_mds is not None and self.node_mds.ndim == 1
-
-        # UUID needs to have been created before LogCollection can be made
-        # TODO: Figure out when this should be created, and how it is kept in sync when new logs are created
-        self.logs = rqp.WellLogCollection(frame = self)
 
     def _load_from_xml(self):
         """Loads the wellbore frame object from an xml node (and associated hdf5 data)."""
@@ -137,9 +135,8 @@ class WellboreFrame(BaseResqpy):
         else:
             self.wellbore_interpretation = rqo.WellboreInterpretation(self.model, uuid = interp_uuid)
 
-        # Create well log collection of all log data
+        self.extract_property_collection()
         self.logs = rqp.WellLogCollection(frame = self)
-        # pass
 
     def extract_crs_uuid(self):
         """Returns the uuid of the coordinate reference system used by the related trajectory."""
@@ -147,6 +144,20 @@ class WellboreFrame(BaseResqpy):
         if self.trajectory is None:
             return None
         return self.trajectory.crs_uuid
+
+    def extract_property_collection(self):
+        """Returns property collection for the frame, creating attribute if not already established."""
+        if self.property_collection is None:
+            self.property_collection = rqp.PropertyCollection(support = self)
+        return self.property_collection
+
+    def extract_log_collection(self, refresh = False):
+        """Returns collection of well logs (nodes properties) for this frame, creating if refresh or not already established."""
+        if refresh:
+            self.logs = None
+        if self.logs is None:
+            self.logs = rqp.WellLogCollection(frame = self)
+        return self.logs
 
     def create_feature_and_interpretation(self):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does
@@ -163,7 +174,7 @@ class WellboreFrame(BaseResqpy):
                                                                       wellbore_feature = self.wellbore_feature)
             self.feature_and_interpretation_to_be_written = True
         else:
-            log.info("WellboreInterpretation already exists")
+            log.debug("WellboreInterpretation for {self.title} already exists")
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the measured depths."""
