@@ -54,7 +54,7 @@ class WellboreFrame(BaseResqpy):
            trajectory (Trajectory object, optional): the trajectory of the well; required if loading from
               list of measured depths
            mds (optional numpy 1D array, tuple or list of floats): ordered list of measured depths which
-              will constitute the frame; ignored if uuid is not None
+              will constitute the frame; ignored if uuid is not None; units are those of trajectory mds
            represented_interp (wellbore interpretation object, optional): if present, is noted as the wellbore
               interpretation object which this frame relates to; ignored if uuid is not None
            title (str, optional): the citation title to use for a new wellbore frame;
@@ -99,7 +99,8 @@ class WellboreFrame(BaseResqpy):
                          originator = originator,
                          extra_metadata = extra_metadata)
 
-        if self.root is None and trajectory is not None and mds is not None and len(mds) > 1:
+        if self.root is None and trajectory is not None and mds is not None:
+            assert len(mds) > 1, 'at least two measured depth nodes needed for wellbore frame'
             self.node_count = len(mds)
             self.node_mds = np.array(mds)
             assert self.node_mds is not None and self.node_mds.ndim == 1
@@ -158,6 +159,27 @@ class WellboreFrame(BaseResqpy):
         if self.logs is None:
             self.logs = rqp.WellLogCollection(frame = self)
         return self.logs
+
+    def interval_for_md(self, md):
+        """Returns wellbore frame interval index and fractional way along interval, for given md.
+
+        arguments:
+            md (float): measured depth, in units used by trajectory mds
+
+        returns:
+            (int, float) where int is the index of the wellbore frame interval containing md, and float is a fraction
+                way through that interval of md, in range 0.0 to 1.0
+
+        note:
+            if md is outside the range covered by the wellbore frame intervals, an index of -1 is returned and
+            the fraction will be 0.0 for an md shallower than the frame intervals, 1.0 for deeper
+        """
+        if md < self.node_mds[0]:
+            return -1, 0.0  # -1 indicates md is not in any frame interval, 0.0 indicates too shallow
+        for i in range(self.node_count - 1):
+            if md <= self.node_mds[i + 1]:
+                return i, (md - self.node_mds[i]) / (self.node_mds[i + 1] - self.node_mds[i])
+        return -1, 1.0  # 1.0 indicates md is deeper than the intervals covered by the frame
 
     def create_feature_and_interpretation(self):
         """Instantiate new empty WellboreFeature and WellboreInterpretation objects, if a wellboreinterpretation does

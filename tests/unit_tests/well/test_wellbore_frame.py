@@ -1,3 +1,4 @@
+import math as maths
 import numpy as np
 import pandas as pd
 
@@ -38,7 +39,7 @@ def test_WellboreFrame(example_model_and_crs):
     trajectory.create_xml()
 
     # Create a wellbore frame object
-    wellbore_frame_mds = np.array([305, 315])
+    wellbore_frame_mds = np.array([305, 315, 320])
     wellbore_frame = resqpy.well.WellboreFrame(parent_model = model,
                                                trajectory = trajectory,
                                                mds = wellbore_frame_mds,
@@ -61,8 +62,18 @@ def test_WellboreFrame(example_model_and_crs):
     wellbore_frame_2 = resqpy.well.WellboreFrame(parent_model = model2, uuid = wellbore_frame_uuid)
 
     # ----------- Assert ---------
-    assert wellbore_frame_2.node_count == 2
+    assert wellbore_frame_2.node_count == 3
     np.testing.assert_equal(wellbore_frame_2.node_mds, wellbore_frame_mds)
+
+    # test interval_for_md() method
+    i, f = wellbore_frame_2.interval_for_md(310.0)
+    assert i == 0 and maths.isclose(f, 0.5)
+    i, f = wellbore_frame_2.interval_for_md(319.0)
+    assert i == 1 and maths.isclose(f, 0.8)
+    i, f = wellbore_frame_2.interval_for_md(304.9)
+    assert i == -1 and maths.isclose(f, 0.0)
+    i, f = wellbore_frame_2.interval_for_md(320.01)
+    assert i == -1 and maths.isclose(f, 1.0)
 
 
 def test_create_feature_and_intrepretation(example_model_and_crs):

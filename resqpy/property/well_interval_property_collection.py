@@ -1,6 +1,6 @@
 """Class for a collection of well interval properties"""
 
-# Nexus is a registered trademark of the Halliburton Company
+# NB. This class does not appear to be well formed and is a candidate for deprecation
 
 import logging
 

@@ -1,7 +1,5 @@
 """Class for wellintervalproperty, for resqml wellbore frame of blocked wellbore supports."""
 
-# Nexus is a registered trademark of the Halliburton Company
-
 import logging
 
 log = logging.getLogger(__name__)

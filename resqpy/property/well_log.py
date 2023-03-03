@@ -1,7 +1,5 @@
 """Class for a welllog, representing resqml properties for well logs"""
 
-# Nexus is a registered trademark of the Halliburton Company
-
 import logging
 
 log = logging.getLogger(__name__)

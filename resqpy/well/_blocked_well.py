@@ -25,6 +25,7 @@ import resqpy.property as rqp
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as wam
 import resqpy.well as rqw
+import resqpy.well.blocked_well_frame as bwf
 import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -133,8 +134,9 @@ class BlockedWell(BaseResqpy):
 
         self.cell_interval_map = None  # maps from cell index to interval (ie. node) index; populated on demand
 
-        #: All logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
-        self.logs = None
+        self.property_collection = None
+        #: all logs associated with the blockedwellbore; an instance of :class:`resqpy.property.WellIntervalPropertyCollection`
+        self.logs = None  # due for deprecation
         self.cellind_null = -1
         self.gridind_null = -1
         self.facepair_null = -1
@@ -250,7 +252,7 @@ class BlockedWell(BaseResqpy):
         self.cell_count = rqet.find_tag_int(node, 'CellCount')
         assert self.cell_count is not None and self.cell_count > 0
 
-        # TODO: remove this if block once RMS export issue resolved
+        # todo: remove this if block once RMS export issue resolved
         if self.cell_count == self.node_count:
             extended_mds = np.empty((self.node_mds.size + 1,))
             extended_mds[:-1] = self.node_mds
@@ -350,6 +352,12 @@ class BlockedWell(BaseResqpy):
             grid_uuid = rqet.uuid_for_part_root(grid_node)
             grid_obj = self.model.grid(uuid = grid_uuid, find_properties = False)
             self.grid_list.append(grid_obj)
+
+    def extract_property_collection(self, refresh = False):
+        """Returns a property collection for the blocked well."""
+        if self.property_collection is None or refresh:
+            self.property_collection = rqp.PropertyCollection(support = self)
+        return self.property_collection
 
     def map_cell_and_grid_indices(self):
         """Returns a list of index values linking the grid_indices to cell_indices.
@@ -1704,6 +1712,89 @@ class BlockedWell(BaseResqpy):
 
         return df
 
+    def wb_cell_for_md(self, md):
+        """Return blocked well cell index and fractional distance into cell md interval, for given md."""
+
+        if md < self.node_mds[0]:
+            return -1, 0.0
+        ci = 0
+        for i in range(self.node_count - 1):
+            if md <= self.node_mds[i + 1]:
+                if self.grid_indices[i] < 0:
+                    ci = -1  # indicates md is in unblocked interval
+                return ci, (md - self.node_mds[i]) / (self.node_mds[i + 1] - self.node_mds[i])
+            if self.grid_indices[i] >= 0:
+                ci += 1
+        return -1, 1.0  # 1.0 indicates md is deeper than the intervals covered by the blocked well
+
+    def frame_contributions_list(self, wbf):
+        """Returns wellbore frame contributions to each cell in this blocked well.
+
+        arguments:
+            wbf (WellboreFrame): the wellbore frame to map to this blocked well
+
+        returns:
+            list of list of (int, float, float) with one entry per blocked well cell, and each
+                entry being a list of (wellbore frame interval index,
+                                       fraction of wellbore frame interval in cell,
+                                       fraction of cell's wellbore interval in wellbore frame interval)
+        """
+        return bwf.blocked_well_frame_contributions_list(self, wbf)
+
+    def add_properties_from_wellbore_frame(self,
+                                           frame_uuid = None,
+                                           property_kinds_list = None,
+                                           realization = None,
+                                           set_length = None,
+                                           set_perforation_fraction = None):
+        """Add properties to this blocked well by derivation from wellbore frame intervals properties.
+
+        arguments:
+            frame_uuid (UUID, optional): the uuid of the wellbore frame to source properties from; if None, a
+                solitary wellbore frame relating to the same trajectory as this blocked well will be used
+            property_kinds_list (list of str, optional): if present, a list of handled property kinds which
+                are to be set from the wellbore frame properties; if None, any handled property kinds that
+                are present for the wellbore frame will be used
+            realization (int, optional): if present, wellbore frame properties will be filtered by this
+                realization number and it will be assigned to the blocked well properties that are created
+            set_length (bool, optional): if True, a length property will be generated based on active
+                measured depth intervals; if None, will be set True if length is in list of property kinds
+                being processed
+            set_perforation_fraction (bool, optional): if True, a perforation fraction property will be
+                created based on the fraction of the measured depth within a blocked well cell that is
+                flagged as active, ie. perforated at some time; if None, it will be created only if length
+                and permeability thickness are both absent
+
+        returns:
+            list of uuids of created property parts (does not include any copied time series object)
+
+        notes:
+            this method is designed to set up some blocked well properties based on similar properties
+            already established on a special wellbore frame, mainly for perforations and open hole completions;
+            frame_uuid should be specified if there are well logs in the dataset, or other wellbore frames;
+            if a permeability thickness property is being set based on a wellbore frame property, the value
+            is divided between blocked well cells based solely on measured depth interval lengths, without
+            reference to grid properties such as net to gross ratio or permeability;
+            titles will be the same as those used in the frame properties, and 'PPERF' for partial
+            perforation;
+            units of measure will also be the same as those in the wellbore frame;
+            this method only supports single grid blocked wells at present
+        """
+
+        # note: 'active' ia a static property kind used to indicate that a cell is perforated or otherwise
+        # open to flow at some time, so needs to appear somewhere in well specification data for flow simulation;
+        # 'well connection open' is a dynamic indicator used to identify time periods when a connection is open
+        # handled_property_kinds = [
+        #     'active', 'well connection open', 'length', 'permeability length', 'skin', 'wellbore radius',
+        #     'non darcy flow coefficient']
+
+        return bwf.add_blocked_well_properties_from_wellbore_frame(self,
+                                                                   frame_uuid = frame_uuid,
+                                                                   property_kinds_list = property_kinds_list,
+                                                                   realization = realization,
+                                                                   set_length = set_length,
+                                                                   set_perforation_fraction = set_perforation_fraction)
+
     def __get_interval_count(self):
         """Get the number of intervals to be added to the dataframe."""
 
@@ -2560,7 +2651,7 @@ class BlockedWell(BaseResqpy):
 
         for column in columns:
             extra = column.upper()
-            uom, pk, discrete = self.__set_uom_pk_discrete_for_df_properties(extra = extra, length_uom = length_uom)
+            uom, pk, discrete = self._get_uom_pk_discrete_for_df_properties(extra = extra, length_uom = length_uom)
             if discrete:
                 null_value = -1
                 na_value = -1
@@ -2596,16 +2687,17 @@ class BlockedWell(BaseResqpy):
         extra_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_series_uuid,
                                                                      find_local_property_kinds = True)
 
-    def __set_uom_pk_discrete_for_df_properties(self, extra, length_uom, temperature_uom = None):
+    def _get_uom_pk_discrete_for_df_properties(self, extra, length_uom, temperature_uom = None):
         """Set the property kind and unit of measure for all properties in the dataframe."""
+        # todo: this is horribly inefficient, building a whole dictionary for every call but only using one entry
         if length_uom not in ['m', 'ft']:
             raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
         if extra == 'TEMP' and (temperature_uom is None or
                                 temperature_uom not in wam.valid_uoms('thermodynamic temperature')):
             raise ValueError(f"The temperature_uom must be in {wam.valid_uoms('thermodynamic temperature')}.")
 
-        length_uom_pk_discrete = self.__set_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
-                                                                                        extra = extra)
+        length_uom_pk_discrete = self._get_uom_pk_discrete_for_length_based_properties(length_uom = length_uom,
+                                                                                       extra = extra)
         uom_pk_discrete_dict = {
             'ANGLA': ('dega', 'azimuth', False),
             'ANGLV': ('dega', 'inclination', False),
@@ -2637,7 +2729,7 @@ class BlockedWell(BaseResqpy):
         }
         return uom_pk_discrete_dict.get(extra, ('Euc', 'continuous', False))
 
-    def __set_uom_pk_discrete_for_length_based_properties(self, length_uom, extra):
+    def _get_uom_pk_discrete_for_length_based_properties(self, length_uom, extra):
         if length_uom is None or length_uom == 'Euc':
             if extra in ['LENGTH', 'MD', 'MDCON']:
                 uom = self.trajectory.md_uom

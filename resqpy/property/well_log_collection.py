@@ -1,7 +1,5 @@
 """Class for a collection of well logs"""
 
-# Nexus is a registered trademark of the Halliburton Company
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -59,7 +57,7 @@ class WellLogCollection(rqp_pc.PropertyCollection):
     def add_log(self, title, data, unit, discrete = False, realization = None, write = True, source_info = ''):
         """Add a well log to the collection, and optionally save to HDF / XML.
 
-        Note:
+        note:
            If write=False, the data are not written to the model and are saved to be written later.
            To write the data, you can subsequently call::
 
