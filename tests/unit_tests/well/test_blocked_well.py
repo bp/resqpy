@@ -267,10 +267,12 @@ def test_set_for_column_and_other_things(example_model_and_crs):
 
     # check derivation of blocked well properties from wellbore frame properties
     pks = ['active', 'wellbore radius', 'well connection open', 'permeability length', 'skin']
-    bw.add_properties_from_wellbore_frame(frame_uuid = wellbore_frame.uuid,
-                                          property_kinds_list = pks,
-                                          set_length = True,
-                                          set_perforation_fraction = True)
+    uuids = bw.add_properties_from_wellbore_frame(frame_uuid = wellbore_frame.uuid,
+                                                  property_kinds_list = pks,
+                                                  set_length = True,
+                                                  set_perforation_fraction = True,
+                                                  set_frame_interval = True)
+    assert len(uuids) == 14
     model.store_epc()
     model = rq.Model(model.epc_file)
     bw = BlockedWell(model, uuid = bw.uuid)
@@ -329,6 +331,15 @@ def test_set_for_column_and_other_things(example_model_and_crs):
                             (4.0, np.NaN, -1, -1.5, np.NaN)], dtype = float)
     # yapf: enable
     assert_array_almost_equal(bw_skin, expect_skin)
+    # check wellbore frame interval blocked well property
+    wbf_ii_part = bw_pc.singleton(property_kind = 'wellbore frame interval')
+    assert wbf_ii_part is not None
+    wbf_ii_uuid = model.uuid_for_part(wbf_ii_part)
+    rel_frame_uuid = model.uuid(obj_type = 'WellboreFrameRepresentation', related_uuid = wbf_ii_uuid, related_mode = 2)
+    assert rel_frame_uuid is not None and bu.matching_uuids(rel_frame_uuid, wellbore_frame.uuid)
+    wbf_ii = bw_pc.cached_part_array_ref(wbf_ii_part)
+    assert wbf_ii is not None and wbf_ii.shape == (bw.cell_count,)
+    assert np.all(wbf_ii == (0, -1, 2, 2, -1)) or np.all(wbf_ii == (0, -1, 2, 3, -1))
 
 
 def test_derive_from_cell_list(example_model_and_crs):

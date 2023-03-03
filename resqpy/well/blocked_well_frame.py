@@ -75,7 +75,8 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
                                                     property_kinds_list = None,
                                                     realization = None,
                                                     set_length = None,
-                                                    set_perforation_fraction = None):
+                                                    set_perforation_fraction = None,
+                                                    set_frame_interval = False):
     """Add properties to this blocked well by derivation from wellbore frame intervals properties.
 
     arguments:
@@ -94,6 +95,8 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
             created based on the fraction of the measured depth within a blocked well cell that is
             flagged as active, ie. perforated at some time; if None, it will be created only if length
             and permeability thickness are both absent
+        set_frame_interval (bool, default False): if True, a static discrete property holding the index
+            of the dominant active wellbore frame interval (per blocked well cell) is created
 
     returns:
         list of uuids of created property parts (does not include any copied time series object)
@@ -107,6 +110,9 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
         reference to grid properties such as net to gross ratio or permeability;
         titles will be the same as those used in the frame properties, and 'PPERF' for partial
         perforation;
+        if set_frame_interval is True, the resulting property will be given a soft relationship with the
+        wellbore frame (in addition to its supporting representation reference relationship with the
+        blocked well); a null value of -1 is used where no active frame interval is present in a cell;
         units of measure will also be the same as those in the wellbore frame;
         this method only supports single grid blocked wells at present;
         blocked well and wellbore frame must be in the same model
@@ -178,13 +184,14 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
     # inherit static properties from wellbore frame to blocked well; resampling mehtod depends on property kind
     # TODO: make length and perforation fraction properties dynamic
     wb_active_array = None
-    if 'active' in pk_list or set_length or set_perforation_fraction:
+    if 'active' in pk_list or set_length or set_perforation_fraction or set_frame_interval:
         wbf_p = wbf_pc.singleton(property_kind = 'active')
         assert wbf_p is not None, 'problem with active wellbore frame property'
         wbf_a = wbf_pc.cached_part_array_ref(wbf_p)
         wb_a = np.zeros(bw.cell_count, dtype = bool)
         length = np.zeros(bw.cell_count, dtype = float)
         pperf = np.zeros(bw.cell_count, dtype = float)
+        dominant_wbf_interval = np.full(bw.cell_count, -1, dtype = int)
         ci = 0
         for wb_ii in range(bw.node_count - 1):
             if bw.grid_indices[wb_ii] < 0:
@@ -192,14 +199,31 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
             i = ci
             ci += 1
             wbf_contributions = wb_fraction_of_wbf[i]
+            max_active_cell_fr = 0.0
+            max_active_wbf_ii = None
             for (wbf_ii, _, cell_fr) in wbf_contributions:
                 if wbf_a[wbf_ii]:
                     wb_a[i] = True  # any contributing frame interval active makes cell active
                     pperf[i] += cell_fr
+                    if cell_fr > max_active_cell_fr:
+                        max_active_cell_fr = cell_fr
+                        max_active_wbf_ii = wbf_ii
             if pperf[i] > 1.0:
                 pperf[i] = 1.0
+            if max_active_wbf_ii is not None:
+                dominant_wbf_interval[i] = max_active_wbf_ii
             length[i] = pperf[i] * (bw.node_mds[wb_ii + 1] - bw.node_mds[wb_ii])
         wb_active_array = wb_a.copy()
+        if set_frame_interval:
+            # position this first to make it easy to get its uuid, for adding a soft relationship
+            wb_pc.add_cached_array_to_imported_list(dominant_wbf_interval,
+                                                    f'derived from wellbore frame {wbf.title}',
+                                                    'wellbore frame interval',
+                                                    discrete = True,
+                                                    property_kind = 'wellbore frame interval',
+                                                    null_value = -1,
+                                                    realization = realization,
+                                                    indexable_element = 'cells')
         if 'active' in pk_list:
             wb_pc.add_cached_array_to_imported_list(wb_a,
                                                     f'derived from wellbore frame {wbf.title}',
@@ -356,5 +380,8 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
 
     wb_pc.write_hdf5_for_imported_list()
     uuids = wb_pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    if set_frame_interval:
+        bw.model.create_reciprocal_relationship_uuids(uuids[0], 'sourceObject', frame_uuid, 'destinationObject')
 
     return uuids

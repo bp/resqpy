@@ -1746,7 +1746,8 @@ class BlockedWell(BaseResqpy):
                                            property_kinds_list = None,
                                            realization = None,
                                            set_length = None,
-                                           set_perforation_fraction = None):
+                                           set_perforation_fraction = None,
+                                           set_frame_interval = False):
         """Add properties to this blocked well by derivation from wellbore frame intervals properties.
 
         arguments:
@@ -1764,6 +1765,8 @@ class BlockedWell(BaseResqpy):
                 created based on the fraction of the measured depth within a blocked well cell that is
                 flagged as active, ie. perforated at some time; if None, it will be created only if length
                 and permeability thickness are both absent
+            set_frame_interval (bool, default False): if True, a static discrete property holding the index
+                of the dominant active wellbore frame interval (per blocked well cell) is created
 
         returns:
             list of uuids of created property parts (does not include any copied time series object)
@@ -1777,8 +1780,12 @@ class BlockedWell(BaseResqpy):
             reference to grid properties such as net to gross ratio or permeability;
             titles will be the same as those used in the frame properties, and 'PPERF' for partial
             perforation;
+            if set_frame_interval is True, the resulting property will be given a soft relationship with the
+            wellbore frame (in addition to its supporting representation reference relationship with the
+            blocked well); a null value of -1 is used where no active frame interval is present in a cell;
             units of measure will also be the same as those in the wellbore frame;
-            this method only supports single grid blocked wells at present
+            this method only supports single grid blocked wells at present;
+            wellbore frame must be in the same model as this blocked well
         """
 
         # note: 'active' ia a static property kind used to indicate that a cell is perforated or otherwise
@@ -1793,7 +1800,8 @@ class BlockedWell(BaseResqpy):
                                                                    property_kinds_list = property_kinds_list,
                                                                    realization = realization,
                                                                    set_length = set_length,
-                                                                   set_perforation_fraction = set_perforation_fraction)
+                                                                   set_perforation_fraction = set_perforation_fraction,
+                                                                   set_frame_interval = set_frame_interval)
 
     def __get_interval_count(self):
         """Get the number of intervals to be added to the dataframe."""
