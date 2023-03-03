@@ -37,7 +37,7 @@ class TimeSeries(ats.AnyTimeSeries):
         arguments:
            parent_model (model.Model): the resqpy model to which the time series will belong
            uuid (uuid.UUID, optional): the uuid of a TimeSeries object to be loaded from xml
-           first_time_stamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
+           first_timestamp (str, optional): the first timestamp (in RESQML format) if not loading from xml;
               this and the remaining arguments are ignored if loading from xml; if present, timestamp must
               be in ISO 8601 format, eg '2023-01-31' or '2023-01-31T13:30:00Z' or '2023-01-31T13:30:00.912'
            daily (non-negative int, optional): the number of one day interval timesteps to start the series

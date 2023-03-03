@@ -10,23 +10,24 @@ from numpy.testing import assert_array_almost_equal
 import pytest
 
 import resqpy
-import resqpy.olio.uuid as bu
-from resqpy.grid import RegularGrid
-from resqpy.model import Model
+import resqpy.model as rq
+import resqpy.grid as grr
 import resqpy.property as rqp
+import resqpy.time_series as rqts
+import resqpy.well as rqw
+import resqpy.olio.uuid as bu
 from resqpy.well.well_utils import _derive_from_wellspec_check_grid_name
 from resqpy.well import BlockedWell
-from resqpy.time_series import TimeSeries
 
 
 def test_wellspec_properties(example_model_and_crs):
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
@@ -53,13 +54,11 @@ def test_wellspec_properties(example_model_and_crs):
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
-    bw = resqpy.well.BlockedWell(
-        model,
-        wellspec_file = wellspec_file,
-        well_name = well_name,
-        use_face_centres = True,
-        add_wellspec_properties = True,
-    )
+    bw = rqw.BlockedWell(model,
+                         wellspec_file = wellspec_file,
+                         well_name = well_name,
+                         use_face_centres = True,
+                         add_wellspec_properties = True)
     assert bw is not None
     bw_uuid = bw.uuid
     skin_uuid = model.uuid(title = 'SKIN', related_uuid = bw.uuid)
@@ -70,11 +69,13 @@ def test_wellspec_properties(example_model_and_crs):
     model.store_epc()
     log.debug(model.grid().property_collection.titles())
     # re-open model from persistent storage
-    model = Model(model.epc_file)
+    model = rq.Model(model.epc_file)
     bw2_uuid = model.uuid(obj_type = 'BlockedWellboreRepresentation', title = 'DOGLEG')
     assert bw2_uuid is not None
-    bw2 = resqpy.well.BlockedWell(model, uuid = bw2_uuid)
+    bw2 = rqw.BlockedWell(model, uuid = bw2_uuid)
     assert bu.matching_uuids(bw_uuid, bw2_uuid)
+    pc = bw2.extract_property_collection()
+    assert pc is not None and pc.number_of_parts() == 6
     df2 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW', 'PPERF'],
                        use_properties = True)
     assert df2 is not None
@@ -94,13 +95,13 @@ def test_derive_from_wellspec_check_grid_name(example_model_and_crs, check_grid_
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (5, 3, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       title = 'Battleship',
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           title = 'Battleship',
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
@@ -116,47 +117,235 @@ def test_derive_from_wellspec_check_grid_name(example_model_and_crs, check_grid_
     assert result[1] == col_list
 
 
-def test_set_for_column(example_model_and_crs):
+def test_set_for_column_and_other_things(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (5, 3, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
-    well_name = 'DOGLEG'
-    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
+    well_name = 'VERTICAL'
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
 
     # --------- Act ----------
     # populate empty blocked well object for a 'vertical' well in the given column
     bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1, 1))
+    bw.write_hdf5()
+    bw.create_xml()
+
+    wellbore_frame_mds = np.array([90.0, 110.0, 220.0, 270.0, 290.0, 360.0], dtype = float)
+    wellbore_frame = rqw.WellboreFrame(parent_model = model,
+                                       trajectory = bw.trajectory,
+                                       mds = wellbore_frame_mds,
+                                       title = 'w.b.f.')
+    assert wellbore_frame is not None and wellbore_frame.node_count == len(wellbore_frame_mds)
+    assert wellbore_frame.node_mds is not None and len(wellbore_frame.node_mds) == wellbore_frame.node_count
+    wellbore_frame.write_hdf5()
+    wellbore_frame.create_xml()
+    # add a time series for dynamic properties to refer to
+    ts = rqts.TimeSeries(model, first_timestamp = '1997-03-03', yearly = 2, title = 'well connection times')
+    ts.create_xml()
+    # add some properties on the wellbore frame
+    wbf_pc = wellbore_frame.extract_property_collection()
+    a = np.array((True, False, True, True, False), dtype = bool)
+    wbf_pc.add_cached_array_to_imported_list(a,
+                                             'unit test',
+                                             'perforated',
+                                             discrete = True,
+                                             property_kind = 'active',
+                                             indexable_element = 'intervals')
+    r = np.array((0.1, 0.1, 0.075, 0.075, 0.075), dtype = float)
+    wbf_pc.add_cached_array_to_imported_list(r,
+                                             'unit test',
+                                             'hole size',
+                                             discrete = False,
+                                             property_kind = 'wellbore radius',
+                                             uom = 'm',
+                                             indexable_element = 'intervals')
+    o = np.array([(False, False, True, True, False), (True, False, True, True, False),
+                  (True, False, True, False, False)],
+                 dtype = bool)
+    for ti in range(3):
+        wbf_pc.add_cached_array_to_imported_list(o[ti],
+                                                 'unit test',
+                                                 'open flag',
+                                                 discrete = True,
+                                                 property_kind = 'well connection open',
+                                                 time_index = ti,
+                                                 time_series_uuid = ts.uuid,
+                                                 indexable_element = 'intervals')
+    kh = np.array([(2000.0, 0.0, 2500.0, 3000.0, 0.0), (2000.0, 0.0, 2000.0, 3000.0, 0.0),
+                   (2000.0, 0.0, 1500.0, 3000.0, 0.0)],
+                  dtype = float)
+    for ti in range(3):
+        wbf_pc.add_cached_array_to_imported_list(kh[ti],
+                                                 'unit test',
+                                                 'KH',
+                                                 discrete = False,
+                                                 property_kind = 'permeability length',
+                                                 uom = 'mD.m',
+                                                 time_index = ti,
+                                                 time_series_uuid = ts.uuid,
+                                                 indexable_element = 'intervals')
+    skin = np.array([(3.0, np.NaN, -1.0, 2.0, np.NaN), (3.5, np.NaN, -1.0, 2.0, np.NaN),
+                     (4.0, np.NaN, -1.0, -2.0, np.NaN)],
+                    dtype = float)
+    for ti in range(3):
+        wbf_pc.add_cached_array_to_imported_list(skin[ti],
+                                                 'unit test',
+                                                 'SKIN',
+                                                 discrete = False,
+                                                 property_kind = 'skin',
+                                                 uom = 'Euc',
+                                                 time_index = ti,
+                                                 time_series_uuid = ts.uuid,
+                                                 indexable_element = 'intervals')
+
+    wbf_pc.write_hdf5_for_imported_list()
+    uuids = wbf_pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 11
+
+    model.store_epc()
 
     # --------- Assert ----------
+    model = rq.Model(model.epc_file)
+    bw = rqw.BlockedWell(model, uuid = bw.uuid)
+    wellbore_frame = rqw.WellboreFrame(model, uuid = wellbore_frame.uuid)
+
     assert bw.cell_count == 5
-    assert bw.node_count == len(
-        bw.node_mds) == len(bw.trajectory.measured_depths) - 1  # tail added to trajectory measured depths
-    assert (len(bw.grid_list) == 1) & (bw.grid_list[0] == grid)
+    # note: tail added to trajectory measured depths
+    assert bw.node_count == len(bw.node_mds) == len(bw.trajectory.measured_depths) - 1
+    assert (len(bw.grid_list) == 1) and bu.matching_uuids(bw.grid_list[0].uuid, grid.uuid)
+
+    # test wb_cell_for_md() method
+    ci, f = bw.wb_cell_for_md(88.0)
+    assert ci == -1 and maths.isclose(f, 0.88)
+    ci, f = bw.wb_cell_for_md(110.0)
+    assert ci == 0 and maths.isclose(f, 0.2)
+    ci, f = bw.wb_cell_for_md(225.0)
+    assert ci == 2 and maths.isclose(f, 0.5)
+    ci, f = bw.wb_cell_for_md(351.0)
+    assert ci == -1
+
+    # test wellbore frame contributions per cell functionality
+    contribs = bw.frame_contributions_list(wellbore_frame)
+    assert len(contribs) == bw.cell_count
+    c0 = contribs[0]  # contributions for cell 0
+    assert len(c0) == 2
+    c00 = c0[0]
+    assert len(c00) == 3  # entries in inner lists are triplets
+    assert c00[0] == 0 and maths.isclose(c00[1], 0.5) and maths.isclose(c00[2], 0.2)
+    c01 = c0[1]
+    assert c01[0] == 1 and maths.isclose(c01[1], 40.0 / 110.0) and maths.isclose(c01[2], 0.8)
+    c1 = contribs[1]
+    assert len(c1) == 1
+    c10 = c1[0]
+    assert c10[0] == 1 and maths.isclose(c10[1], 50.0 / 110.0) and maths.isclose(c10[2], 1.0)
+    c2 = contribs[2]
+    assert len(c2) == 2
+    c20 = c2[0]
+    assert c20[0] == 1 and maths.isclose(c20[1], 20.0 / 110.0) and maths.isclose(c20[2], 0.4)
+    c21 = c2[1]
+    assert c21[0] == 2 and maths.isclose(c21[1], 0.6) and maths.isclose(c21[2], 0.6)
+    c3 = contribs[3]
+    assert len(c3) == 3
+    c30 = c3[0]
+    assert c30[0] == 2 and maths.isclose(c30[1], 0.4) and maths.isclose(c30[2], 0.4)
+    c31 = c3[1]
+    assert c31[0] == 3 and maths.isclose(c31[1], 1.0) and maths.isclose(c31[2], 0.4)
+    c32 = c3[2]
+    assert c32[0] == 4 and maths.isclose(c32[1], 10.0 / 70.0) and maths.isclose(c32[2], 0.2)
+    c4 = contribs[4]
+    assert len(c4) == 1
+    c40 = c4[0]
+    assert c40[0] == 4 and maths.isclose(c40[1], 50.0 / 70.0) and maths.isclose(c40[2], 1.0)
+
+    # check derivation of blocked well properties from wellbore frame properties
+    pks = ['active', 'wellbore radius', 'well connection open', 'permeability length', 'skin']
+    bw.add_properties_from_wellbore_frame(frame_uuid = wellbore_frame.uuid,
+                                          property_kinds_list = pks,
+                                          set_length = True,
+                                          set_perforation_fraction = True)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    bw = BlockedWell(model, uuid = bw.uuid)
+    bw_pc = bw.extract_property_collection()
+    # check active flag has been sampled correctly (cell active if any part of any frame interval active)
+    bw_active = bw_pc.single_array_ref(property_kind = 'active')
+    assert bw_active is not None and bw_active.shape == (bw.cell_count,)
+    assert np.all(bw_active == (True, False, True, True, False))
+    # check active length
+    bw_length_part = bw_pc.singleton(property_kind = 'length')
+    assert bw_length_part is not None
+    assert bw_pc.uom_for_part(bw_length_part) == bw.trajectory.md_uom
+    bw_length = bw_pc.cached_part_array_ref(bw_length_part)
+    assert bw_length is not None and bw_length.shape == (bw.cell_count,)
+    assert_array_almost_equal(bw_length, (10.0, 0.0, 30.0, 40.0, 0.0))
+    # check perforation fraction
+    bw_pperf = bw_pc.single_array_ref(property_kind = 'perforation fraction')
+    assert bw_pperf is not None and bw_pperf.shape == (bw.cell_count,)
+    assert_array_almost_equal(bw_pperf, (0.2, 0.0, 0.6, 0.8, 0.0))
+    # check wellbore radius
+    radw_part = bw_pc.singleton(property_kind = 'wellbore radius')
+    assert radw_part is not None
+    assert bw_pc.uom_for_part(radw_part) == 'm'
+    radw = bw_pc.cached_part_array_ref(radw_part)
+    assert radw is not None and radw.shape == (bw.cell_count,)
+    assert_array_almost_equal(radw, (0.1, 0.1, 0.1, 0.075, 0.075))
+    # check dynamic open connection flag
+    open_flag_pc = rqp.selective_version_of_collection(bw_pc, property_kind = 'well connection open')
+    assert open_flag_pc.number_of_parts() == 3
+    open_flag = open_flag_pc.time_series_array_ref(fill_missing = False, indexable_element = 'cells')
+    assert open_flag.shape == (3, bw.cell_count)
+    # yapf: disable
+    assert np.all(open_flag.astype(bool) == np.array([(False, False, True, True, False),
+                                                      (True, False, True, True, False),
+                                                      (True, False, True, True, False)], dtype = bool))
+    # yapf: enable
+    # check dynamic KH
+    kh_pc = rqp.selective_version_of_collection(bw_pc, citation_title = 'KH')
+    assert kh_pc.number_of_parts() == 3
+    bw_kh = kh_pc.time_series_array_ref(fill_missing = False, indexable_element = 'cells')
+    assert bw_kh.shape == (3, bw.cell_count)
+    # yapf: disable
+    expect_kh = np.array([(1000.0, 0.0, 1500.0, 4000.0, 0.0),
+                          (1000.0, 0.0, 1200.0, 3800.0, 0.0),
+                          (1000.0, 0.0,  900.0, 3600.0, 0.0)], dtype = float)
+    # yapf: enable
+    assert_array_almost_equal(bw_kh, expect_kh)
+    # check dynamic skin
+    skin_pc = rqp.selective_version_of_collection(bw_pc, property_kind = 'skin')
+    assert skin_pc.number_of_parts() == 3
+    bw_skin = skin_pc.time_series_array_ref(fill_missing = False, indexable_element = 'cells')
+    assert bw_skin.shape == (3, bw.cell_count)
+    # yapf: disable
+    expect_skin = np.array([(3.0, np.NaN, -1, 0.5, np.NaN),
+                            (3.5, np.NaN, -1, 0.5, np.NaN),
+                            (4.0, np.NaN, -1, -1.5, np.NaN)], dtype = float)
+    # yapf: enable
+    assert_array_almost_equal(bw_skin, expect_skin)
 
 
 def test_derive_from_cell_list(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (5, 3, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
     cell_kji0_list = np.array([(1, 1, 1), (2, 2, 2), (3, 3, 3), (3, 3, 4)])
-    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
 
     # --------- Act ----------
     # populate empty blocked well object for a 'vertical' well in the given column
@@ -172,18 +361,18 @@ def test_grid_uuid_list(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (5, 3, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     grid_uuid = grid.uuid
     well_name = 'DOGLEG'
     cell_kji0_list = np.array([(1, 1, 1), (2, 2, 2), (3, 3, 3), (3, 3, 4)])
-    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
 
     # --------- Act ----------
     # populate empty blocked well object for a 'vertical' well in the given column
@@ -200,12 +389,12 @@ def test_verify_grid_name(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
@@ -214,7 +403,7 @@ def test_verify_grid_name(example_model_and_crs):
          [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_2'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
     row = source_df.iloc[2]
-    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True)
 
     # --------- Act ----------
     skipped_warning_grid, skip_row = bw._BlockedWell__verify_grid_name(grid_name_to_check = 'grid_1',
@@ -231,12 +420,12 @@ def test_calculate_exit_and_entry(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     well_name = 'DOGLEG'
@@ -249,7 +438,7 @@ def test_calculate_exit_and_entry(example_model_and_crs):
                    [2,    3,    3,   60.0,     0.0,    -0.5,   0.20,   0.9,    'grid_1']],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
     # yapf: enable
-    bw = resqpy.well.BlockedWell(model, well_name = well_name)
+    bw = rqw.BlockedWell(model, well_name = well_name)
 
     # --------- Act ----------
     cp = grid.corner_points(cell_kji0 = (0, 1, 1))
@@ -303,12 +492,12 @@ def test_calculate_exit_and_entry_mixed_units(example_model_and_mixed_units_crs)
 
     # --------- Arrange ----------
     model, crs = example_model_and_mixed_units_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     assert grid.crs.xy_units == 'm' and grid.crs.z_units == 'ft'
@@ -322,7 +511,7 @@ def test_calculate_exit_and_entry_mixed_units(example_model_and_mixed_units_crs)
                    [2,    3,    3,   60.0,     0.0,    -0.5,   0.20,   0.9,    'grid_1']],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
     # yapf: enable
-    bw = resqpy.well.BlockedWell(model, well_name = well_name)
+    bw = rqw.BlockedWell(model, well_name = well_name)
 
     # --------- Act ----------
     cp = grid.corner_points(cell_kji0 = (0, 1, 1))
@@ -376,12 +565,12 @@ def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     cp_expected = grid.corner_points(cell_kji0 = (2, 2, 1))
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
@@ -390,7 +579,7 @@ def test_calculate_cell_cp_center_and_vectors(example_model_and_crs):
         [[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 0.9, 'grid_1'], [2, 2, 2, 0.45, -90.0, 2.5, 0.25, 0.9, 'grid_1'],
          [2, 3, 2, 0.45, -90.0, 1.0, 0.20, 0.9, 'grid_1'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 0.9, 'grid_1']],
         columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'PPERF', 'GRID'])
-    bw = resqpy.well.BlockedWell(model, well_name = well_name, use_face_centres = True)
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True)
 
     # --------- Act ----------
     cp, cell_centre, entry_vector, exit_vector = bw._BlockedWell__calculate_cell_cp_center_and_vectors(
@@ -411,12 +600,12 @@ def test_import_from_cellio_file(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
 
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
@@ -443,7 +632,7 @@ def test_import_from_cellio_file(example_model_and_crs):
 
 
 # --------- Act ----------
-    bw = resqpy.well.BlockedWell(model, use_face_centres = True)
+    bw = rqw.BlockedWell(model, use_face_centres = True)
     # assert that certain attributes have not been populated
     assert bw.grid_list == []
     assert bw.trajectory is None
@@ -465,12 +654,12 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (5, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     perm_i_array = np.random.random(grid.extent_kji)
@@ -524,11 +713,11 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
-    bw = resqpy.well.BlockedWell(model,
-                                 wellspec_file = wellspec_file,
-                                 well_name = well_name,
-                                 use_face_centres = True,
-                                 add_wellspec_properties = True)
+    bw = rqw.BlockedWell(model,
+                         wellspec_file = wellspec_file,
+                         well_name = well_name,
+                         use_face_centres = True,
+                         add_wellspec_properties = True)
 
     # --------- Act ----------
     df = bw.dataframe(extra_columns_list = ['X', 'Y', 'DEPTH', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'KH', 'WI', 'WBC'],
@@ -567,12 +756,12 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
 def test_dataframe_from_trajectory(example_model_and_crs):
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (5, 4, 4),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       as_irregular_grid = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 4, 4),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           as_irregular_grid = True)
 
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
@@ -580,10 +769,7 @@ def test_dataframe_from_trajectory(example_model_and_crs):
 
     # Create a measured depth datum
     location = (0.0, 0.0, -elevation)
-    datum = resqpy.well.MdDatum(parent_model = model,
-                                crs_uuid = crs.uuid,
-                                location = location,
-                                md_reference = 'kelly bushing')
+    datum = rqw.MdDatum(parent_model = model, crs_uuid = crs.uuid, location = location, md_reference = 'kelly bushing')
     mds = np.array([0.0, 100, 210, 230, 240, 250])
     zs = mds * 1.03 - elevation
     well_name = 'CoconutDrop'
@@ -596,18 +782,14 @@ def test_dataframe_from_trajectory(example_model_and_crs):
     })
 
     # Create a trajectory from dataframe
-    trajectory = resqpy.well.Trajectory(parent_model = model,
-                                        data_frame = source_dataframe,
-                                        well_name = well_name,
-                                        md_datum = datum,
-                                        length_uom = 'm')
+    trajectory = rqw.Trajectory(parent_model = model,
+                                data_frame = source_dataframe,
+                                well_name = well_name,
+                                md_datum = datum,
+                                length_uom = 'm')
     trajectory.write_hdf5()
     trajectory.create_xml()
-    bw = resqpy.well.BlockedWell(model,
-                                 well_name = well_name,
-                                 grid = grid,
-                                 trajectory = trajectory,
-                                 use_face_centres = True)
+    bw = rqw.BlockedWell(model, well_name = well_name, grid = grid, trajectory = trajectory, use_face_centres = True)
 
     # --------- Act ----------
     df = bw.dataframe(extra_columns_list = ['X', 'Y', 'DEPTH', 'RADW'], stat = 'ON', length_uom = 'ft')
@@ -624,12 +806,12 @@ def test_write_wellspec(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       set_points_cached = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True, use_lattice = False)
     perm_array = np.random.random(grid.extent_kji)
@@ -664,11 +846,11 @@ def test_write_wellspec(example_model_and_crs):
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
-    bw = resqpy.well.BlockedWell(model,
-                                 wellspec_file = wellspec_file,
-                                 well_name = well_name,
-                                 use_face_centres = True,
-                                 add_wellspec_properties = True)
+    bw = rqw.BlockedWell(model,
+                         wellspec_file = wellspec_file,
+                         well_name = well_name,
+                         use_face_centres = True,
+                         add_wellspec_properties = True)
 
     # --------- Act ----------
     df = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'SKIN', 'STAT', 'RADW', 'KH'],
@@ -694,12 +876,12 @@ def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
 
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    grid = RegularGrid(model,
-                       extent_kji = (3, 4, 3),
-                       dxyz = (50.0, -50.0, 50.0),
-                       origin = (0.0, 0.0, 100.0),
-                       crs_uuid = crs.uuid,
-                       as_irregular_grid = True)
+    grid = grr.RegularGrid(model,
+                           extent_kji = (3, 4, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           as_irregular_grid = True)
     grid.write_hdf5()
     grid.create_xml(write_geometry = True)
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
@@ -722,11 +904,11 @@ def test_convenience_methods_xyz_and_kji0_marker(example_model_and_crs):
                 else:
                     fp.write(f' {row[col]:6.2f}')
             fp.write('\n')
-    bw = resqpy.well.BlockedWell(model,
-                                 wellspec_file = wellspec_file,
-                                 well_name = well_name,
-                                 use_face_centres = True,
-                                 add_wellspec_properties = True)
+    bw = rqw.BlockedWell(model,
+                         wellspec_file = wellspec_file,
+                         well_name = well_name,
+                         use_face_centres = True,
+                         add_wellspec_properties = True)
 
     # --------- Act ----------
     cell_0, grid_0_uuid = bw.kji0_marker()  # cell_0 returned in the format (k0, j0, i0)
@@ -759,7 +941,7 @@ def test_add_df_properties(tmp_path, tmp_model):
     length_uom = 'm'
 
     model = tmp_model
-    time_series = TimeSeries(model)
+    time_series = rqts.TimeSeries(model)
     time_series.timestamps = ["2004-04-11"]
     time_series.create_xml()
     time_index = 0
@@ -776,7 +958,7 @@ IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    
 18    28    5    NA    0.320   0.000   NA      NA    ON      5.000     88.080   86.800   9165.280
             """)
 
-    grid = RegularGrid(model, extent_kji = (50, 50, 50))
+    grid = grr.RegularGrid(model, extent_kji = (50, 50, 50))
     grid.create_xml()
 
     bw = BlockedWell(
