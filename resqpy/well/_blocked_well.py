@@ -164,37 +164,20 @@ class BlockedWell(BaseResqpy):
                                    wellspec_file = wellspec_file,
                                    cellio_file = cellio_file,
                                    column_ji0 = column_ji0)
-
-            # Using dictionary mapping to replicate a switch statement. The init_function is chosen based on the
-            # data source and the correct function is then called based on the init_function_dict
-            init_function_dict = {
-                'trajectory':
-                    partial(self.compute_from_trajectory, self.trajectory, grid),
-                'wellspec_file':
-                    partial(self.derive_from_wellspec,
-                            wellspec_file,
-                            well_name,
-                            grid,
-                            check_grid_name = check_grid_name,
-                            use_face_centres = use_face_centres,
-                            add_properties = add_wellspec_properties,
-                            usa_date_format = usa_date_format),
-                'cellio_file':
-                    partial(self.__check_cellio_init_okay,
-                            cellio_file = cellio_file,
-                            well_name = well_name,
-                            grid = grid),
-                'column_ji0':
-                    partial(self.set_for_column, well_name, grid, column_ji0)
-            }
-            chosen_init_method = BlockedWell.__choose_init_data_source(trajectory = self.trajectory,
-                                                                       wellspec_file = wellspec_file,
-                                                                       cellio_file = cellio_file,
-                                                                       column_ji0 = column_ji0)
-            try:
-                init_function_dict[chosen_init_method]()
-            except KeyError:
-                pass
+            if self.trajectory is not None:
+                self.compute_from_trajectory(self.trajectory, grid)
+            elif wellspec_file:
+                self.derive_from_wellspec(wellspec_file,
+                                          well_name,
+                                          grid,
+                                          check_grid_name = check_grid_name,
+                                          use_face_centres = use_face_centres,
+                                          add_properties = add_wellspec_properties,
+                                          usa_date_format = usa_date_format)
+            elif cellio_file:
+                self.__check_cellio_init_okay(cellio_file = cellio_file, well_name = well_name, grid = grid)
+            elif column_ji0 is not None:
+                self.set_for_column(well_name, grid, column_ji0)
             self.gridind_null = -1
             self.facepair_null = -1
             self.cellind_null = -1
@@ -218,18 +201,6 @@ class BlockedWell(BaseResqpy):
         okay = self.import_from_rms_cellio(cellio_file, well_name, grid)
         if not okay:
             self.node_count = 0
-
-    @staticmethod
-    def __choose_init_data_source(trajectory, wellspec_file, cellio_file, column_ji0):
-        """Specify the data source from which the BlockedWell object will be initialized."""
-        if trajectory is not None:
-            return "trajectory"
-        elif wellspec_file is not None:
-            return "wellspec_file"
-        elif cellio_file is not None:
-            return "cellio_file"
-        elif column_ji0 is not None:
-            return "column_ji0"
 
     def _load_from_xml(self):
         """Loads the blocked wellbore object from an xml node (and associated hdf5 data)."""
