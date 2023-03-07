@@ -164,37 +164,20 @@ class BlockedWell(BaseResqpy):
                                    wellspec_file = wellspec_file,
                                    cellio_file = cellio_file,
                                    column_ji0 = column_ji0)
-
-            # Using dictionary mapping to replicate a switch statement. The init_function is chosen based on the
-            # data source and the correct function is then called based on the init_function_dict
-            init_function_dict = {
-                'trajectory':
-                    partial(self.compute_from_trajectory, self.trajectory, grid),
-                'wellspec_file':
-                    partial(self.derive_from_wellspec,
-                            wellspec_file,
-                            well_name,
-                            grid,
-                            check_grid_name = check_grid_name,
-                            use_face_centres = use_face_centres,
-                            add_properties = add_wellspec_properties,
-                            usa_date_format = usa_date_format),
-                'cellio_file':
-                    partial(self.__check_cellio_init_okay,
-                            cellio_file = cellio_file,
-                            well_name = well_name,
-                            grid = grid),
-                'column_ji0':
-                    partial(self.set_for_column, well_name, grid, column_ji0)
-            }
-            chosen_init_method = BlockedWell.__choose_init_data_source(trajectory = self.trajectory,
-                                                                       wellspec_file = wellspec_file,
-                                                                       cellio_file = cellio_file,
-                                                                       column_ji0 = column_ji0)
-            try:
-                init_function_dict[chosen_init_method]()
-            except KeyError:
-                pass
+            if self.trajectory is not None:
+                self.compute_from_trajectory(self.trajectory, grid)
+            elif wellspec_file:
+                self.derive_from_wellspec(wellspec_file,
+                                          well_name,
+                                          grid,
+                                          check_grid_name = check_grid_name,
+                                          use_face_centres = use_face_centres,
+                                          add_properties = add_wellspec_properties,
+                                          usa_date_format = usa_date_format)
+            elif cellio_file:
+                self.__check_cellio_init_okay(cellio_file = cellio_file, well_name = well_name, grid = grid)
+            elif column_ji0 is not None:
+                self.set_for_column(well_name, grid, column_ji0)
             self.gridind_null = -1
             self.facepair_null = -1
             self.cellind_null = -1
@@ -218,18 +201,6 @@ class BlockedWell(BaseResqpy):
         okay = self.import_from_rms_cellio(cellio_file, well_name, grid)
         if not okay:
             self.node_count = 0
-
-    @staticmethod
-    def __choose_init_data_source(trajectory, wellspec_file, cellio_file, column_ji0):
-        """Specify the data source from which the BlockedWell object will be initialized."""
-        if trajectory is not None:
-            return "trajectory"
-        elif wellspec_file is not None:
-            return "wellspec_file"
-        elif cellio_file is not None:
-            return "cellio_file"
-        elif column_ji0 is not None:
-            return "column_ji0"
 
     def _load_from_xml(self):
         """Loads the blocked wellbore object from an xml node (and associated hdf5 data)."""
@@ -1764,7 +1735,7 @@ class BlockedWell(BaseResqpy):
             set_perforation_fraction (bool, optional): if True, a perforation fraction property will be
                 created based on the fraction of the measured depth within a blocked well cell that is
                 flagged as active, ie. perforated at some time; if None, it will be created only if length
-                and permeability thickness are both absent
+                and permeability length are both absent
             set_frame_interval (bool, default False): if True, a static discrete property holding the index
                 of the dominant active wellbore frame interval (per blocked well cell) is created
 
@@ -3425,16 +3396,16 @@ class BlockedWell(BaseResqpy):
 
         part_list = [self.model.part_for_uuid(uuid) for uuid in uuid_list]
 
-        assert len(self.grid_list) == 1, "Only blocked wells with a single grid can be handled currently"
+        assert len(self.grid_list) == 1, "only blocked wells with a single grid can be handled currently"
         grid = self.grid_list[0]
-        parts = self.model.parts_list_filtered_by_supporting_uuid(part_list,
-                                                                  grid.uuid)  # only those properties on the grid
+        # filter to only those properties on the grid
+        parts = self.model.parts_list_filtered_by_supporting_uuid(part_list, grid.uuid)
         if len(parts) < len(uuid_list):
             log.warning(f"{len(uuid_list)-len(parts)} uuids ignored as they do not belong to the same grid as the gcs")
 
         gridpc = grid.extract_property_collection()
-        cell_parts = [part for part in parts if gridpc.indexable_for_part(part) == 'cells'
-                     ]  # only 'cell' properties are handled
+        # only 'cell' properties are handled
+        cell_parts = [part for part in parts if gridpc.indexable_for_part(part) == 'cells']
         if len(cell_parts) < len(parts):
             log.warning(f"{len(parts)-len(cell_parts)} uuids ignored as they do not have indexableelement of cells")
 
@@ -3478,5 +3449,5 @@ class BlockedWell(BaseResqpy):
                 bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_uuid)
         else:
             log.debug(
-                "No properties added - uuids either not 'cell' properties or blocked well is associated with multiple grids"
+                "no properties added - uuids either not 'cell' properties or blocked well is associated with multiple grids"
             )
