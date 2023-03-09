@@ -41,9 +41,7 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
 
     face_dict = {'TX': 'I', 'TY': 'J', 'TZ': 'K', 'TI': 'I', 'TJ': 'J', 'TK': 'K'}
 
-    # if os.path.isfile(file_name):
     chunks = []
-    # with open(file_name) as f:
     for line in file_as_list:
         if len(line.strip()):
             if (not line.strip()[0] == '!') & (not line.strip()[0] == 'C'):
