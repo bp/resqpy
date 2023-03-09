@@ -75,10 +75,24 @@ def amplify(v, scaling):  # note: could just use numpy a * scalar facility
 def unit_vector(v):
     """Returns vector with same direction as v but with unit length."""
     assert 2 <= len(v) <= 3
-    v = np.array(v, dtype = float)
-    if np.all(v == 0.0):
+    v = np.array(v, dtype = np.float64)
+    norm = np.linalg.norm(v)
+    if norm == 0.0:
         return v
-    return v / maths.sqrt(np.sum(v * v))
+    v = v / norm
+    return v
+
+
+@njit
+def unit_vector_njit(v):
+    """Returns vector with same direction as v but with unit length."""
+    assert 2 <= len(v) <= 3
+    v = np.array(v, dtype = np.float64)
+    norm = np.linalg.norm(v)
+    if norm == 0.0:
+        return v
+    v = v / norm
+    return v
 
 
 def unit_vectors(v):
@@ -404,10 +418,27 @@ def rotation_matrix_3d_vector(v):
     note:
        the returned matrix will map a positive z axis vector onto v
     """
+    v = v / np.linalg.norm(v)
+    kmat = np.array([[0, 0, -v[0]], [0, 0, -v[1]], [v[0], v[1], 0]])
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * (1 / (1 + v[2]))
 
-    m = tilt_3d_matrix(azimuth(v), inclination(v))
-    m[:2, :] = -m[:2, :]  # todo: should this change be in the tilt matrix?
-    return m
+    rotation_matrix[:2] = -rotation_matrix[:2]
+    return rotation_matrix
+
+
+@njit
+def rotation_matrix_3d_vector_njit(v):
+    """Returns a rotation matrix which will rotate points by inclination and azimuth of vector.
+
+    note:
+       the returned matrix will map a positive z axis vector onto v
+    """
+    v = v / np.linalg.norm(v)
+    kmat = np.array([[0, 0, -v[0]], [0, 0, -v[1]], [v[0], v[1], 0]])
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * (1 / (1 + v[2]))
+
+    rotation_matrix[:2] = -rotation_matrix[:2]
+    return rotation_matrix
 
 
 def tilt_points(pivot_xyz, azimuth, dip, points):
@@ -666,7 +697,7 @@ def point_in_triangle(x, y, triangle):
     return inside
 
 
-@njit
+@njit(parallel=True)
 def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
 
@@ -683,14 +714,14 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     note:
         the polygon is assumed closed, the closing point should not be repeated
     """
-    polygon_points = np.empty((0, 3), dtype = numba.int32)
+    polygon_points = np.full((len(points), 3), -1, dtype = np.int32)
     for point_num in numba.prange(len(points)):
         p = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
         if p is True:
             j, i = divmod(point_num, points_xlen)
-            polygon_points = np.append(polygon_points, np.array([[polygon_num, j, i]], dtype = numba.int32), axis = 0)
+            polygon_points[point_num] = [polygon_num, j, i]
 
-    return polygon_points
+    return polygon_points[polygon_points[:, 0] != -1]
 
 
 @njit
