@@ -68,7 +68,9 @@ class PolylineSet(rql_c._BasePolyline):
         self.save_polys = False
         self.boolnotconstant = None
         self.boolvalue = None
+        self.closed_array = None
         self.crs_uuid = crs_uuid
+        self.indices = None
 
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -92,10 +94,11 @@ class PolylineSet(rql_c._BasePolyline):
                     break
             self.polys = polylines
             # Setting the title of the first polyline given as the PolylineSet title
-            if len(polylines) > 1:
-                self.title = f"{polylines[0].title} + {len(polylines)-1} polylines"
-            else:
-                self.title = polylines[0].title
+            if not self.title:
+                if len(polylines) > 1:
+                    self.title = f"{polylines[0].title} + {len(polylines)-1} polylines"
+                else:
+                    self.title = polylines[0].title
 
         elif irap_file is not None:  # Create from an input IRAP file
             if crs_uuid is None:
@@ -113,6 +116,7 @@ class PolylineSet(rql_c._BasePolyline):
         root = self.root
 
         self.rep_int_root = self.model.referenced_node(rqet.find_tag(root, 'RepresentedInterpretation'))
+        self.closed_array = np.empty((0,), dtype = bool)
 
         for patch_node in rqet.list_of_tag(root, 'LinePatch'):  # Loop over all LinePatches - likely just the one
             assert patch_node is not None  # Required field
@@ -134,7 +138,7 @@ class PolylineSet(rql_c._BasePolyline):
             closed_array = self.get_bool_array(closed_node)
 
             count_node = rqet.find_tag(patch_node, 'NodeCountPerPolyline')
-            rql_c.load_hdf5_array(self, count_node, 'count_perpol', tag = 'Values')
+            rql_c.load_hdf5_array(self, count_node, 'count_perpol', tag = 'Values', dtype = 'int')
 
             points_node = rqet.find_tag(geometry_node, 'Points')
             assert points_node is not None  # Required field
@@ -155,12 +159,16 @@ class PolylineSet(rql_c._BasePolyline):
             # delattr(self,'count_perpol')
 
             self.polys.extend(subpolys)
+            self.closed_array = np.concatenate((self.closed_array, closed_array))
+
+        self.bool_array_format()
 
     def _set_from_irap(self, irap_file):
         inpoints = rsl.read_lines(irap_file)
         self.count_perpol = []
         closed_array = []
-        self.title = os.path.basename(irap_file).split(".")[0]
+        if not self.title:
+            self.title = os.path.basename(irap_file).split(".")[0]
         for i, poly in enumerate(inpoints):
             if len(poly) > 1:  # Polylines must have at least 2 points
                 self.count_perpol.append(len(poly))
@@ -183,7 +191,8 @@ class PolylineSet(rql_c._BasePolyline):
             inpoints = f.readlines()
         self.count_perpol = []
         closed_array = []
-        self.title = os.path.basename(charisma_file).split(".")[0]
+        if not self.title:
+            self.title = os.path.basename(charisma_file).split(".")[0]
         for i, line in enumerate(inpoints):
             line = line.split()
             coord_entry = np.array([[float(line[3]), float(line[4]), float(line[5])]])
@@ -278,32 +287,45 @@ class PolylineSet(rql_c._BasePolyline):
         pindex.text = '0'
 
         if self.boolnotconstant:
+
             # We have mixed data - use a BooleanArrayFromIndexArray
             closed = rqet.SubElement(patch, ns['resqml2'] + 'ClosedPolylines')
             closed.set(ns['xsi'] + 'type', ns['xsd'] + 'BooleanArrayFromIndexArray')
             closed.text = '\n'
 
-            bool_val = rqet.SubElement(closed, ns['resqml2'] + 'Value')
+            bool_val = rqet.SubElement(closed, ns['resqml2'] + 'IndexIsTrue')
             bool_val.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
-            bool_val.text = str(self.boolvalue).lower()
-
-            ind_val = rqet.SubElement(closed, ns['resqml2'] + 'Indices')
-            ind_val.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-            ind_val.text = '\n'
+            bool_val.text = str(not self.boolvalue).lower()
 
             count = rqet.SubElement(closed, ns['resqml2'] + 'Count')
             count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
             count.text = str(len(self.count_perpol))
 
-            self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'indices_patch0', root = ind_val)
+            ind_val = rqet.SubElement(closed, ns['resqml2'] + 'Indices')
+            ind_val.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerHdf5Array')
+            ind_val.text = '\n'
+
+            iv_null = rqet.SubElement(ind_val, ns['resqml2'] + 'NullValue')
+            iv_null.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+            iv_null.text = '-1'
+
+            iv_values = rqet.SubElement(ind_val, ns['resqml2'] + 'Values')
+            iv_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+            iv_values.text = '\n'
+
+            self.model.create_hdf5_dataset_ref(ext_uuid, self.uuid, 'indices_patch0', root = iv_values)
+
         else:
+
             # All bools are the same - use a BooleanConstantArray
             closed = rqet.SubElement(patch, ns['resqml2'] + 'ClosedPolylines')
             closed.set(ns['xsi'] + 'type', ns['resqml2'] + 'BooleanConstantArray')
             closed.text = '\n'
+
             bool_val = rqet.SubElement(closed, ns['resqml2'] + 'Value')
             bool_val.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')
             bool_val.text = str(self.boolvalue).lower()
+
             count = rqet.SubElement(closed, ns['resqml2'] + 'Count')
             count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
             count.text = str(len(self.count_perpol))
@@ -367,7 +389,7 @@ class PolylineSet(rql_c._BasePolyline):
         if self.uuid is None:
             self.uuid = bu.new_uuid()
         self.combine_polylines(self.polys)
-        self.bool_array_format(self.closed_array)
+        self.bool_array_format()
         self.save_polys = save_polylines
         if self.save_polys:
             for poly in self.polys:
@@ -377,29 +399,37 @@ class PolylineSet(rql_c._BasePolyline):
         h5_reg.register_dataset(self.uuid, 'points_patch0', self.coordinates)
         h5_reg.register_dataset(self.uuid, 'NodeCountPerPolyline_patch0', self.count_perpol.astype(np.int32))
         if self.boolnotconstant:
-            h5_reg.register_dataset(self.uuid, 'indices_patch0', self.indices)
+            h5_reg.register_dataset(self.uuid, 'indices_patch0', np.array(self.indices, dtype = np.int32))
         h5_reg.write(file_name, mode = mode)
 
     def get_bool_array(self, closed_node):
-        # TODO: Check if also defined boolean arrays
-        """Returns a boolean array using details in the node location.
+        # TODO: check for other permissible forms of the abstract boolean array
+        """Returns a boolean array using details in the xml node location.
 
-        If type of boolean array is BooleanConstantArray, uses the array value and count to generate the array. If type of boolean array is BooleanArrayFromIndexArray, find the "other" value bool and indices of the "other" values, and insert these into an array opposite to the main bool.
+        arguments:
+            closed_node (xml node): the node under which the boolean array information sits
 
-        args:
-            closed_node: the node under which the boolean array information sits
+        returns:
+            1D numpy bool array set True for those pplylines within the set which are marked as closed
         """
-        if rqet.node_type(closed_node) == 'BooleanConstantArray':
+        # if type of boolean array is BooleanConstantArray, uses the array value and count to generate
+        # the array; if type of boolean array is BooleanArrayFromIndexArray, finds the "other" value
+        # bool and indices of the "other" values, and inserts these into an array opposite to the main bool
+        flavour = rqet.node_type(closed_node)
+        if flavour == 'BooleanConstantArray':
             count = rqet.find_tag_int(closed_node, 'Count')
             value = rqet.bool_from_text(rqet.node_text(rqet.find_tag(closed_node, 'Value')))
-            return np.full((count), value)
-        elif rqet.node_type(closed_node) == 'BooleanArrayFromIndexArray':
+            return np.full((count,), value, dtype = bool)
+        elif flavour == 'BooleanArrayFromIndexArray':
             count = rqet.find_tag_int(closed_node, 'Count')
-            indices_arr = rql_c.load_hdf5_array(self, closed_node, 'indices_arr', tag = 'Indices')
+            indices_node = rqet.find_tag(closed_node, 'Indices')
+            assert indices_node is not None
+            indices_arr = rql_c.load_hdf5_array(self, indices_node, 'indices_arr', tag = 'Values', dtype = 'int')
             istrue = rqet.bool_from_text(rqet.node_text(rqet.find_tag(closed_node, 'IndexIsTrue')))
-            out = np.full((count), not istrue)
+            out = np.full((count,), not istrue, dtype = bool)
             out[indices_arr] = istrue
             return out
+        raise ValueError(f'unrecognised closed array xml node type: {flavour}')
 
     def convert_to_polylines(self,
                              closed_array = None,
@@ -496,32 +526,32 @@ class PolylineSet(rql_c._BasePolyline):
 
         self.polys = polylines
 
-    def bool_array_format(self, closed_array):
-        """Determines an appropriate output boolean array format from an input array of bools.
+    def bool_array_format(self):
+        """Determines an appropriate output boolean array format depending on the closed_array bools.
 
         self.boolnotconstant - set to True if all are not open or all closed
         self.boolvalue - value of isclosed for all polylines, or for the majority of polylines if mixed
         self.indices - array of indices where the values are not self.boolvalue, if the polylines are mixed
         """
 
+        assert self.closed_array is not None
         self.indices = []
         self.boolnotconstant = False
-        if all(closed_array):
+        if all(self.closed_array):
             self.boolvalue = True
-        elif not all(closed_array) and not any(closed_array):
+        elif not any(self.closed_array):
             self.boolvalue = False
         else:
-            if np.count_nonzero(closed_array) > (len(closed_array) / 2):
+            if np.count_nonzero(self.closed_array) > (len(self.closed_array) // 2):
                 self.boolvalue = True
-                for i, val in enumerate(closed_array):
+                for i, val in enumerate(self.closed_array):
                     if not val:
                         self.indices.append(i)
             else:
                 self.boolvalue = False
-                for i, val in enumerate(closed_array):
+                for i, val in enumerate(self.closed_array):
                     if val:
                         self.indices.append(i)
-        if len(self.indices) > 0:
             self.boolnotconstant = True
 
     def set_interpretation_root(self, rep_int_root, recursive = True):

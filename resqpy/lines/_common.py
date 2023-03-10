@@ -56,22 +56,25 @@ class _BasePolyline(BaseResqpy):
         self.rep_int_root = interp_root
 
 
-def load_hdf5_array(object, node, array_attribute, tag = 'Values'):
+def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'float'):
     """Loads the property array data as an attribute of object, from the hdf5 referenced in xml node.
 
     :meta private:
     """
-
     assert (rqet.node_type(node) in ['DoubleHdf5Array', 'IntegerHdf5Array', 'Point3dHdf5Array'])
     # ignore null value
     h5_key_pair = object.model.h5_uuid_and_path_for_node(node, tag = tag)
     if h5_key_pair is None:
         return None
-    return object.model.h5_array_element(h5_key_pair,
-                                         index = None,
-                                         cache_array = True,
-                                         object = object,
-                                         array_attribute = array_attribute)
+    object.model.h5_array_element(h5_key_pair,
+                                  index = None,
+                                  cache_array = True,
+                                  dtype = dtype,
+                                  object = object,
+                                  array_attribute = array_attribute)
+    a = getattr(object, array_attribute)
+    assert a is not None
+    return a
 
 
 def shift_polyline(parent_model, poly_root, xyz_shift = (0, 0, 0), title = ''):
