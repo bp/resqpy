@@ -19,7 +19,7 @@ The package is written and maintained by bp, and is made available under the MIT
 license as a contribution to the open-source community.
 
 **resqpy** was created by Andy Beer. For enquires about resqpy, please contact
-Emma Nesbit (emma.nesbit@uk.bp.com)
+Emma Nesbit (emma.nesbit@bp.com)
 
 ### Documentation
 
