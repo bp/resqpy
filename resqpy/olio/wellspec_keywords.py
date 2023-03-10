@@ -382,6 +382,7 @@ def get_well_pointers(
             words = line.split()
             assert len(words) >= 2, "Missing date after TIME keyword."
             date = words[1]
+            date_obj = None
             if '(' in date:
                 # sometimes user specifies (HH:MM:SS) along with date - can separate time from date with this check
                 date = date.split('(')[0]
@@ -390,13 +391,13 @@ def get_well_pointers(
                     date_obj = datetime.datetime.strptime(date, "%m/%d/%Y").date()
                 else:
                     date_obj = datetime.datetime.strptime(date, "%d/%m/%Y").date()
-                if no_date_replacement is not None and date_obj < no_date_replacement:
-                    raise ValueError(
-                        f"The Zero Date {no_date_replacement} must be before the first wellspec TIME {date_obj}.")
-                date = date_obj.isoformat()
             except ValueError:
                 raise ValueError(f"The date found '{date}' does not match the correct format (usa_date_format "
                                  f"is {usa_date_format}).")
+            if no_date_replacement is not None and date_obj < no_date_replacement:
+                raise ValueError(
+                    f"The Zero Date {no_date_replacement} must be before the first wellspec TIME {date_obj}.")
+            date = date_obj.isoformat()
             time_pointers[file.tell()] = date
 
     current_date = None  # Before first TIME

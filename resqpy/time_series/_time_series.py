@@ -233,3 +233,13 @@ def check_timestamp(timestamp):
     if timestamp.endswith('Z'):
         timestamp = timestamp[:-1]
     _ = dt.datetime.fromisoformat(timestamp)
+
+
+def colloquial_date(timestamp, usa_date_format = False):
+    """Returns date string in format DD/MM/YYYY (or MM/DD/YYYY if usa_date_format is True)."""
+    if timestamp.endswith('Z'):
+        timestamp = timestamp[:-1]
+    date_obj = dt.datetime.fromisoformat(timestamp)
+    if usa_date_format:
+        return f'{date_obj.month:02}/{date_obj.day:02}/{date_obj.year:4}'
+    return f'{date_obj.day:02}/{date_obj.month:02}/{date_obj.year:4}'
