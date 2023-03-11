@@ -2313,6 +2313,7 @@ def test_pack_unpack_bits_larger_aligned(example_model_and_crs):
     grid.create_xml()
     pc = grid.extract_property_collection()
     array = (np.random.random(shape) > 0.5)
+    brray = np.logical_not(array)
 
     pc.add_cached_array_to_imported_list(cached_array = array.copy(),
                                          source_info = 'testy',
@@ -2321,6 +2322,14 @@ def test_pack_unpack_bits_larger_aligned(example_model_and_crs):
                                          discrete = True)
     pc.write_hdf5_for_imported_list(use_pack = True)
     pc.create_xml_for_imported_list_and_add_parts_to_model()
+    bp = rqp.Property.from_array(model,
+                                 brray,
+                                 'nonsense',
+                                 'negated',
+                                 grid.uuid,
+                                 property_kind = 'sandy',
+                                 discrete = True,
+                                 use_pack = True)
     model.store_epc()
 
     model = rq.Model(model.epc_file)
@@ -2329,6 +2338,9 @@ def test_pack_unpack_bits_larger_aligned(example_model_and_crs):
     a = pc.single_array_ref(property_kind = 'shale', dtype = bool, use_pack = True)  # with unpacking
     assert a is not None and a.shape == shape
     assert np.all(a == array)
+    b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
+    assert b is not None and b.shape == shape
+    assert np.all(b == brray)
 
 
 def test_pack_unpack_bits_larger_unaligned(example_model_and_crs):
@@ -2340,6 +2352,7 @@ def test_pack_unpack_bits_larger_unaligned(example_model_and_crs):
     grid.create_xml()
     pc = grid.extract_property_collection()
     array = (np.random.random(shape) > 0.5)
+    brray = np.logical_not(array)
 
     pc.add_cached_array_to_imported_list(cached_array = array.copy(),
                                          source_info = 'testy',
@@ -2348,6 +2361,14 @@ def test_pack_unpack_bits_larger_unaligned(example_model_and_crs):
                                          discrete = True)
     pc.write_hdf5_for_imported_list(use_pack = True)
     pc.create_xml_for_imported_list_and_add_parts_to_model()
+    bp = rqp.Property.from_array(model,
+                                 brray,
+                                 'nonsense',
+                                 'negated',
+                                 grid.uuid,
+                                 property_kind = 'sandy',
+                                 discrete = True,
+                                 use_pack = True)
     model.store_epc()
 
     model = rq.Model(model.epc_file)
@@ -2356,3 +2377,6 @@ def test_pack_unpack_bits_larger_unaligned(example_model_and_crs):
     a = pc.single_array_ref(property_kind = 'shale', dtype = bool, use_pack = True)  # with unpacking
     assert a is not None and a.shape == shape
     assert np.all(a == array)
+    b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
+    assert b is not None and b.shape == shape
+    assert np.all(b == brray)

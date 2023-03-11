@@ -1742,7 +1742,7 @@ class PropertyCollection():
            exclude_null (boolean, default False): if True, and masked is also True, then elements of the array
               holding the null value will also be masked out
            use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
-              be unpacked if its shape indicates that it has been packed into bits
+              be unpacked if its shape indicates that it has been packed into bits for storage
 
         returns:
            reference to a cached numpy array containing the actual property data; multiple calls will return
@@ -2311,8 +2311,7 @@ class PropertyCollection():
               as 32 bit; if None, the system default is to write as 32 bit; if True, 32 bit is used; if
               False, 64 bit data is written; ignored if dtype is not None
            use_pack (bool, default False): if True, bool arrays will be packed along their last axis; this
-              will generally result in hdf5 data that is not readable by non-resqpy applications; also, when
-              reading back such data, the required shape must be specified
+              will generally result in hdf5 data that is not readable by non-resqpy applications
 
         :meta common:
         """

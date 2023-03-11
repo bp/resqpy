@@ -124,6 +124,7 @@ class Property(BaseResqpy):
                    find_local_property_kind = True,
                    expand_const_arrays = False,
                    dtype = None,
+                   use_pack = False,
                    extra_metadata = {}):
         """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
 
@@ -168,6 +169,8 @@ class Property(BaseResqpy):
            expand_const_arrays (boolean, default False): if True, and a const_value is given, the array will be fully
               expanded and written to the hdf5 file; the xml will then not indicate that it is constant
            dtype (numpy dtype, optional): if present, the elemental data type to use when writing the array to hdf5
+           use_pack (bool, default False): if True, a bool array will be packed along its last axis; this
+              will generally result in hdf5 data that is not readable by non-resqpy applications
            extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
 
         returns:
@@ -213,7 +216,7 @@ class Property(BaseResqpy):
                             count = count,
                             points = points,
                             const_value = const_value)
-        prop.write_hdf5(expand_const_arrays = expand_const_arrays, dtype = dtype)
+        prop.write_hdf5(expand_const_arrays = expand_const_arrays, dtype = dtype, use_pack = use_pack)
         prop.create_xml(support_uuid = support_uuid,
                         time_series_uuid = time_series_uuid,
                         string_lookup_uuid = string_lookup_uuid,
@@ -223,7 +226,7 @@ class Property(BaseResqpy):
                         extra_metadata = extra_metadata)
         return prop
 
-    def array_ref(self, dtype = None, masked = False, exclude_null = False):
+    def array_ref(self, dtype = None, masked = False, exclude_null = False, use_pack = True):
         """Returns a (cached) numpy array containing the property values.
 
         arguments:
@@ -232,6 +235,8 @@ class Property(BaseResqpy):
               the inactive cell mask in the case of a Grid property
            exclude_null (boolean, default False): if True and masked is True, elements whose value is the null value
               (NaN for floats) will be masked out
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
+              be unpacked if its shape indicates that it has been packed into bits for storage
 
         returns:
            numpy array
@@ -242,7 +247,8 @@ class Property(BaseResqpy):
         return self.collection.cached_part_array_ref(self.part,
                                                      dtype = dtype,
                                                      masked = masked,
-                                                     exclude_null = exclude_null)
+                                                     exclude_null = exclude_null,
+                                                     use_pack = use_pack)
 
     def is_continuous(self):
         """Returns boolean indicating that the property contains continuous (ie. float) data.
@@ -383,7 +389,7 @@ class Property(BaseResqpy):
                                                           const_value = const_value,
                                                           points = points)
 
-    def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None):
+    def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None, use_pack = False):
         """Writes the array data to the hdf5 file; not usually called directly.
 
         arguments:
@@ -393,6 +399,8 @@ class Property(BaseResqpy):
            expand_const_arrays (bool, default False): if True and the array is a constant array then a fully populated
               array is generated and stored (otherwise the constant value is held in xml and no hdf5 data is needed)
            dtype (numpy dtype, optional): if present, the elemental data type to use when writing the array to hdf5
+           use_pack (bool, default False): if True, a bool array will be packed along its last axis; this
+              will generally result in hdf5 data that is not readable by non-resqpy applications
 
         notes:
            see the documentation for the convenience method from_array()
@@ -400,10 +408,13 @@ class Property(BaseResqpy):
         if not self.collection.imported_list:
             log.warning('no imported Property array to write to hdf5')
             return
+        if str(dtype) == 'pack':
+            use_pack = True
         self.collection.write_hdf5_for_imported_list(file_name = file_name,
                                                      mode = mode,
                                                      expand_const_arrays = expand_const_arrays,
-                                                     dtype = dtype)
+                                                     dtype = dtype,
+                                                     use_pack = use_pack)
 
     def create_xml(self,
                    ext_uuid = None,
