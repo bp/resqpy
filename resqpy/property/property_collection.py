@@ -58,7 +58,8 @@ class PropertyCollection():
         """
 
         assert property_set_root is None or support is not None, \
-            'support (grid, wellbore frame, blocked well, mesh, or grid connection set) must be specified when populating property collection from property set'
+            'support (grid, wellbore frame, blocked well, mesh, or grid connection set) must be specified ' + \
+            'when populating property collection from property set'
 
         self.dict = {}  # main dictionary of model property parts which are members of the collection
         # above is mapping from part_name to:
@@ -802,7 +803,8 @@ class PropertyCollection():
                          multiple_handling = 'exception',
                          title = None,
                          title_mode = None,
-                         related_uuid = None):
+                         related_uuid = None,
+                         use_pack = True):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -814,6 +816,8 @@ class PropertyCollection():
               will also be masked out
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
            title (string, optional): synonym for citation_title argument
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
+              be unpacked if its shape indicates that it has been packed into bits
 
         Other optional arguments:
         realization, support_uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
@@ -856,7 +860,11 @@ class PropertyCollection():
                               related_uuid = related_uuid)
         if part is None:
             return None
-        return self.cached_part_array_ref(part, dtype = dtype, masked = masked, exclude_null = exclude_null)
+        return self.cached_part_array_ref(part,
+                                          dtype = dtype,
+                                          masked = masked,
+                                          exclude_null = exclude_null,
+                                          use_pack = use_pack)
 
     def number_of_parts(self):
         """Returns the number of parts (properties) in this collection.
@@ -1722,7 +1730,7 @@ class PropertyCollection():
             return None  # could treat as fatal error
         return model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
 
-    def cached_part_array_ref(self, part, dtype = None, masked = False, exclude_null = False):
+    def cached_part_array_ref(self, part, dtype = None, masked = False, exclude_null = False, use_pack = True):
         """Returns a numpy array containing the data for the property part; the array is cached in this collection.
 
         arguments:
@@ -1733,6 +1741,8 @@ class PropertyCollection():
               the mask is set to the inactive array attribute of the support object if present
            exclude_null (boolean, default False): if True, and masked is also True, then elements of the array
               holding the null value will also be masked out
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
+              be unpacked if its shape indicates that it has been packed into bits for storage
 
         returns:
            reference to a cached numpy array containing the actual property data; multiple calls will return
@@ -1746,7 +1756,8 @@ class PropertyCollection():
            if the indexable element is set to the typical value for the class of supporting representation, eg.
            'cells' for grid objects); if exclude_null is set True then null value elements will also be masked out
            (as long as masked is True); however, it is recommended simply to use np.NaN values in floating point
-           property arrays if the commonality is not needed
+           property arrays if the commonality is not needed;
+           set use_pack True if the hdf5 data may have been written with a similar setting
 
         :meta common:
         """
@@ -1757,7 +1768,7 @@ class PropertyCollection():
             return None
 
         if not hasattr(self, cached_array_name):
-            pcga._cached_part_array_ref_get_array(self, part, dtype, model, cached_array_name)
+            pcga._cached_part_array_ref_get_array(self, part, dtype, model, cached_array_name, use_pack)
 
         if masked:
             exclude_value = self.null_value_for_part(part) if exclude_null else None
@@ -1856,13 +1867,18 @@ class PropertyCollection():
             assert len(patch_list) == 1  # todo: handle more than one patch of values
             return model.h5_uuid_and_path_for_node(rqet.find_tag(patch_list[0], 'Values'))
 
-    def facets_array_ref(self, use_32_bit = False, indexable_element = None):  # todo: add masked argument
+    def facets_array_ref(self,
+                         use_32_bit = False,
+                         indexable_element = None,
+                         use_pack = True):  # todo: add masked argument
         """Returns a +1D array of all parts with first axis being over facet values; Use facet_list() for lookup.
 
         arguments:
            use_32_bit (boolean, default False): if True, the resulting numpy array will use a 32 bit dtype; if False, 64 bit
            indexable_element (string, optional): the indexable element for the properties in the collection; if None, will
               be determined from the data
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
+              be unpacked if its shape indicates that it has been packed into bits
 
         returns:
            numpy array containing all the data in the collection, the first axis being over facet values and the rest of
@@ -1897,7 +1913,7 @@ class PropertyCollection():
 
         for part in self.parts():
             facet_index = facet_list.index(self.facet_for_part(part))
-            pa = self.cached_part_array_ref(part, dtype = dtype)
+            pa = self.cached_part_array_ref(part, dtype = dtype, use_pack = use_pack)
             a[facet_index] = pa
             self.uncache_part_array(part)
 
@@ -2278,7 +2294,8 @@ class PropertyCollection():
                                      mode = 'a',
                                      expand_const_arrays = False,
                                      dtype = None,
-                                     use_int32 = None):
+                                     use_int32 = None,
+                                     use_pack = False):
         """Create or append to an hdf5 file, writing datasets for the imported arrays.
 
         arguments:
@@ -2293,6 +2310,8 @@ class PropertyCollection():
            use_int32 (bool, optional): if dtype is None, this controls whether 64 bit int arrays are written
               as 32 bit; if None, the system default is to write as 32 bit; if True, 32 bit is used; if
               False, 64 bit data is written; ignored if dtype is not None
+           use_pack (bool, default False): if True, bool arrays will be packed along their last axis; this
+              will generally result in hdf5 data that is not readable by non-resqpy applications
 
         :meta common:
         """
@@ -2315,10 +2334,13 @@ class PropertyCollection():
                 uuid = entry[0]
                 cached_name = entry[3]
             tail = 'points_patch0' if entry[18] else 'values_patch0'
+            if use_pack and (str(dtype).startswith('bool') or
+                             (dtype is None and str(self.__dict__[cached_name].dtype) == 'bool')):
+                dtype = 'pack'
             h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
         h5_reg.write(file = file_name, mode = mode, use_int32 = use_int32)
 
-    def write_hdf5_for_part(self, part, file_name = None, mode = 'a'):
+    def write_hdf5_for_part(self, part, file_name = None, mode = 'a', use_pack = False):
         """Create or append to an hdf5 file, writing dataset for the specified part."""
 
         if self.constant_value_for_part(part) is not None:
@@ -2326,7 +2348,10 @@ class PropertyCollection():
         h5_reg = rwh5.H5Register(self.model)
         a = self.cached_part_array_ref(part)
         tail = 'points_patch0' if self.points_for_part(part) else 'values_patch0'
-        h5_reg.register_dataset(self.uuid_for_part(part), tail, a)
+        dtype = None
+        if use_pack and 'bool' in str(a.dtype):
+            dtype = 'pack'
+        h5_reg.register_dataset(self.uuid_for_part(part), tail, a, dtype = dtype)
         h5_reg.write(file = file_name, mode = mode)
 
     def create_xml_for_imported_list_and_add_parts_to_model(self,

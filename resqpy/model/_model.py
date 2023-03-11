@@ -1344,7 +1344,8 @@ class Model():
               required to cache or access cached array
            dtype (string or data type): the data type of the elements of the array (need not match hdf5 array in precision)
            required_shape (tuple of ints, optional): if not None, the hdf5 array will be reshaped to this shape; if index
-              is not None, it is taken to be applicable to the required shape
+              is not None, it is taken to be applicable to the required shape; required if the array is bool data that was
+              written with resqpy specific dtype of 'pack'
 
         returns:
            if index is None, then None;
