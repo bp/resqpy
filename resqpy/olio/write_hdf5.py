@@ -54,7 +54,8 @@ class H5Register():
            be as if the copy argument is True regardless of its setting;
            the use of 'pack' as dtype will result in hdf5 data that will not generally be readable
            by non-resqpy applications; when reading packed data, the required shape must be specified;
-           packing only takes place over the last axis
+           packing only takes place over the last axis; do not use packing if the array needs to be
+           read or updated in slices, or read a single value at a time with index values
         """
 
         # log.debug('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)

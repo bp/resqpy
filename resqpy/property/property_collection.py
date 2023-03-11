@@ -804,7 +804,7 @@ class PropertyCollection():
                          title = None,
                          title_mode = None,
                          related_uuid = None,
-                         use_pack = False):
+                         use_pack = True):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -816,6 +816,8 @@ class PropertyCollection():
               will also be masked out
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
            title (string, optional): synonym for citation_title argument
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
+              be unpacked if its shape indicates that it has been packed into bits
 
         Other optional arguments:
         realization, support_uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
@@ -1728,7 +1730,7 @@ class PropertyCollection():
             return None  # could treat as fatal error
         return model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
 
-    def cached_part_array_ref(self, part, dtype = None, masked = False, exclude_null = False, use_pack = False):
+    def cached_part_array_ref(self, part, dtype = None, masked = False, exclude_null = False, use_pack = True):
         """Returns a numpy array containing the data for the property part; the array is cached in this collection.
 
         arguments:
@@ -1739,7 +1741,7 @@ class PropertyCollection():
               the mask is set to the inactive array attribute of the support object if present
            exclude_null (boolean, default False): if True, and masked is also True, then elements of the array
               holding the null value will also be masked out
-           use_pack (boolean, default False): if True, and the property is a boolean array, the hdf5 data will
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
               be unpacked if its shape indicates that it has been packed into bits
 
         returns:
@@ -1868,13 +1870,15 @@ class PropertyCollection():
     def facets_array_ref(self,
                          use_32_bit = False,
                          indexable_element = None,
-                         use_pack = False):  # todo: add masked argument
+                         use_pack = True):  # todo: add masked argument
         """Returns a +1D array of all parts with first axis being over facet values; Use facet_list() for lookup.
 
         arguments:
            use_32_bit (boolean, default False): if True, the resulting numpy array will use a 32 bit dtype; if False, 64 bit
            indexable_element (string, optional): the indexable element for the properties in the collection; if None, will
               be determined from the data
+           use_pack (boolean, default True): if True, and the property is a boolean array, the hdf5 data will
+              be unpacked if its shape indicates that it has been packed into bits
 
         returns:
            numpy array containing all the data in the collection, the first axis being over facet values and the rest of
@@ -2346,7 +2350,7 @@ class PropertyCollection():
         a = self.cached_part_array_ref(part)
         tail = 'points_patch0' if self.points_for_part(part) else 'values_patch0'
         dtype = None
-        if use_pack and str(a.dtype) == 'bool':
+        if use_pack and 'bool' in str(a.dtype):
             dtype = 'pack'
         h5_reg.register_dataset(self.uuid_for_part(part), tail, a, dtype = dtype)
         h5_reg.write(file = file_name, mode = mode)
