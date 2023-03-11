@@ -15,7 +15,7 @@ import numpy as np
 import resqpy.olio.uuid as bu
 
 resqml_path_head = '/RESQML/'  # note: latest fesapi code uses RESQML20
-write_bool_as_int8 = True  # Nexus read fails if bool used as hdf5 element dtype; also better for NullValue handling
+write_bool_as_uint8 = True  # Nexus read fails if bool used as hdf5 element dtype
 write_int_as_int32 = True  # only applies if registered dtype is None
 
 
@@ -37,7 +37,8 @@ class H5Register():
            group_tail (string): the remainder of the hdf5 internal path (following RESQML and
               uuid elements)
            a (numpy array): the dataset (array) to be registered for writing
-           dtype (type or string): the required type of the individual elements within the dataset
+           dtype (type or string): the required type of the individual elements within the dataset;
+              special value of 'pack' may be used to cause a bool array to be packed before writing
            hdf5_internal_path (string, optional): if present, a full hdf5 internal path to use
               instead of the default generated from the uuid
            copy (boolean, default False): if True, a copy of the array will be made at the time of
@@ -50,14 +51,20 @@ class H5Register():
         notes:
            several arrays might belong to the same object;
            if a dtype is given and necessitates a conversion of the array data, the behaviour will
-           be as if the copy argument is True regardless of its setting
+           be as if the copy argument is True regardless of its setting;
+           the use of 'pack' as dtype will result in hdf5 data that will not generally be readable
+           by non-resqpy applications; when reading packed data, the required shape must be specified;
+           packing only takes place over the last axis
         """
 
-        #     print('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)
+        # log.debug('registering dataset with uuid ' + str(object_uuid) + ' and group tail ' + group_tail)
         assert (len(group_tail) > 0)
         assert a is not None
         assert isinstance(a, np.ndarray)
-        if dtype is not None:
+        if str(dtype) == 'pack':
+            a = np.packbits(a, axis = -1)  # todo: check this returns uint8 array
+            dtype = 'uint8'
+        elif dtype is not None:
             a = a.astype(dtype, copy = copy)
         elif copy:
             a = a.copy()
@@ -66,7 +73,7 @@ class H5Register():
         if group_tail[-1] == '/':
             group_tail = group_tail[:-1]
         if (object_uuid, group_tail) in self.dataset_dict.keys():
-            pass  # todo: warn of re-registration?
+            log.warning(f'multiple hdf5 registrations for uuid: {object_uuid}; group: {group_tail}')
         self.dataset_dict[(object_uuid, group_tail)] = (a, dtype)
         if hdf5_internal_path:
             self.hdf5_path_dict[(object_uuid, group_tail)] = hdf5_internal_path
@@ -99,8 +106,8 @@ class H5Register():
                 dtype = a.dtype
                 if use_int32 and str(dtype) == 'int64':
                     dtype = 'int32'
-            if write_bool_as_int8 and str(dtype).lower().startswith('bool'):
-                dtype = 'int8'
+            if write_bool_as_uint8 and str(dtype).lower().startswith('bool'):
+                dtype = 'uint8'
             # log.debug('Writing hdf5 dataset ' + internal_path + ' of size ' + str(a.size) + ' type ' + str(dtype))
             fp.create_dataset(internal_path, data = a, dtype = dtype)
 
