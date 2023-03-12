@@ -60,12 +60,14 @@ def cell_geometry_is_defined(grid, cell_kji0 = None, cell_geometry_is_defined_ro
                                              object = grid,
                                              array_attribute = 'array_cell_geometry_is_defined',
                                              dtype = 'bool')
-        if grid.geometry_defined_for_all_cells_cached is None and cache_array and hasattr(
-                grid, 'array_cell_geometry_is_defined'):
-            grid.geometry_defined_for_all_cells_cached = (np.count_nonzero(
-                grid.array_cell_geometry_is_defined) == grid.array_cell_geometry_is_defined.size)
+        if (grid.geometry_defined_for_all_cells_cached is None and (cache_array or cell_kji0 is None) and
+                hasattr(grid, 'array_cell_geometry_is_defined')):
+            grid.geometry_defined_for_all_cells_cached =  \
+                (np.count_nonzero(grid.array_cell_geometry_is_defined) == grid.array_cell_geometry_is_defined.size)
             if grid.geometry_defined_for_all_cells_cached:
                 delattr(grid, 'array_cell_geometry_is_defined')
+        if cell_kji0 is None:
+            return grid.geometry_defined_for_all_cells_cached
         return result
 
 
