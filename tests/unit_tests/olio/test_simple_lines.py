@@ -74,3 +74,72 @@ def test_nearest_rods(example_model_and_crs):
                 assert len(rod_list[i]) == len(lines[i]) and rod_list[i].ndim == 2 and rod_list[i].shape[1] == 2
             assert np.all(rod_list[0] == e_kj_0)
             assert np.all(rod_list[1] == e_1)
+
+
+def test_drape_lines_to_rods(example_model_and_crs):
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (10, 10, 10),
+                           dxyz = (1.0, 2.0, 0.5),
+                           origin = (100.0, 200.0, 300.0),
+                           crs_uuid = crs.uuid,
+                           title = 'grid for rods',
+                           as_irregular_grid = True)
+    grid.write_hdf5_from_caches()
+    grid.create_xml()
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    lines = [
+        np.array([(101.9, 210.3, 303.1), (107.2, 207.8, 301.6)], dtype = float),
+        np.array([(100.0, 200.0, 300.0), (102.0, 204.0, 301.0), (104.0, 208.0, 302.0), (106.0, 212.0, 303.0)],
+                 dtype = float)
+    ]
+    rod_list = sl.nearest_rods(lines, 'xz', grid, 'J')
+    drapes = sl.drape_lines_to_rods(lines, rod_list, 'xz', grid, 'J')
+    assert len(drapes) == len(lines)
+    for i in range(len(lines)):
+        assert drapes[i].shape == lines[i].shape
+        assert_array_almost_equal(drapes[i][:, 0], lines[i][:, 0])
+        assert_array_almost_equal(drapes[i][:, 1], 199.0)
+        assert_array_almost_equal(drapes[i][:, 2], lines[i][:, 2])
+    drapes = sl.drape_lines_to_rods(lines, rod_list, 'yz', grid, 'I', offset = -99.0)
+    assert len(drapes) == len(lines)
+    for i in range(len(lines)):
+        assert drapes[i].shape == lines[i].shape
+        assert_array_almost_equal(drapes[i][:, 0], 1.0)
+        assert_array_almost_equal(drapes[i][:, 1:], lines[i][:, 1:])
+    drapes = sl.drape_lines_to_rods(lines, rod_list, 'yz', grid, 'I', offset = -0.1, ref_slice0 = 4, plus_face = True)
+    assert len(drapes) == len(lines)
+    for i in range(len(lines)):
+        assert drapes[i].shape == lines[i].shape
+        assert_array_almost_equal(drapes[i][:, 0], 104.9)
+        assert_array_almost_equal(drapes[i][:, 1:], lines[i][:, 1:])
+
+
+def test_drape_lines(example_model_and_crs):
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (10, 10, 10),
+                           dxyz = (1.0, 2.0, 0.5),
+                           origin = (100.0, 200.0, 300.0),
+                           crs_uuid = crs.uuid,
+                           title = 'grid for rods',
+                           as_irregular_grid = True)
+    grid.write_hdf5_from_caches()
+    grid.create_xml()
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    lines = [
+        np.array([(101.9, 210.3, 303.1), (107.2, 207.8, 301.6)], dtype = float),
+        np.array([(100.0, 200.0, 300.0), (102.0, 204.0, 301.0), (104.0, 208.0, 302.0), (106.0, 212.0, 303.0)],
+                 dtype = float)
+    ]
+    pillar_list = sl.nearest_pillars(lines, grid, ref_k = 0, ref_kp = 0)
+    drapes = sl.drape_lines(lines, pillar_list, grid)
+    assert len(drapes) == len(lines)
+    for i in range(len(lines)):
+        assert drapes[i].shape == lines[i].shape
+        assert_array_almost_equal(drapes[i][:, :2], lines[i][:, :2])
+        assert_array_almost_equal(drapes[i][:, 2], 299.0)
