@@ -1,6 +1,8 @@
-import resqpy.grid_surface as rqgs
 import numpy as np
 import pytest
+
+import resqpy.grid_surface as rqgs
+import resqpy.property as rqp
 
 
 def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surface):
@@ -28,6 +30,17 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     # Arrange
     grid = small_grid_and_surface[0]
     surface = small_grid_and_surface[1]
+    surf_flange = rqp.Property.from_array(surface.model,
+                                          cached_array = None,
+                                          source_info = 'constant False',
+                                          keyword = 'flange bool',
+                                          support_uuid = surface.uuid,
+                                          property_kind = 'flange bool',
+                                          indexable_element = 'faces',
+                                          discrete = True,
+                                          const_value = 0,
+                                          expand_const_arrays = False,
+                                          dtype = bool)
     name = "test"
     return_properties = ["offset"]
 
@@ -42,6 +55,7 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
 
     return_properties.append("depth")
     return_properties.append("triangle")
+    return_properties.append("flange bool")
     (
         gcs_optimised,
         properties_optimised,
@@ -54,6 +68,7 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     triangles_optimised = properties_optimised["triangle"]
     depths_optimised = properties_optimised["depth"]
     offsets_optimised = properties_optimised["offset"]
+    flange_optimised = properties_optimised["flange bool"]
 
     # Assert
     np.testing.assert_array_equal(cip_normal, cip_optimised)
@@ -63,6 +78,8 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     assert np.all(depths_optimised > 0.0)
     assert triangles_optimised.shape == offsets_optimised.shape
     assert np.all(triangles_optimised >= 0)
+    assert flange_optimised.shape == offsets_optimised.shape
+    assert not np.any(flange_optimised)
 
 
 def test_bisector_from_faces_flat_surface_k():
