@@ -45,11 +45,13 @@ def add_grid_with_missing_points(model, crs, missing_pillar = False):
 
 def test_cell_geometry_is_defined_regular_grid(basic_regular_grid):
     grid = basic_regular_grid
+    assert grid.geometry_defined_for_all_cells(cache_array = False)
     assert grid.cell_geometry_is_defined(cell_kji0 = (0, 0, 0), cache_array = False)
     assert grid.cell_geometry_is_defined(cell_kji0 = (1, 1, 1), cache_array = True)
     assert hasattr(grid, 'array_cell_geometry_is_defined')
     assert np.all(grid.cell_geometry_is_defined)
     assert grid.geometry_defined_for_all_cells_cached
+    assert grid.geometry_defined_for_all_cells(cache_array = True)
 
 
 def test_cell_geometry_is_defined_cell_kji0(example_model_and_crs):
@@ -68,6 +70,8 @@ def test_cell_geometry_is_defined_cell_kji0(example_model_and_crs):
     assert all_cells is not None and not all_cells
     assert grid.cell_geometry_is_defined(cell_kji0 = (1, 0, 1), cache_array = True)
     assert np.count_nonzero(grid.array_cell_geometry_is_defined) == 6
+    grid.geometry_defined_for_all_cells_cached = None
+    assert not grid.geometry_defined_for_all_cells(cache_array = False)
 
 
 def test_pillar_geometry_is_defined_everywhere(example_model_and_crs):
@@ -76,10 +80,16 @@ def test_pillar_geometry_is_defined_everywhere(example_model_and_crs):
     model.store_epc()
     model = rq.Model(model.epc_file)
     grid = model.grid()
+    assert grid.geometry_defined_for_all_pillars(cache_array = False)
     grid.cache_all_geometry_arrays()
     assert grid.geometry_defined_for_all_pillars_cached
     assert grid.pillar_geometry_is_defined(pillar_ji0 = (0, 1))
     assert grid.pillar_geometry_is_defined(pillar_ji0 = (1, 0))
+    grid.geometry_defined_for_all_pillars_cached = None
+    assert grid.geometry_defined_for_all_pillars(cache_array = True)
+    assert grid.geometry_defined_for_all_pillars_cached
+    grid.geometry_defined_for_all_pillars_cached = None
+    assert grid.geometry_defined_for_all_pillars(cache_array = False)
 
 
 def test_missing_pillar_geometry(example_model_and_crs):
@@ -88,6 +98,7 @@ def test_missing_pillar_geometry(example_model_and_crs):
     model.store_epc()
     model = rq.Model(model.epc_file)
     grid = model.grid()
+    assert not grid.geometry_defined_for_all_pillars(cache_array = False)
     grid.cache_all_geometry_arrays()
     assert not grid.geometry_defined_for_all_cells_cached
     assert not grid.geometry_defined_for_all_pillars_cached
