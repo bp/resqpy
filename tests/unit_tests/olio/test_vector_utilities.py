@@ -33,6 +33,15 @@ def test_unit_vectors():
         assert_array_almost_equal(vec.unit_vector_from_azimuth(a), e)
 
 
+def test_nan_unit_vectors():
+    v_set = np.array([(3.0, 4.0, 0.0), (3.7, -3.7, np.NaN), (0.0, 0.0, 1.0), (0.0, np.NaN, 0.0)])
+    one_over_root_three = 1.0 / maths.sqrt(3.0)
+    expected = np.array([(3.0 / 5.0, 4.0 / 5.0, 0.0), (np.NaN, np.NaN, np.NaN), (0.0, 0.0, 1.0),
+                         (np.NaN, np.NaN, np.NaN)])
+    for v, e in zip(v_set, expected):
+        assert_array_almost_equal(vec.unit_vector(v), e)
+
+
 def test_angles():
     pi_by_2 = maths.pi / 2.0
     assert maths.isclose(vec.radians_from_degrees(90.0), pi_by_2)
@@ -304,3 +313,69 @@ def test_xy_sort():
     assert_array_almost_equal(spx, espx)
     assert_array_almost_equal(spy, espy)
     assert_array_almost_equal(spxy, espxy)
+
+
+def test_inclinations():
+    v_set = np.array([(3.0, 4.0, 0.0), (0.0, -3.7, 3.7), (0.0, 0.0, 1.0), (100.0 * maths.sqrt(3.0) / 2.0, 0.0, -50.0)],
+                     dtype = float)
+    e = np.array([90.0, 45.0, 0.0, 120.0], dtype = float)
+    inclines = vec.inclinations(v_set)
+    assert_array_almost_equal(inclines, e)
+
+
+def test_nan_inclinations():
+    v_set = np.array([(3.0, np.NaN, 0.0), (0.0, -3.7, 3.7), (np.NaN, 0.0, 1.0),
+                      (100.0 * maths.sqrt(3.0) / 2.0, 0.0, -50.0)],
+                     dtype = float)
+    e = np.array([np.NaN, 45.0, np.NaN, 120.0], dtype = float)
+    inclines = vec.nan_inclinations(v_set)
+    assert_array_almost_equal(inclines, e)
+
+
+def test_points_direction_vector():
+    p = np.zeros((3, 5, 3), dtype = float)
+    p[0, :, 0] = 100.0 * np.arange(5).astype(float)
+    p[1, :, 0] = p[0, :, 0] + 100.0
+    p[2, :, 0] = p[0, :, 0] - 100.0
+    p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
+    p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
+    e_0 = np.mean(p[2], axis = 0) - np.mean(p[0], axis = 0)
+    e_1 = np.mean(p[:, 4], axis = 0) - np.mean(p[:, 0], axis = 0)
+    pdv_0 = vec.points_direction_vector(p, axis = 0)
+    pdv_1 = vec.points_direction_vector(p, axis = 1)
+    assert_array_almost_equal(pdv_0, e_0)
+    assert_array_almost_equal(pdv_1, e_1)
+
+
+def test_points_direction_vector_some_nan():
+    p = np.zeros((3, 5, 3), dtype = float)
+    p[0, :, 0] = 100.0 * np.arange(5).astype(float)
+    p[1, :, 0] = p[0, :, 0] + 100.0
+    p[2, :, 0] = p[0, :, 0] - 100.0
+    p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
+    p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
+    p[0, 2, :] = np.NaN
+    p[1, 4, :] = np.NaN
+    e_0 = np.nanmean(p[2], axis = 0) - np.nanmean(p[0], axis = 0)
+    e_1 = np.nanmean(p[:, 4], axis = 0) - np.nanmean(p[:, 0], axis = 0)
+    pdv_0 = vec.points_direction_vector(p, axis = 0)
+    pdv_1 = vec.points_direction_vector(p, axis = 1)
+    assert_array_almost_equal(pdv_0, e_0)
+    assert_array_almost_equal(pdv_1, e_1)
+
+
+def test_points_direction_vector_nan_sloces():
+    p = np.zeros((3, 5, 3), dtype = float)
+    p[0, :, 0] = 100.0 * np.arange(5).astype(float)
+    p[1, :, 0] = p[0, :, 0] + 100.0
+    p[2, :, 0] = p[0, :, 0] - 100.0
+    p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
+    p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
+    p[0, :, :] = np.NaN
+    p[:, 4, :] = np.NaN
+    e_0 = np.nanmean(p[2], axis = 0) - np.nanmean(p[1], axis = 0)
+    e_1 = np.nanmean(p[:, 3], axis = 0) - np.nanmean(p[:, 0], axis = 0)
+    pdv_0 = vec.points_direction_vector(p, axis = 0)
+    pdv_1 = vec.points_direction_vector(p, axis = 1)
+    assert_array_almost_equal(pdv_0, e_0)
+    assert_array_almost_equal(pdv_1, e_1)
