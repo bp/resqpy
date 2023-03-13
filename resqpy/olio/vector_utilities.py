@@ -196,17 +196,18 @@ def points_direction_vector(a, axis):
     start = 0
     start_slicing = [slice(None)] * a.ndim
     while True:
-        start_slicing[axis] = slice(start)
+        start_slicing[axis] = slice(start, start + 1)
         if not np.all(np.isnan(a[tuple(start_slicing)])):
             break
         start += 1
+        assert start < a.shape[axis]
     finish = a.shape[axis] - 1
     finish_slicing = [slice(None)] * a.ndim
     while True:
-        finish_slicing[axis] = slice(finish)
+        finish_slicing[axis] = slice(finish, finish + 1)
         if not np.all(np.isnan(a[tuple(finish_slicing)])):
             break
-        finish += 1
+        finish -= 1
     if start >= finish:
         return None
     if a.ndim > 2:
