@@ -165,6 +165,7 @@ def test_bisector_from_faces_flat_surface_j():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
+    ca = rqgs.column_bisector_from_faces(grid_extent_kji[1:], j_faces[0], i_faces[0])
 
     # Assert
     np.all(a == np.array([[[True, True, True], [False, False, False], [False, False, False]],
@@ -172,6 +173,8 @@ def test_bisector_from_faces_flat_surface_j():
                           [[True, True, True], [False, False, False], [False, False, False]]],
                          dtype = bool))
     assert is_curtain is True
+    assert ca.shape == tuple(grid_extent_kji[1:])
+    assert np.all(ca == a[0]) or np.all(ca == np.logical_not(a[0]))
 
 
 def test_shadow_from_faces_curtain():
