@@ -837,7 +837,7 @@ def make_all_clockwise_xy(t, p):
     return t
 
 
-def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None, inner_ring = True):
+def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None, inner_ring = False):
     """Creates a set of points surrounding the point set p, in the xy plane.
 
     arguments:
@@ -847,7 +847,7 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
           the 'radius' of the outermost points in p
        radial_distance (float): if present, the radius of the ring of points, unless radial_factor
           results in a greater distance in which case that is used
-       inner_ring (bool, default True): if True, an inner ring of points, with double count, is created
+       inner_ring (bool, default False): if True, an inner ring of points, with double count, is created
           at a radius just outside that of the furthest flung original point; this improves triangulation
           of the extended point set when the original has a non-convex hull
 
