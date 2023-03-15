@@ -413,7 +413,7 @@ def print_xml_tree(root,
                                     log_level = log_level,
                                     max_lines = max_lines,
                                     line_count = line_count)
-        if line_count > max_lines:
+        if max_lines and line_count > max_lines:
             break
     return line_count
 
