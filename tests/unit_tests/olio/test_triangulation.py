@@ -289,5 +289,5 @@ def test_surrounding_xy_ring():
         assert ring.shape == (3 * n, 3)
         assert_array_almost_equal(ring[:, 2], 457.0)
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
-        assert_array_almost_equal(r[:2 * n], 1.05 * P_radius)  # inner ring points
+        assert_array_almost_equal(r[:2 * n], 1.1 * P_radius)  # inner ring points
         assert_array_almost_equal(r[2 * n:], 234.0)

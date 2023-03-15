@@ -874,7 +874,7 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
         radius = radial_distance
     ring = make_ring(count, centre, radius)
     if inner_ring:
-        inner_radius = p_radius * 1.05
+        inner_radius = p_radius * 1.1
         assert radius > inner_radius
         in_ring = make_ring(2 * count, centre, inner_radius)
         return np.concatenate((in_ring, ring), axis = 0)
