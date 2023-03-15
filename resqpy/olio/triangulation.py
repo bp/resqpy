@@ -837,7 +837,7 @@ def make_all_clockwise_xy(t, p):
     return t
 
 
-def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None):
+def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None, inner_ring = True):
     """Creates a set of points surrounding the point set p, in the xy plane.
 
     arguments:
@@ -847,11 +847,22 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
           the 'radius' of the outermost points in p
        radial_distance (float): if present, the radius of the ring of points, unless radial_factor
           results in a greater distance in which case that is used
+       inner_ring (bool, default True): if True, an inner ring of points, with double count, is created
+          at a radius just outside that of the furthest flung original point; this improves triangulation
+          of the extended point set when the original has a non-convex hull
 
     returns:
-       numpy float array of shape (count, 3) being xyz points in surrounding ring; z is set constant to
-       mean value of z in p
+       numpy float array of shape (N, 3) being xyz points in surrounding ring(s); z is set constant to
+       mean value of z in p; N is count if inner_ring is False, 3 * count if True
     """
+
+    def make_ring(count, centre, radius):
+        delta_theta = 2.0 * maths.pi / float(count)
+        ring = np.zeros((count, 3))
+        for i in range(count):
+            theta = float(i) * delta_theta
+            ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+        return ring
 
     assert p.shape[-1] == 3
     assert radial_factor >= 1.0
@@ -861,11 +872,12 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
     radius = p_radius * radial_factor
     if radial_distance is not None and radial_distance > radius:
         radius = radial_distance
-    delta_theta = 2.0 * maths.pi / float(count)
-    ring = np.zeros((count, 3))
-    for i in range(count):
-        theta = float(i) * delta_theta
-        ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+    ring = make_ring(count, centre, radius)
+    if inner_ring:
+        inner_radius = p_radius * 1.05
+        assert radius > inner_radius
+        in_ring = make_ring(2 * count, centre, inner_radius)
+        return np.concatenate((in_ring, ring), axis = 0)
     return ring
 
 
@@ -963,7 +975,7 @@ def _find_unused(ap: np.ndarray, used_mask: np.ndarray, v: int):  # type: ignore
 
 @njit
 def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
-    """Returns the index of the first False value in the array."""
+    """Returns the index of the first False (or zero) value in the 1D array."""
     for idx, val in np.ndenumerate(array):
         if not val:
             return idx[0]
@@ -972,7 +984,7 @@ def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
 
 @njit
 def _first_match(array: np.ndarray, v: int) -> Optional[int]:  # type: ignore
-    """Returns the index of the first True value in the array."""
+    """Returns the index of the first occurrence of value v in the 1D array."""
     for idx, val in np.ndenumerate(array):
         if val == v:
             return idx[0]

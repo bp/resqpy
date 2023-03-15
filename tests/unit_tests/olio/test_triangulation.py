@@ -1,5 +1,4 @@
 import math as maths
-
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
@@ -236,3 +235,59 @@ def test_edges_and_rims():
         else:
             assert set(rp) == (set(np.arange(6, dtype = int)) | set(24 + np.arange(6, dtype = int)) | set(
                 (6, 12, 18, 11, 17, 23)))
+
+
+def test_first_false():
+    a = np.array((0, 0, 1, 0, 1, 1), dtype = bool)
+    assert tri._first_false(a) == 0
+    a = np.logical_not(a)
+    assert tri._first_false(a) == 2
+    a = np.zeros(5, dtype = bool)
+    assert tri._first_false(a) == 0
+    a = np.logical_not(a)
+    assert tri._first_false(a) == 5  # indication of no False values present
+
+
+def test_first_match():
+    a = np.array((0, 0, 1, 0, 1, 1), dtype = bool)
+    assert tri._first_match(a, False) == 0
+    assert tri._first_match(a, True) == 2
+    a = np.arange(7, dtype = int)
+    assert tri._first_match(a, 5) == 5
+    assert tri._first_match(a, -1) == 7
+    assert tri._first_match(a, 0) == 0
+    assert tri._first_match(a, 13487) == 7
+
+
+def test_first_unused():
+    ap = np.array([(2, 5), (5, 3), (7, 2), (3, 5), (5, 4), (3, 6), (5, 8)], dtype = int)
+    used = np.array((True, True, False, True, False, False, False))
+    i, v = tri._find_unused(ap, used, 0)
+    assert i == 7 and v == -1  # not found
+    i, v = tri._find_unused(ap, used, 2)
+    assert i == 2 and v == 7  # not found
+    i, v = tri._find_unused(ap, used, 7)
+    assert i == 2 and v == 2
+    i, v = tri._find_unused(ap, used, 8)
+    assert i == 6 and v == 5
+    i, v = tri._find_unused(ap, used, 5)
+    assert i == 4 and v == 4
+
+
+def test_surrounding_xy_ring():
+    p = np.array([(-23.0, -23.0, 457.0), (-23.0, 23.0, 457.0), (23.0, 23.0, 457.0), (23.0, -23.0, 457.0)],
+                 dtype = float)
+    P_radius = maths.sqrt(2 * 23.0 * 23.0)
+    for n in (5, 17):
+        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False)
+        assert ring.shape == (n, 3)
+        assert_array_almost_equal(ring[:, 2], 457.0)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r, 10.0 * P_radius)
+    for n in (6, 11):
+        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 2.0, radial_distance = 234.0, inner_ring = True)
+        assert ring.shape == (3 * n, 3)
+        assert_array_almost_equal(ring[:, 2], 457.0)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r[:2 * n], 1.05 * P_radius)  # inner ring points
+        assert_array_almost_equal(r[2 * n:], 234.0)
