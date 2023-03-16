@@ -80,6 +80,7 @@ def function_multiprocessing(function: Callable,
     if tmp_dir_path is None:
         tmp_dir_path = '.'
     tmp_dir = Path(tmp_dir_path) / f'tmp_{uuid.uuid4()}'
+    os.makedirs(tmp_dir)
     for i, kwargs in enumerate(kwargs_list):
         kwargs["index"] = i
         kwargs["parent_tmp_dir"] = str(tmp_dir)
