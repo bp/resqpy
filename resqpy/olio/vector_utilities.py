@@ -189,6 +189,7 @@ def nan_inclinations(a, already_unit_vectors = False):
 
 def points_direction_vector(a, axis):
     """Returns an average direction vector based on first and last non-NaN points or slices in given axis."""
+    # note: as currently coded, might give poor results with some patterns of NaNs
 
     assert a.ndim > 1 and 0 <= axis < a.ndim - 1 and a.shape[-1] > 1 and a.shape[axis] > 1
     if np.all(np.isnan(a)):
@@ -258,9 +259,20 @@ def naive_2d_lengths(v):
 
 
 def unit_corrected_length(v, unit_conversion):
-    """Returns the length of the vector v after applying the unit_conversion factors."""
-    # unit_conversion might be [1.0, 1.0, 0.3048] to convert z from feet to metres, for example
-    # or [3.28084, 3.28084, 1.0] to convert x and y from metres to feet
+    """Returns the length of the vector v after applying the unit_conversion factors.
+
+    arguments:
+        v (1D numpy float array): vector with mixed units of measure
+        unit_conversion (1D numpy float array): vector to multiply elements of v by, prior to finding length
+
+    returns:
+        float, being the length of v after adjustment by unit_conversion
+
+    notes:
+        example unit_conversion might be:
+        [1.0, 1.0, 0.3048] to convert z from feet to metres, or
+        [3.28084, 3.28084, 1.0] to convert x and y from metres to feet
+    """
     converted = elemental_multiply(v, unit_conversion)
     return naive_length(converted)
 
