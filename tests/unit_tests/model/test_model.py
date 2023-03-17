@@ -883,3 +883,22 @@ def test_uuid_consolidation(tmp_path):
                 assert bu.matching_uuids(offset_uuid, uuid_expected)
 
     combined_model.check_catalogue_dictionaries()
+
+
+def test_untitled(tmp_path):
+    epc = os.path.join(tmp_path, 'test_untitled.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    assert not crs.title
+    assert rqet.find_nested_tags_text(crs.root, ['Citation', 'Title']) == 'untitled'
+    mdd = rqw.MdDatum(model, location = (123.0, 456.0, 0.0), crs_uuid = crs.uuid)
+    mdd.create_xml()
+    assert rqet.find_nested_tags_text(mdd.root, ['LocalCrs', 'Title']) == 'untitled'
+    model.store_epc()
+    model = rq.Model(epc)
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert crs.title == 'untitled'
+    assert rqet.find_nested_tags_text(crs.root, ['Citation', 'Title']) == 'untitled'
+    mdd = rqw.MdDatum(model, uuid = mdd.uuid)
+    assert rqet.find_nested_tags_text(mdd.root, ['LocalCrs', 'Title']) == 'untitled'
