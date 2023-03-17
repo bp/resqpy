@@ -563,6 +563,25 @@ class Polyline(rql_c._BasePolyline):
             segment = -1
         return meet.point_snapped_to_line_segment_2d(p, self.coordinates[segment], self.coordinates[segment + 1])
 
+    def segment_xyz_from_xy(self, segment, x, y):
+        """Returns xyz point on segment given x and y (which should be on or close to the segment).
+
+        note:
+           this method allows a return to a 3D point after working in the 2D xy plane.
+        """
+
+        if segment == len(self.coordinates) - 1:
+            segment = -1
+        seg_vector = self.coordinates[segment + 1] - self.coordinates[segment]
+        if abs(seg_vector[0]) > abs(seg_vector[1]):
+            assert (x - self.coordinates[segment, 0]) * (x - self.coordinates[segment + 1, 0]) <= 0
+            f = (x - self.coordinates[segment, 0]) / seg_vector[0]
+        else:
+            assert (y - self.coordinates[segment, 1]) * (y - self.coordinates[segment + 1, 1]) <= 0
+            f = (y - self.coordinates[segment, 1]) / seg_vector[1]
+        assert 0.0 <= f <= 1.0
+        return (1.0 - f) * self.coordinates[segment] + f * self.coordinates[segment + 1]
+
     def xy_crossings(self, other):
         """Returns list of (x, y) pairs of crossing points with other polyline, in xy plane."""
 
