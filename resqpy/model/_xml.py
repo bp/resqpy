@@ -153,9 +153,9 @@ def _create_ref_node(model, flavour, title, uuid, content_type = None, root = No
     else:
         ct_node.text = 'application/x-resqml+xml;version=2.0;type=' + content_type
 
-    if not title:
+    if title is None or len(title) == 0:
         title = model.title(uuid = uuid)
-        if title is None:
+        if title is None or len(title) == 0:
             title = 'untitled'
     title_node = rqet.SubElement(ref_node, ns['eml'] + 'Title')
     title_node.set(ns['xsi'] + 'type', ns['eml'] + 'DescriptionString')
@@ -204,8 +204,8 @@ def _create_rels_part(model):
 def _create_citation(root = None, title = '', originator = None):
     """Creates a citation xml node and optionally appends as a child of root."""
 
-    if title is None:
-        title = ''
+    if title is None or len(title) == 0:
+        title = 'untitled'
 
     citation = rqet.Element(ns['eml'] + 'Citation')
     citation.set(ns['xsi'] + 'type', ns['eml'] + 'Citation')

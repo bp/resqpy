@@ -730,7 +730,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     else:
         line += '>'
         text = root.text
-        if (not text or text.isspace()) and tag == 'Title':
+        if (not text or text.isspace()) and tag.endswith('Title'):
             text = 'untitled'
         if text and not text.isspace():
             line += text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
