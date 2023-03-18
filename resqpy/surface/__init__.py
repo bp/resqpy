@@ -2,7 +2,7 @@
 
 __all__ = [
     'BaseSurface', 'CombinedSurface', 'Mesh', 'TriangulatedPatch', 'PointSet', 'Surface', 'TriMesh',
-    'distill_triangle_points'
+    'distill_triangle_points', '_adjust_flange_z'
 ]
 
 from ._base_surface import BaseSurface
@@ -10,7 +10,7 @@ from ._combined_surface import CombinedSurface
 from ._mesh import Mesh
 from ._triangulated_patch import TriangulatedPatch
 from ._pointset import PointSet
-from ._surface import Surface, distill_triangle_points
+from ._surface import Surface, distill_triangle_points, _adjust_flange_z
 from ._tri_mesh import TriMesh
 
 # Set "module" attribute of all public objects to this path.

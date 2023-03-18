@@ -908,12 +908,50 @@ def edges(t):
     return np.unique(all_edges, axis = 0, return_counts = True)
 
 
+def triangles_using_point(t, point_index):
+    """Returns list-like 1D int array of indices of triangles using vertex identified by point_index."""
+
+    assert t.ndim == 2 and t.shape[1] == 3 and isinstance(point_index, int)
+    mask = np.any(t == point_index, axis = -1)
+    return np.where(mask)[0]
+
+
+def triangles_using_edge(t, p1, p2):
+    """Returns list-like 1D int array of indices of triangles using edge identified by pair of point indices."""
+
+    assert t.ndim == 2 and t.shape[1] == 3 and p1 != p2
+    mask = np.logical_and(np.any(t == p1, axis = -1), np.any(t == p2, axis = -1))
+    return np.where(mask)[0]
+
+
+def triangles_using_edges(t, edges):
+    """Returns int array of shape (len(edges), 2) with indices of upto 2 triangles using each edge (-1 for unused)."""
+
+    assert t.ndim == 2 and t.shape[1] == 3 and edges.ndim == 2 and edges.shape[1] == 2
+    ti = np.full((len(edges), 2), -1, dtype = int)
+    for i in range(len(edges)):
+        te = triangles_using_edge(t, edges[i, 0], edges[i, 1])
+        c = len(te)
+        assert 0 <= c <= 2
+        if c:
+            ti[i, :c] = te
+    return ti
+
+
 def rim_edges(all_edges, edge_counts):
     """Returns a subset of all edges where the edge count is 1."""
 
     assert all_edges.ndim == 2 and all_edges.shape[1] == 2
     assert edge_counts.ndim == 1 and edge_counts.size == len(all_edges)
     return all_edges[edge_counts == 1, :]
+
+
+def internal_edges(all_edges, edge_counts):
+    """Returns a subset of all edges where the edge count is 2."""
+
+    assert all_edges.ndim == 2 and all_edges.shape[1] == 2
+    assert edge_counts.ndim == 1 and edge_counts.size == len(all_edges)
+    return all_edges[edge_counts == 2, :]
 
 
 def rims(all_rim_edges):

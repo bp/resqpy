@@ -293,7 +293,7 @@ def set_geometry_is_defined(grid,
 
     assert not np.all(nan_mask), 'grid does not have any geometry defined'
 
-    points[:] = np.where(np.repeat(np.expand_dims(nan_mask, axis = nan_mask.ndim), 3, axis = -1), np.NaN, points)
+    points[np.where(np.repeat(np.expand_dims(nan_mask, axis = nan_mask.ndim), 3, axis = -1))] = np.NaN
 
     surround_z = grid.xyz_box(lazy = False)[1 if grid.z_inc_down() else 0, 2]
 
@@ -309,11 +309,12 @@ def set_geometry_is_defined(grid,
 
     grid.geometry_defined_for_all_cells_cached = False
 
-    primary_nan_mask = \
-        nan_mask.reshape((grid.nk_plus_k_gaps + 1, -1))[:, :primary_count].reshape(
-            (grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1))
+    primary_nan_mask = nan_mask.reshape((grid.nk_plus_k_gaps + 1, -1))[:, :primary_count].reshape(
+        (grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1))
+
     column_nan_mask = np.logical_or(np.logical_or(primary_nan_mask[:, :-1, :-1], primary_nan_mask[:, :-1, 1:]),
                                     np.logical_or(primary_nan_mask[:, 1:, :-1], primary_nan_mask[:, 1:, 1:]))
+
     if grid.k_gaps:
         grid.array_cell_geometry_is_defined = np.logical_not(
             np.logical_or(column_nan_mask[grid.k_raw_index_array], column_nan_mask[grid.k_raw_index_array + 1]))
@@ -335,6 +336,7 @@ def set_geometry_is_defined(grid,
         partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis = 0).flatten())
         if np.any(partial_pillar_mask):
             points.reshape((grid.nk_plus_k_gaps + 1, -1, 3))[:, partial_pillar_mask, :] = np.NaN
+            grid.geometry_defined_for_all_pillars_cached = False
             cells_update_needed = True
     elif complete_partial_pillars:
         partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis = 0).flatten())
@@ -358,7 +360,9 @@ def set_geometry_is_defined(grid,
                 (grid.nj + 1, grid.ni + 1)))
             column_nan_mask = np.logical_or(np.logical_or(top_nan_mask[:-1, :-1], top_nan_mask[:-1, 1:]),
                                             np.logical_or(top_nan_mask[1:, :-1], top_nan_mask[1:, 1:]))
-            grid.array_cell_geometry_is_defined = np.repeat(np.expand_dims(column_nan_mask, 0), grid.nk, axis = 0)
+            grid.array_cell_geometry_is_defined = np.repeat(np.logical_not(np.expand_dims(column_nan_mask, 0)),
+                                                            grid.nk,
+                                                            axis = 0)
             grid.geometry_defined_for_all_cells_cached = np.all(grid.array_cell_geometry_is_defined)
             if grid.geometry_defined_for_all_cells_cached:
                 del grid.array_cell_geometry_is_defined

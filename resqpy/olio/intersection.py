@@ -164,8 +164,7 @@ def line_triangles_intersects(line_p, line_v, triangles, line_segment = False):
         ts[:] = np.where(np.logical_or(ts < 0.0, ts > 1.0), np.nan, ts)
     np.divide(np.sum(np.cross(p02s, line_rv) * lp_t0s, axis = 1), denoms, out = us, where = nz)
     np.divide(np.sum(np.cross(line_rv, p01s) * lp_t0s, axis = 1), denoms, out = vs, where = nz)
-    ts[:] = np.where(np.logical_or(np.logical_or(us < 0.0, us > 1.0), np.logical_or(vs < 0.0, us + vs > 1.0)), np.nan,
-                     ts)
+    ts[np.where(np.logical_or(np.logical_or(us < 0.0, us > 1.0), np.logical_or(vs < 0.0, us + vs > 1.0)))] = np.nan
 
     intersects = np.empty((n, 3))
     intersects[:] = line_v * np.repeat(ts, 3).reshape((n, 3)) + line_p

@@ -35,7 +35,7 @@ def add_grid_with_missing_points(model, crs, missing_pillar = False):
     grid.array_cell_geometry_is_defined[0, 0, 1] = False
     if missing_pillar:
         grid.points_cached[:, 1, 0, :] = np.NaN
-        grid.array_cell_geometry_is_defined[:, 1, 0] = False
+        grid.array_cell_geometry_is_defined[:, :, 0] = False
         grid.array_pillar_geometry_is_defined = np.ones((3, 3), dtype = bool)
         grid.array_pillar_geometry_is_defined[1, 0] = False
     grid.write_hdf5_from_caches()
@@ -106,3 +106,84 @@ def test_missing_pillar_geometry(example_model_and_crs):
     assert grid.pillar_geometry_is_defined(pillar_ji0 = (1, 1), cache_array = True)
     assert grid.array_pillar_geometry_is_defined[0, 1]
     assert not grid.array_pillar_geometry_is_defined[1, 0]
+
+
+def test_pillar_geometry_is_defined_ref(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_missing_points(model, crs, missing_pillar = True)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    gid = grid.pillar_geometry_is_defined_ref()
+    gid_e = np.ones((grid.nj + 1, grid.ni + 1), dtype = bool)
+    gid_e[1, 0] = False
+    assert gid.shape == (grid.nj + 1, grid.ni + 1)
+    assert np.all(gid == gid_e)
+
+
+def test_set_geometry_is_defined_defaults(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_missing_points(model, crs, missing_pillar = False)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    grid.cell_geometry_is_defined()
+    cgid = grid.array_cell_geometry_is_defined
+    # these array attributes are deleted by the set_geometry_is_defined() method anyway; here for clarity
+    if hasattr(grid, 'array_pillar_geometry_is_defined'):
+        delattr(grid, 'array_pillar_geometry_is_defined')
+    if hasattr(grid, 'array_cell_geometry_is_defined'):
+        delattr(grid, 'array_cell_geometry_is_defined')
+    grid.set_geometry_is_defined()
+    assert hasattr(grid, 'array_cell_geometry_is_defined')
+    assert np.all(grid.array_cell_geometry_is_defined == cgid)
+
+
+def test_set_geometry_is_defined_complete_partial_pillars(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_missing_points(model, crs, missing_pillar = False)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    grid.set_geometry_is_defined(complete_partial_pillars = True)
+    if hasattr(grid, 'array_cell_geometry_is_defined'):
+        assert np.all(grid.array_cell_geometry_is_defined)
+    else:
+        assert grid.geometry_defined_for_all_cells_cached
+
+
+def test_set_geometry_is_defined_complete_partial_pillars_pillar_missing(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_missing_points(model, crs, missing_pillar = True)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    grid.set_geometry_is_defined(complete_partial_pillars = True)
+    ecgid = np.ones(tuple(grid.extent_kji), dtype = bool)
+    ecgid[:, :, 0] = False
+    assert hasattr(grid, 'array_cell_geometry_is_defined')
+    assert np.all(grid.array_cell_geometry_is_defined == ecgid)
+
+
+def test_set_geometry_is_defined_complete_all_pillar_missing(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_missing_points(model, crs, missing_pillar = True)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    grid.set_geometry_is_defined(complete_all = True)
+    assert grid.geometry_defined_for_all_cells_cached is True
+
+
+def test_set_geometry_is_defined_nullify_partial_pillars(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_missing_points(model, crs, missing_pillar = False)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    grid.set_geometry_is_defined(nullify_partial_pillars = True)
+    ecgid = np.ones((2, 2, 2), dtype = bool)
+    ecgid[:, 0, 1] = False
+    ecgid[:, 1, 0] = False
+    assert hasattr(grid, 'array_cell_geometry_is_defined')
+    assert np.all(grid.array_cell_geometry_is_defined == ecgid)
