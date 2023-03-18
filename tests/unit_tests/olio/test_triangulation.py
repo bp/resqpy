@@ -209,6 +209,8 @@ def test_edges_and_rims():
 
     re = tri.rim_edges(e, c)
     assert re.shape == (4 * 2 + 5 * 2 + 6 + 4, 2)
+    ie = tri.internal_edges(e, c)
+    assert ie.shape == (len(e) - re.shape[0], 2)
 
     rims_edge_list, rims_points_list = tri.rims(re)
     assert len(rims_edge_list) == 3
@@ -235,6 +237,47 @@ def test_edges_and_rims():
         else:
             assert set(rp) == (set(np.arange(6, dtype = int)) | set(24 + np.arange(6, dtype = int)) | set(
                 (6, 12, 18, 11, 17, 23)))
+
+
+def test_internal_edges():
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    e, c = tri.edges(t)
+    assert len(e) == 7
+    ie = tri.internal_edges(e, c)
+    assert ie.shape == (2, 2)
+    assert np.all(ie == np.array([(0, 4), (1, 4)], dtype = int))
+
+
+def test_triangles_using_point():
+    p = np.array([(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)], dtype = float)
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    assert tuple(tri.triangles_using_point(t, 1)) == (1, 2)
+    assert tuple(tri.triangles_using_point(t, 2)) == (2,)
+    assert np.all(tri.triangles_using_point(t, 4) == [0, 1, 2])
+    assert tuple(tri.triangles_using_point(t, 3)) == (0,)
+    assert len(tri.triangles_using_point(t, 5)) == 0
+
+
+def test_triangles_using_edge():
+    p = np.array([(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)], dtype = float)
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    assert set(tri.triangles_using_edge(t, 1, 4)) == set((1, 2))
+    assert set(tri.triangles_using_edge(t, 4, 1)) == set((1, 2))
+    assert set(tri.triangles_using_edge(t, 4, 0)) == set((0, 1))
+    assert set(tri.triangles_using_edge(t, 0, 4)) == set((0, 1))
+    assert set(tri.triangles_using_edge(t, 3, 4)) == set((0,))
+    assert set(tri.triangles_using_edge(t, 4, 3)) == set((0,))
+    assert set(tri.triangles_using_edge(t, 4, 2)) == set((2,))
+    assert len(tri.triangles_using_edge(t, 1, 3)) == 0
+
+
+def test_triangles_using_edges():
+    p = np.array([(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)], dtype = float)
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    edges = np.array([(1, 4), (4, 1), (4, 0), (0, 4), (3, 4), (4, 3), (4, 2), (1, 3)], dtype = int)
+    e = np.array([(1, 2), (1, 2), (0, 1), (0, 1), (0, -1), (0, -1), (2, -1), (-1, -1)], dtype = int)
+    tue = tri.triangles_using_edges(t, edges)
+    assert np.all(tue == e)
 
 
 def test_first_false():

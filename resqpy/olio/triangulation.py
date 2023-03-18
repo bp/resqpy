@@ -925,15 +925,16 @@ def triangles_using_edge(t, p1, p2):
 
 
 def triangles_using_edges(t, edges):
-    """Returns int array of shape (len(edges), 2) with indices of triangles using each edge."""
+    """Returns int array of shape (len(edges), 2) with indices of upto 2 triangles using each edge (-1 for unused)."""
 
     assert t.ndim == 2 and t.shape[1] == 3 and edges.ndim == 2 and edges.shape[1] == 2
     ti = np.full((len(edges), 2), -1, dtype = int)
     for i in range(len(edges)):
         te = triangles_using_edge(t, edges[i, 0], edges[i, 1])
         c = len(te)
-        assert 1 <= c <= 2
-        ti[i, :c] = te
+        assert 0 <= c <= 2
+        if c:
+            ti[i, :c] = te
     return ti
 
 
