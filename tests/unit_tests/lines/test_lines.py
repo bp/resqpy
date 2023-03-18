@@ -247,20 +247,20 @@ def test_segment_methods(example_model_and_crs):
     assert_array_almost_equal(line.interpolated_point(0.0), coords[0])
     assert_array_almost_equal(line.interpolated_point(1.0), coords[-1])
     # create a simple 3 segment polyline
-    coords = np.array([(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 5.0, 0.0), (10.0, 10.0, 0.0)])
+    coords = np.array([(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 5.0, 3.0), (10.0, 10.0, 3.0)])
     line = resqpy.lines.Polyline(parent_model = model,
                                  title = 'angled',
                                  set_crs = crs.uuid,
                                  is_closed = False,
                                  set_coord = coords)
     # check midpoint
-    assert_array_almost_equal(line.interpolated_point(0.5), (7.5, 2.5, 0.0))
+    assert_array_almost_equal(line.interpolated_point(0.5), (7.5, 2.5, 1.5))
     # create some equidistant points along the line
     ep = line.equidistant_points(7)
     # check some of the equidistant points
     assert_array_almost_equal(ep[0], coords[0])
     assert maths.isclose(ep[1, 1], 0.0)
-    assert_array_almost_equal(ep[3], (7.5, 2.5, 0.0))
+    assert_array_almost_equal(ep[3], (7.5, 2.5, 1.5))
     assert maths.isclose(ep[5, 0], 10.0)
     assert_array_almost_equal(ep[-1], coords[-1])
     # check line segment intersection method
@@ -268,8 +268,16 @@ def test_segment_methods(example_model_and_crs):
         seg, x, y = line.first_line_intersection(5.0, 5.0, 10.0, 0.0, half_segment = half_seg)
         assert seg == 1
         assert maths.isclose(x, 7.5) and maths.isclose(y, 2.5)
+        xyz = line.segment_xyz_from_xy(seg, x, y)
+        assert_array_almost_equal(xyz, (7.5, 2.5, 1.5))
         seg, x, y = line.first_line_intersection(5.0, 5.0, 0.0, 10.0, half_segment = half_seg)
         assert seg is None and x is None and y is None
+        seg, x, y = line.first_line_intersection(0.0, 10.0, 5.0, 5.0, half_segment = half_seg)
+        if half_seg:
+            assert seg == 1
+            assert maths.isclose(x, 7.5) and maths.isclose(y, 2.5)
+        else:
+            assert seg is None and x is None and y is None
 
 
 def test_area(example_model_and_crs):

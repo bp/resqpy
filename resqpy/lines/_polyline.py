@@ -567,7 +567,8 @@ class Polyline(rql_c._BasePolyline):
         """Returns xyz point on segment given x and y (which should be on or close to the segment).
 
         note:
-           this method allows a return to a 3D point after working in the 2D xy plane.
+           this method allows a return to a 3D point after working in the 2D xy plane;
+           it will fail if the segment is 'vertical', ie. without range in x or y
         """
 
         if segment == len(self.coordinates) - 1:

@@ -491,59 +491,13 @@ class Surface(rqsb.BaseSurface):
             flange_array[:] = np.where(np.any(t >= len(p), axis = 1), True, False)
             if saucer_parameter is not None:
                 assert reorient, 'flange saucer mode only available with reorientation active'
-                self._adjust_flange_z(p_xy_e, len(p), t, flange_array, saucer_parameter)
+                _adjust_flange_z(self.model, self.crs_uuid, p_xy_e, len(p), t, flange_array, saucer_parameter)
                 p_e = vec.rotate_array(reorient_matrix.T, p_xy_e)
         if crs.xy_units != crs.z_units and reorient:
             wam.convert_lengths(p_e[:, 2], crs.xy_units, crs.z_units)
         self.crs_uuid = point_set.crs_uuid
         self.set_from_triangles_and_points(t, p_e)
         return flange_array
-
-    def _adjust_flange_z(self, p_xy_e, flange_start_index, t, flange_array, saucer_parameter):
-        """Adjust the flange point z values (in recumbent space) by extrapolation of pair of points on original."""
-
-        model = self.model
-
-        # reconstruct the hull (could be concave) of original points
-        all_edges, edge_use_count = triangulate.edges(t)
-        inner_edges = triangulate.internal_edges(all_edges, edge_use_count)
-        t_for_inner_edges = triangulate.triangles_using_edges(t, inner_edges)
-        assert np.all(t_for_inner_edges >= 0)
-        flange_pairs = flange_array[t_for_inner_edges]
-        rim_edges = inner_edges[np.where(flange_pairs[:, 0] != flange_pairs[:, 1])]
-        assert rim_edges.ndim == 2 and rim_edges.shape[1] == 2 and len(rim_edges) > 0
-        rim_edge_index_list, rim_point_index_list = triangulate.rims(rim_edges)
-        assert len(rim_edge_index_list) == 1 and len(rim_point_index_list) == 1
-        rim_edge_indices = rim_edge_index_list[0]
-        rim_point_indices = rim_point_index_list[0]  # ordered list of points on original hull (could be concave)
-        rim_pl = rql.Polyline(model,
-                              set_coord = p_xy_e[rim_point_indices],
-                              set_crs = self.crs_uuid,
-                              is_closed = True,
-                              title = 'rim')
-
-        centre = np.mean(p_xy_e[:flange_start_index], axis = 0)
-        # for each flange point, intersect a line from centre with the rim, and sample surface at saucer parameter
-        for flange_pi in range(flange_start_index, len(p_xy_e)):
-            f_xyz = p_xy_e[flange_pi]
-            pl_seg, rim_x, rim_y = rim_pl.first_line_intersection(centre[0], centre[1], f_xyz[0], f_xyz[1])
-            assert pl_seg is not None
-            rim_xyz = rim_pl.segment_xyz_from_xy(pl_seg, rim_x, rim_y)
-            sample_p = (1.0 - saucer_parameter) * centre + saucer_parameter * rim_xyz
-            p_list = vec.points_in_triangles_njit(np.expand_dims(sample_p, axis = 0), p_xy_e[t], 1)
-            vertical = np.array((0.0, 0.0, 1.0), dtype = float)
-            assert len(p_list) > 0
-            triangle_index, p_index, _ = p_list[0]
-            start_xyz = meet.line_triangle_intersect_numba(sample_p, vertical, p_xy_e[t[triangle_index]], t_tol = 0.05)
-            v_to_rim = rim_xyz - start_xyz
-            v_to_flange_p = f_xyz - start_xyz
-            if abs(v_to_rim[0]) > abs(v_to_rim[1]):
-                f = (v_to_rim[0]) / (v_to_flange_p[0])
-            else:
-                f = (v_to_rim[1]) / (v_to_flange_p[1])
-            assert 0.0 < f < 1.0
-            z = (rim_xyz[2] - start_xyz[2]) / f + start_xyz[2]
-            p_xy_e[flange_pi, 2] = z
 
     def make_all_clockwise_xy(self, reorient = False):
         """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
@@ -1138,3 +1092,48 @@ def distill_triangle_points(t, p):
     assert np.all(triangles_mapped < len(points_distilled))
 
     return triangles_mapped, points_distilled
+
+
+def _adjust_flange_z(model, crs_uuid, p_xy_e, flange_start_index, t, flange_array, saucer_parameter):
+    """Adjust the flange point z values (in recumbent space) by extrapolation of pair of points on original."""
+
+    # reconstruct the hull (could be concave) of original points
+    all_edges, edge_use_count = triangulate.edges(t)
+    inner_edges = triangulate.internal_edges(all_edges, edge_use_count)
+    t_for_inner_edges = triangulate.triangles_using_edges(t, inner_edges)
+    assert np.all(t_for_inner_edges >= 0)
+    flange_pairs = flange_array[t_for_inner_edges]
+    rim_edges = inner_edges[np.where(flange_pairs[:, 0] != flange_pairs[:, 1])]
+    assert rim_edges.ndim == 2 and rim_edges.shape[1] == 2 and len(rim_edges) > 0
+    rim_edge_index_list, rim_point_index_list = triangulate.rims(rim_edges)
+    assert len(rim_edge_index_list) == 1 and len(rim_point_index_list) == 1
+    rim_edge_indices = rim_edge_index_list[0]
+    rim_point_indices = rim_point_index_list[0]  # ordered list of points on original hull (could be concave)
+    rim_pl = rql.Polyline(model,
+                          set_coord = p_xy_e[rim_point_indices],
+                          set_crs = crs_uuid,
+                          is_closed = True,
+                          title = 'rim')
+
+    centre = np.mean(p_xy_e[:flange_start_index], axis = 0)
+    # for each flange point, intersect a line from centre with the rim, and sample surface at saucer parameter
+    for flange_pi in range(flange_start_index, len(p_xy_e)):
+        f_xyz = p_xy_e[flange_pi]
+        pl_seg, rim_x, rim_y = rim_pl.first_line_intersection(centre[0], centre[1], f_xyz[0], f_xyz[1])
+        assert pl_seg is not None
+        rim_xyz = rim_pl.segment_xyz_from_xy(pl_seg, rim_x, rim_y)
+        sample_p = (1.0 - saucer_parameter) * centre + saucer_parameter * rim_xyz
+        p_list = vec.points_in_triangles_njit(np.expand_dims(sample_p, axis = 0), p_xy_e[t], 1)
+        vertical = np.array((0.0, 0.0, 1.0), dtype = float)
+        assert len(p_list) > 0
+        triangle_index, p_index, _ = p_list[0]
+        start_xyz = meet.line_triangle_intersect_numba(sample_p, vertical, p_xy_e[t[triangle_index]], t_tol = 0.05)
+        v_to_rim = rim_xyz - start_xyz
+        v_to_flange_p = f_xyz - start_xyz
+        if abs(v_to_rim[0]) > abs(v_to_rim[1]):
+            f = (v_to_rim[0]) / (v_to_flange_p[0])
+        else:
+            f = (v_to_rim[1]) / (v_to_flange_p[1])
+        assert 0.0 < f < 1.0
+        z = (rim_xyz[2] - start_xyz[2]) / f + start_xyz[2]
+        p_xy_e[flange_pi, 2] = z
