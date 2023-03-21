@@ -750,10 +750,6 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
        determine the triangulation;
        the numpy linear algebra option seems to be memory intensive, not recommended
     """
-
-    def z_range(p):
-        return np.nanmax(p[..., 2]) - np.nanmin(p[..., 2])
-
     def best_angles(points, mid_x, mid_y, steps, d_theta):
         best_range = None
         best_x_rotation = None
@@ -766,7 +762,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
                 rotation_m = vec.rotation_3d_matrix((x_degrees, 0.0, y_degrees))
                 p = points.copy()
                 rotated_p = vec.rotate_array(rotation_m, p)
-                z_r = z_range(rotated_p)
+                z_r = np.nanmax(rotated_p[..., 2]) - np.nanmin(rotated_p[..., 2])
                 if best_range is None or z_r < best_range:
                     best_range = z_r
                     best_x_rotation = x_degrees
@@ -777,14 +773,13 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
         assert p.ndim >= 2 and p.shape[-1] == 3
         p = p.reshape((-1, 3))
         centre = p.sum(axis = 0) / p.shape[0]
-        u, s, vh = np.linalg.svd(p - centre)
+        _, _, vh = np.linalg.svd(p - centre)
         # unit normal vector
         return vh[2, :]
 
     assert points.ndim >= 2 and points.shape[-1] == 3
 
     if use_linalg:
-
         normal_vector = linalg_normal_vector(points)
         incl = vec.inclination(normal_vector)
         if incl == 0.0:
@@ -792,10 +787,8 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
         else:
             azi = vec.azimuth(normal_vector)
             rotation_m = vec.tilt_3d_matrix(azi, incl)
-
     else:
-
-        # coarse iteration trying a few different angles
+        # coarse iteration trying a few different angles
         best_x_rotation, best_y_rotation = best_angles(points, 0.0, 0.0, 7, 30.0)
 
         # finer iteration searching around the best coarse rotation

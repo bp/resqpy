@@ -75,10 +75,22 @@ def amplify(v, scaling):  # note: could just use numpy a * scalar facility
 def unit_vector(v):
     """Returns vector with same direction as v but with unit length."""
     assert 2 <= len(v) <= 3
-    v = np.array(v, dtype = float)
-    if np.all(v == 0.0):
+    v = np.array(v, dtype = np.float64)
+    norm = np.linalg.norm(v)
+    if norm == 0.0:
         return v
-    return v / maths.sqrt(np.sum(v * v))
+    v = v / norm
+    return v
+
+
+@njit
+def unit_vector_njit(v):
+    """Returns vector with same direction as v but with unit length."""
+    norm = np.linalg.norm(v)
+    if norm == 0.0:
+        return v
+    v = v / norm
+    return v
 
 
 def unit_vectors(v):
@@ -306,14 +318,12 @@ def rotation_matrix_3d_axial(axis, angle):
        this function follows the mathematical convention: a positive angle results in anti-clockwise rotation
        when viewed in direction of positive axis
     """
-
     axis_a = (axis + 1) % 3
     axis_b = (axis_a + 1) % 3
-    matrix = np.zeros((3, 3))
-    matrix[axis, axis] = 1.0
-    radians = radians_from_degrees(angle)
-    cosine = maths.cos(radians)
-    sine = maths.sin(radians)
+    matrix = np.eye(3)
+    radians = np.radians(angle)
+    cosine = np.cos(radians)
+    sine = np.sin(radians)
     matrix[axis_a, axis_a] = cosine
     matrix[axis_b, axis_b] = cosine
     matrix[axis_a, axis_b] = -sine  # left handed coordinate system, eg. UTM & depth
@@ -322,44 +332,69 @@ def rotation_matrix_3d_axial(axis, angle):
 
 
 def no_rotation_matrix():
-    """Returns a rotation matrix which will not move points."""
-    matrix = np.zeros((3, 3))
-    for axis in range(3):
-        matrix[axis, axis] = 1.0
-    return matrix
+    """Returns a rotation matrix which will not move points (identity matrix)."""
+    return np.eye(3)
 
 
 def rotation_3d_matrix(xzy_axis_angles):
-    """Returns a rotation matrix which will rotate points about 3 axes by angles in degrees."""
+    """Returns a rotation matrix which will rotate points about the x, z, then y axis by angles in degrees."""
+    angles = np.radians(xzy_axis_angles)
+    cos_c, cos_a, cos_b = np.cos(angles)
+    sin_c, sin_a, sin_b = np.sin(angles)
 
-    # matrix = np.zeros((3, 3))
-    # for axis in range(3):
-    #     matrix[axis, axis] = 1.0
-    # for axis in range(3):
-    #     matrix = np.dot(matrix, rotation_matrix_3d_axial(axis, xzy_axis_angles[axis]))
-    matrix = rotation_matrix_3d_axial(1, xzy_axis_angles[2])  # about y axis
-    matrix = np.dot(matrix, rotation_matrix_3d_axial(2, xzy_axis_angles[1]))  # about z axis
-    matrix = np.dot(matrix, rotation_matrix_3d_axial(0, xzy_axis_angles[0]))  # about x axis
-    return matrix
+    sin_a_sin_c = sin_a * sin_c
+    sin_a_cos_c = sin_a * cos_c
+
+    rotation_matrix = np.array(
+        [
+            [cos_a * cos_b, -sin_a_cos_c * cos_b + sin_b * sin_c, cos_b * sin_a_sin_c + sin_b * cos_c],
+            [sin_a, cos_a * cos_c, -sin_c * cos_a],
+            [-sin_b * cos_a, sin_a_cos_c * sin_b + cos_b * sin_c, -sin_b * sin_a_sin_c + cos_b * cos_c],
+        ]
+    )
+    return rotation_matrix
+
+
+@njit
+def rotation_3d_matrix_njit(xzy_axis_angles):
+    """Returns a rotation matrix which will rotate points about the x, z, then y axis by angles in degrees."""
+    angles = np.radians(xzy_axis_angles)
+    cos_c, cos_a, cos_b = np.cos(angles)
+    sin_c, sin_a, sin_b = np.sin(angles)
+
+    sin_a_sin_c = sin_a * sin_c
+    sin_a_cos_c = sin_a * cos_c
+
+    rotation_matrix = np.array(
+        [
+            [cos_a * cos_b, -sin_a_cos_c * cos_b + sin_b * sin_c, cos_b * sin_a_sin_c + sin_b * cos_c],
+            [sin_a, cos_a * cos_c, -sin_c * cos_a],
+            [-sin_b * cos_a, sin_a_cos_c * sin_b + cos_b * sin_c, -sin_b * sin_a_sin_c + cos_b * cos_c],
+        ]
+    )
+    return rotation_matrix
 
 
 def reverse_rotation_3d_matrix(xzy_axis_angles):
-    """Returns a rotation matrix which will rotate back points about 3 axes by angles in degrees."""
+    """Returns a rotation matrix which will rotate points about the y, z, then x axis by angles in degrees."""
 
     return rotation_3d_matrix(xzy_axis_angles).T
 
 
 def rotate_vector(rotation_matrix, vector):
     """Returns the rotated vector."""
-
     return np.dot(rotation_matrix, vector)
 
 
 def rotate_array(rotation_matrix, a):
     """Returns a copy of array a with each vector rotated by the rotation matrix."""
+    return np.matmul(rotation_matrix, a.reshape(-1, 3).T).T.reshape(a.shape)
 
-    s = a.shape
-    return np.matmul(rotation_matrix, a.reshape(-1, 3).T).T.reshape(s)
+
+@njit
+def rotate_array_njit(rotation_matrix, a):
+    """Returns a copy of array a with each vector rotated by the rotation matrix."""
+    return np.dot(rotation_matrix, a.reshape(-1, 3).T).T.reshape(a.shape)
 
 
 def rotate_xyz_array_around_z_axis(a, target_xy_vector):
@@ -412,15 +447,32 @@ def tilt_3d_matrix(azimuth, dip):
 
 
 def rotation_matrix_3d_vector(v):
+    """Returns a rotation matrix which will rotate vector v to the vertical (z) axis.
+
+    note:
+       the returned matrix will map a positive z axis vector onto v
+    """
+    v = v / np.linalg.norm(v)
+    kmat = np.array([[0, 0, -v[0]], [0, 0, -v[1]], [v[0], v[1], 0]])
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * (1 / (1 + v[2]))
+
+    rotation_matrix[:2] = -rotation_matrix[:2]
+    return rotation_matrix
+
+
+@njit
+def rotation_matrix_3d_vector_njit(v):
     """Returns a rotation matrix which will rotate points by inclination and azimuth of vector.
 
     note:
        the returned matrix will map a positive z axis vector onto v
     """
+    v = v / np.linalg.norm(v)
+    kmat = np.array([[0, 0, -v[0]], [0, 0, -v[1]], [v[0], v[1], 0]])
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * (1 / (1 + v[2]))
 
-    m = tilt_3d_matrix(azimuth(v), inclination(v))
-    m[:2, :] = -m[:2, :]  # todo: should this change be in the tilt matrix?
-    return m
+    rotation_matrix[:2] = -rotation_matrix[:2]
+    return rotation_matrix
 
 
 def tilt_points(pivot_xyz, azimuth, dip, points):
@@ -589,22 +641,37 @@ def point_in_polygon(x, y, polygon):
     note:
         the polygon is assumed closed, the closing point should not be repeated
     """
-    polygon_vertices = len(polygon)
-    inside = False
-    p2x = 0.0
-    p2y = 0.0
-    xints = 0.0
-    p1x, p1y = polygon[0]
-    for i in numba.prange(polygon_vertices + 1):
-        p2x, p2y = polygon[i % polygon_vertices]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xints:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
+    length = len(polygon)-1
+    dy2 = y - polygon[0][1]
+    intersections = 0
+    ii = 0
+    jj = 1
+
+    while ii < length:
+        dy  = dy2
+        dy2 = y - polygon[jj][1]
+
+        # consider only lines which are not completely above/bellow/right from the point
+        if dy*dy2 <= 0.0 and (x >= polygon[ii][0] or x >= polygon[jj][0]):
+
+            # non-horizontal line
+            if dy<0 or dy2<0:
+                F = dy*(polygon[jj][0] - polygon[ii][0])/(dy-dy2) + polygon[ii][0]
+
+                if x > F: # if line is left from the point - the ray moving towards left, will intersect it
+                    intersections += 1
+                elif x == F: # point on line
+                    return 2
+
+            # point on upper peak (dy2=dx2=0) or horizontal line (dy=dy2=0 and dx*dx2<=0)
+            elif dy2==0 and (x==polygon[jj][0] or (dy==0 and (x-polygon[ii][0])*(x-polygon[jj][0])<=0)):
+                return 2
+
+        ii = jj
+        jj += 1
+
+    inside = intersections & 1
+
     return inside
 
 
@@ -679,7 +746,7 @@ def point_in_triangle(x, y, triangle):
     return inside
 
 
-@njit
+@njit(parallel=True)
 def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
 
@@ -696,14 +763,15 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     note:
         the polygon is assumed closed, the closing point should not be repeated
     """
-    polygon_points = np.empty((0, 3), dtype = numba.int32)
+    polygon_points = np.full((len(points), 3), -1, dtype = np.int32)
     for point_num in numba.prange(len(points)):
-        p = point_in_polygon(points[point_num, 0], points[point_num, 1], polygon)
+        x, y = points[point_num]
+        p = point_in_polygon(x, y, polygon)
         if p is True:
             j, i = divmod(point_num, points_xlen)
-            polygon_points = np.append(polygon_points, np.array([[polygon_num, j, i]], dtype = numba.int32), axis = 0)
+            polygon_points[point_num] = [polygon_num, j, i]
 
-    return polygon_points
+    return polygon_points[polygon_points[:, 0] != -1]
 
 
 @njit
@@ -720,16 +788,14 @@ def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: in
         triangle_points (np.ndarray): 2D array containing only the points within the triangle,
             with each row being the triangle number, points y index, and points x index.
     """
-    triangle_points = np.empty((0, 3), dtype = numba.int32)
+    triangle_points = np.full((len(points), 3), -1, dtype = np.int32)
     for point_num in numba.prange(len(points)):
         p = point_in_triangle(points[point_num, 0], points[point_num, 1], triangle)
         if p is True:
             yi, xi = divmod(point_num, points_xlen)
-            triangle_points = np.append(triangle_points,
-                                        np.array([[triangle_num, yi, xi]], dtype = numba.int32),
-                                        axis = 0)
+            triangle_points[point_num] = [triangle_num, yi, xi]
 
-    return triangle_points
+    return triangle_points[triangle_points[:, 0] != -1]
 
 
 @njit
@@ -1133,11 +1199,66 @@ def xy_sorted(p, axis = None):
     """
     assert p.ndim >= 2 and p.shape[-1] >= 2
     p = p.reshape((-1, p.shape[-1]))
-    xy_range = np.nanmax(p, axis = 0) - np.nanmin(p, axis = 0)
     if axis is None:
+        xy_range = np.nanmax(p, axis = 0) - np.nanmin(p, axis = 0)
         axis = (1 if xy_range[1] > xy_range[0] else 0)
     spi = np.argsort(p[:, axis])
     return p[spi], axis
+
+
+@njit
+def xy_sorted_njit(p, axis = -1):
+    """Returns copy of points p sorted according to x or y (whichever has greater range).
+
+    arguments:
+        p (numpy float array of shape (..., 2) or (..., 3)): points to be sorted
+        axis (int, optional): 0 for x sort; 1 for y sort; None for whichever has greater range
+
+    returns:
+        p', axis where p' is a list-like (2D) version of p, sorted by either x or y and axis is 0
+        if the sort was by x, 1 if it were by y
+
+    note:
+       returned array is always 2D, ie. list of points
+    """
+    assert p.ndim >= 2 and p.shape[-1] >= 2
+    p = p.reshape((-1, p.shape[-1]))
+    if axis == -1:
+        xy_range = _nanmax(p) - _nanmin(p)
+        axis = (1 if xy_range[1] > xy_range[0] else 0)
+    points = p[:, axis]
+    spi = np.argsort(points)
+    return p[spi], axis
+
+
+@njit
+def _nanmax(array):
+    """Numba implementation of np.nanmax with axis = 0."""
+    len0 = array.shape[1]
+    max_array = np.empty(len0)
+    for col in range(len0):
+        col_array = array[:, col]
+        max_val = col_array[0]
+        for val in col_array:
+            if val > max_val and not np.isnan(val):
+                max_val = val
+        max_array[col] = max_val
+    return max_array
+
+
+@njit
+def _nanmin(array):
+    """Numba implementation of np.nanmin with axis = 0."""
+    len0 = array.shape[1]
+    min_array = np.empty(len0)
+    for col in range(len0):
+        col_array = array[:, col]
+        min_val = col_array[0]
+        for val in col_array:
+            if val < min_val and not np.isnan(val):
+                min_val = val
+        min_array[col] = min_val
+    return min_array
 
 
 def _projected_xyz_axes(projection):
