@@ -14,7 +14,7 @@ from typing import Tuple, Optional, Dict
 import threading
 
 import numba  # type: ignore
-from numba import njit, cuda  # type: ignore
+from numba import cuda  # type: ignore
 from numba.cuda.cudadrv.devicearray import DeviceNDArray  # type: ignore
 import cupy  # type: ignore
 
@@ -39,7 +39,7 @@ def _cross_d(A: DeviceNDArray, B: DeviceNDArray, c: DeviceNDArray):
 @cuda.jit(device = True)
 def _negative_d(v: DeviceNDArray, nv: DeviceNDArray):
     for d in range(v.shape[0]):
-        nv[d] = numba.float32(-1.) * v[d]
+        nv[d] = numba.float32(-1.0) * v[d]
 
 
 @cuda.jit(device = True)
@@ -51,18 +51,38 @@ def _dot_d(v1: DeviceNDArray, v2: DeviceNDArray, prod: DeviceNDArray):
 
 @cuda.jit(device = True)
 def _norm_d(v: DeviceNDArray, n: DeviceNDArray):
-    n[0] = 0.
+    n[0] = 0.0
     for dim in range(3):
-        n[0] += v[dim]**2.
+        n[0] += v[dim]**2.0
     n[0] = maths.sqrt(n[0])
 
 
 @cuda.jit
-def project_polygons_to_surfaces(faces: DeviceNDArray, triangles: DeviceNDArray, axis: int, index1: int, index2: int,
-                                 colx: int, coly: int, nx: int, ny: int, nz: int, dx: float, dy: float, dz: float,
-                                 l_tol: float, t_tol: float, return_normal_vectors: bool, normals: DeviceNDArray,
-                                 return_depths: bool, depths: DeviceNDArray, return_offsets: bool,
-                                 offsets: DeviceNDArray, return_triangles: bool, triangle_per_face: DeviceNDArray):
+def project_polygons_to_surfaces(
+    faces: DeviceNDArray,
+    triangles: DeviceNDArray,
+    axis: int,
+    index1: int,
+    index2: int,
+    colx: int,
+    coly: int,
+    nx: int,
+    ny: int,
+    nz: int,
+    dx: float,
+    dy: float,
+    dz: float,
+    l_tol: float,
+    t_tol: float,
+    return_normal_vectors: bool,
+    normals: DeviceNDArray,
+    return_depths: bool,
+    depths: DeviceNDArray,
+    return_offsets: bool,
+    offsets: DeviceNDArray,
+    return_triangles: bool,
+    triangle_per_face: DeviceNDArray,
+):
     """Maps the projection of a 3D polygon to 2D grid surfaces along a given axis, using GPUs.
 
     arguments:
@@ -163,10 +183,10 @@ def project_polygons_to_surfaces(faces: DeviceNDArray, triangles: DeviceNDArray,
                 inside = False
                 # 2a. use cross-product to work out Barycentric weights
                 # this could be made prettier by refactoring a device function
-                w1_denom = ((tp[1, coly] - tp[0, coly]) * (tp[2, colx] - tp[0, colx]) - (tp[1, colx] - tp[0, colx]) *
-                            (tp[2, coly] - tp[0, coly]))
-                w2_denom = (tp[2, coly] - tp[0, coly])
-                if w1_denom == 0. or w2_denom == 0.:
+                w1_denom = (tp[1, coly] - tp[0, coly]) * (tp[2, colx] - tp[0, colx]) - (tp[1, colx] - tp[0, colx]) * (
+                    tp[2, coly] - tp[0, coly])
+                w2_denom = tp[2, coly] - tp[0, coly]
+                if w1_denom == 0.0 or w2_denom == 0.0:
                     inside = True  # point lies on a triangle which is actually a line (normally at boundaries)
                 else:
                     w1 = (tp[0, colx] - numba.float64(px)) * (tp[2, coly] - tp[0, coly]) + (
@@ -174,18 +194,18 @@ def project_polygons_to_surfaces(faces: DeviceNDArray, triangles: DeviceNDArray,
                     w1 /= w1_denom
                     w2 = (numba.float64(py) - tp[0, coly] - w1 * (tp[1, coly] - tp[0, coly]))
                     w2 /= w2_denom
-                    if (w1 >= 0. and w2 >= 0. and (w1 + w2) <= 1.):  # inside
+                    if w1 >= 0.0 and w2 >= 0.0 and (w1 + w2) <= 1.0:  # inside
                         inside = True  # point lies in triangle
 
                 # 2b. the point is inside if Barycentric weights meet this condition
                 if inside:
-                    # 3. find intersection point with column centre
+                    # 3. find intersection point with column centre
                     # 3a. Line start point in 3D which had a projection hit
-                    line_p[axis] = numba.float64(grid_dxyz[axis]) / 2.
+                    line_p[axis] = numba.float64(grid_dxyz[axis]) / 2.0
                     line_p[2 - index1] = (py + 0.5) * grid_dxyz[2 - index1]  # kji / xyz & py=d1
                     line_p[2 - index2] = (px + 0.5) * grid_dxyz[2 - index2]  # kji / xyz & px=d2
 
-                    # 3b. Line end point in 3D
+                    # 3b. Line end point in 3D
                     for dim in range(3):
                         line_v[dim] = line_p[dim]
                     line_v[axis] = numba.float64(grid_dxyz[axis]) * (n_axis - numba.float64(0.5))  #!
@@ -209,7 +229,7 @@ def project_polygons_to_surfaces(faces: DeviceNDArray, triangles: DeviceNDArray,
 
                     _dot_d(norm, lp_t0, t)
                     t[0] /= denom[0]
-                    if (t[0] < 0.0 - l_tol or t[0] > 1.0 + l_tol):
+                    if t[0] < 0.0 - l_tol or t[0] > 1.0 + l_tol:
                         continue
 
                     _cross_d(p02, line_rv, tmp)
@@ -255,11 +275,11 @@ def project_polygons_to_surfaces(faces: DeviceNDArray, triangles: DeviceNDArray,
                         _cross_d(line_p, line_v, tmp)
                         _norm_d(tmp, v)
                         for dim in range(3):
-                            normals[face_idx[0], face_idx[1], face_idx[2], dim] = -1. * tmp[dim] / v[0]
+                            normals[face_idx[0], face_idx[1], face_idx[2], dim] = (-1.0 * tmp[dim] / v[0])
                         norm_idx[index2] = int(px)
                         if normals[norm_idx[0], norm_idx[1], norm_idx[2], 2] > 0.0:
                             for dim in range(3):
-                                normals[face_idx[0], face_idx[1], face_idx[2], dim] *= -1.
+                                normals[face_idx[0], face_idx[1], face_idx[2], dim] *= -1.0
 
                     if return_triangles:
                         triangle_per_face[face_idx[0], face_idx[1], face_idx[2]] = triangle_num
@@ -287,15 +307,20 @@ def _diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, st
                 fault_behind = i_faces[iF, jF, kF - 1]
                 fault_back = i_faces[iF, jF, kF]
                 cuda.syncthreads()
-                a[i,j,k] = (a[i-1,j,k] and (not fault_above))  or (a[i+1,j,k] and (not fault_below)) \
-                        or (a[i,j-1,k] and (not fault_left))   or (a[i,j+1,k] and (not fault_right)) \
-                        or (a[i,j,k-1] and (not fault_behind)) or (a[i,j,k+1] and (not fault_back)) \
-                        or a[i,j,k] # already closed
+                a[i, j, k] = ((a[i - 1, j, k] and (not fault_above)) or (a[i + 1, j, k] and (not fault_below)) or
+                              (a[i, j - 1, k] and (not fault_left)) or (a[i, j + 1, k] and (not fault_right)) or
+                              (a[i, j, k - 1] and
+                               (not fault_behind)) or (a[i, j, k + 1] and
+                                                       (not fault_back)) or a[i, j, k])  # already closed
                 cuda.syncthreads()
 
 
-def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray,
-                             i_faces: np.ndarray) -> Tuple[np.ndarray, bool]:
+def bisector_from_faces_cuda(
+    grid_extent_kji: Tuple[int, int, int],
+    k_faces: np.ndarray,
+    j_faces: np.ndarray,
+    i_faces: np.ndarray,
+) -> Tuple[np.ndarray, bool]:
     """Returns a numpy bool array denoting the bisection of the grid by the face sets, using GPUs.
 
     arguments:
@@ -314,18 +339,28 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
         assigned to either the True or False part
     """
     assert len(grid_extent_kji) == 3
-    padded_extent_kji = (grid_extent_kji[0] + 2, grid_extent_kji[1] + 2, grid_extent_kji[2] + 2)
+    padded_extent_kji = (
+        grid_extent_kji[0] + 2,
+        grid_extent_kji[1] + 2,
+        grid_extent_kji[2] + 2,
+    )
     a = cupy.zeros(padded_extent_kji, dtype = bool)
     a[1, 1, 1] = True
 
     a_count = a_count_before = 0
     blockSize = (16, 16)
-    gridSize_k = ((grid_extent_kji[1] + blockSize[0] - 1) // blockSize[0],
-                  (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
-    gridSize_j = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[0],
-                  (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1])
-    gridSize_i = ((grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1],
-                  (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1])
+    gridSize_k = (
+        (grid_extent_kji[1] + blockSize[0] - 1) // blockSize[0],
+        (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1],
+    )
+    gridSize_j = (
+        (grid_extent_kji[0] + blockSize[0] - 1) // blockSize[0],
+        (grid_extent_kji[2] + blockSize[1] - 1) // blockSize[1],
+    )
+    gridSize_i = (
+        (grid_extent_kji[0] + blockSize[0] - 1) // blockSize[1],
+        (grid_extent_kji[1] + blockSize[1] - 1) // blockSize[1],
+    )
 
     while True:
         # forward sweeps
@@ -351,7 +386,7 @@ def bisector_from_faces_cuda(grid_extent_kji: Tuple[int, int, int], k_faces: np.
 
     a = cupy.asnumpy(a[1:-1, 1:-1, 1:-1])
     cell_count = a.size
-    assert 1 <= a_count < cell_count, 'face set for surface is leaky or empty (surface does not intersect grid)'
+    assert (1 <= a_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
 
     # find mean K for a cells and not a cells; if not a cells mean K is lesser (ie shallower), negate a
     layer_cell_count = grid_extent_kji[1] * grid_extent_kji[2]
@@ -379,7 +414,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     name,
     title = None,
     agitate = False,
-    feature_type = 'fault',
+    feature_type = "fault",
     progress_fn = None,
     return_properties = None,
     i_surface = 0,
@@ -415,10 +450,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         to trim first;
         organisational objects for the feature are created if needed
     """
-    # todo: update with extra arguments to keep functionality aligned with find_faces...regular_optimised
+    # todo: update with extra arguments to keep functionality aligned with find_faces...regular_optimised
 
     cuda.select_device(i_gpu)  # bind device to thread
-    device = cuda.get_current_device()  # if no GPU present - this will throw an exception and fall back to CPU
+    device = (cuda.get_current_device())  # if no GPU present - this will throw an exception and fall back to CPU
 
     assert isinstance(grid, grr.RegularGrid)
     assert grid.is_aligned
@@ -430,15 +465,21 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     return_flange_bool = False
     if return_properties:
         assert all([
-            p in ['triangle', 'depth', 'offset', 'normal vector', 'grid bisector', 'flange bool']
-            for p in return_properties
+            p in [
+                "triangle",
+                "depth",
+                "offset",
+                "normal vector",
+                "grid bisector",
+                "flange bool",
+            ] for p in return_properties
         ])
-        return_triangles = ('triangle' in return_properties)
-        return_normal_vectors = ('normal vector' in return_properties)
-        return_depths = ('depth' in return_properties)
-        return_offsets = ('offset' in return_properties)
-        return_bisector = ('grid bisector' in return_properties)
-        return_flange_bool = ('flange bool' in return_properties)
+        return_triangles = "triangle" in return_properties
+        return_normal_vectors = "normal vector" in return_properties
+        return_depths = "depth" in return_properties
+        return_offsets = "offset" in return_properties
+        return_bisector = "grid bisector" in return_properties
+        return_flange_bool = "flange bool" in return_properties
         if return_flange_bool:
             return_triangles = True
 
@@ -450,37 +491,41 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     # prepare surfaces
     surface = surfaces[i_surface]  # get surface under consideration
-    log.debug(f'intersecting surface {surface.title} with regular grid {grid.title} on a GPU')
+    log.debug(f"intersecting surface {surface.title} with regular grid {grid.title} on a GPU")
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
     # print some information about the CUDA card
-    log.debug(f'{device.name} | Device Controller {i_gpu} | ' +
-              f'CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR} | ' +
-              f'Processing surface {i_surface}')
+    log.debug(f"{device.name} | Device Controller {i_gpu} | " +
+              f"CC {device.COMPUTE_CAPABILITY_MAJOR}.{device.COMPUTE_CAPABILITY_MINOR} | " +
+              f"Processing surface {i_surface}")
     # get device attributes to calculate thread dimensions
     nSMs = device.MULTIPROCESSOR_COUNT  # number of SMs
-    maxBlockSize = device.MAX_BLOCK_DIM_X / 2  # max number of threads per block in x-dim
+    maxBlockSize = (device.MAX_BLOCK_DIM_X / 2)  # max number of threads per block in x-dim
     gridSize = 2 * nSMs  # prefer 2*nSMs blocks for full occupancy
     # take the reverse diagonal for relationship between xyz & ijk
-    grid_dxyz = (grid.block_dxyz_dkji[2, 0], grid.block_dxyz_dkji[1, 1], grid.block_dxyz_dkji[0, 2])
+    grid_dxyz = (
+        grid.block_dxyz_dkji[2, 0],
+        grid.block_dxyz_dkji[1, 1],
+        grid.block_dxyz_dkji[0, 2],
+    )
     # extract polygons from surface
     with compiler_lock:  # HDF5 handles seem not to be threadsafe
         triangles, points = surface.triangles_and_points()
-    assert triangles is not None and points is not None, f'surface {surface.title} is empty'
+    assert (triangles is not None and points is not None), f"surface {surface.title} is empty"
 
     if agitate:
         points += 1.0e-5 * (np.random.random(points.shape) - 0.5)  # +/- uniform err.
-    # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+    # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
     # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
     # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
     if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
-        log.debug('converting from surface crs to grid crs')
+        log.debug("converting from surface crs to grid crs")
         s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
         s_crs.convert_array_to(grid.crs, points)
         surface.crs_uuid = grid.crs.uuid
         # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
         # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
-        # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+        # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
 
     p_tri_xyz = points[triangles]
     p_tri_xyz_d = cupy.asarray(p_tri_xyz)
@@ -489,12 +534,12 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if grid.nk > 1:
         log.debug("searching for k faces")
         k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
-        k_triangles = np.full((grid.nk - 1, grid.nj, grid.ni), -1, dtype = int) if return_triangles else np.full(
-            (1, 1, 1), -1, dtype = int)
-        k_depths = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_depths else np.full((1, 1, 1), np.nan)
-        k_offsets = np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_offsets else np.full((1, 1, 1), np.nan)
-        k_normals = np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan) if return_normal_vectors else np.full(
-            (1, 1, 1, 1), np.nan)
+        k_triangles = (np.full((grid.nk - 1, grid.nj, grid.ni), -1, dtype = int) if return_triangles else np.full(
+            (1, 1, 1), -1, dtype = int))
+        k_depths = (np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_depths else np.full((1, 1, 1), np.nan))
+        k_offsets = (np.full((grid.nk - 1, grid.nj, grid.ni), np.nan) if return_offsets else np.full((1, 1, 1), np.nan))
+        k_normals = (np.full((grid.nk - 1, grid.nj, grid.ni, 3), np.nan) if return_normal_vectors else np.full(
+            (1, 1, 1, 1), np.nan))
         k_faces_d = cupy.asarray(k_faces)
         k_triangles_d = cupy.asarray(k_triangles)
         k_depths_d = cupy.asarray(k_depths)
@@ -505,10 +550,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         axis = 2
         index1 = 1
         index2 = 2
-        blockSize = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (
-            p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64  # prefer factors of 32 (threads per warp)
+        blockSize = ((p_tri_xyz.shape[0] - 1) // (gridSize - 1) if
+                     (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64)  # prefer factors of 32 (threads per warp)
         log.debug(
-            f'Executing polygon-intersection GPU-kernel along k-axis using gridSize={gridSize}, blockSize={blockSize}')
+            f"Executing polygon-intersection GPU-kernel along k-axis using gridSize={gridSize}, blockSize={blockSize}")
         project_polygons_to_surfaces[gridSize, blockSize](
             k_faces_d,
             p_tri_xyz_d,
@@ -523,8 +568,8 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
             grid_dxyz[0],
             grid_dxyz[1],
             grid_dxyz[2],
-            0.,
-            0.,
+            0.0,
+            0.0,
             return_normal_vectors,
             k_normals_d,
             return_depths,
@@ -556,12 +601,12 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if grid.nj > 1:
         log.debug("searching for j faces")
         j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
-        j_triangles = np.full((grid.nk, grid.nj - 1, grid.ni), -1, dtype = int) if return_triangles else np.full(
-            (1, 1, 1), -1, dtype = int)
-        j_depths = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_depths else np.full((1, 1, 1), np.nan)
-        j_offsets = np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_offsets else np.full((1, 1, 1), np.nan)
-        j_normals = np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan) if return_normal_vectors else np.full(
-            (1, 1, 1, 1), np.nan)
+        j_triangles = (np.full((grid.nk, grid.nj - 1, grid.ni), -1, dtype = int) if return_triangles else np.full(
+            (1, 1, 1), -1, dtype = int))
+        j_depths = (np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_depths else np.full((1, 1, 1), np.nan))
+        j_offsets = (np.full((grid.nk, grid.nj - 1, grid.ni), np.nan) if return_offsets else np.full((1, 1, 1), np.nan))
+        j_normals = (np.full((grid.nk, grid.nj - 1, grid.ni, 3), np.nan) if return_normal_vectors else np.full(
+            (1, 1, 1, 1), np.nan))
         j_faces_d = cupy.asarray(j_faces)
         j_triangles_d = cupy.asarray(j_triangles)
         j_depths_d = cupy.asarray(j_depths)
@@ -572,10 +617,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         axis = 1
         index1 = 0
         index2 = 2
-        blockSize = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (
-            p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64  # prefer factors of 32 (threads per warp)
+        blockSize = ((p_tri_xyz.shape[0] - 1) // (gridSize - 1) if
+                     (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64)  # prefer factors of 32 (threads per warp)
         log.debug(
-            f'Executing polygon-intersection GPU-kernel along j-axis using gridSize={gridSize}, blockSize={blockSize}')
+            f"Executing polygon-intersection GPU-kernel along j-axis using gridSize={gridSize}, blockSize={blockSize}")
         project_polygons_to_surfaces[gridSize, blockSize](
             j_faces_d,
             p_tri_xyz_d,
@@ -590,8 +635,8 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
             grid_dxyz[0],
             grid_dxyz[1],
             grid_dxyz[2],
-            0.,
-            0.,
+            0.0,
+            0.0,
             return_normal_vectors,
             j_normals_d,
             return_depths,
@@ -623,12 +668,12 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if grid.ni > 1:
         log.debug("searching for i faces")
         i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
-        i_triangles = np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = int) if return_triangles else np.full(
-            (1, 1, 1), -1, dtype = int)
-        i_depths = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_depths else np.full((1, 1, 1), np.nan)
-        i_offsets = np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_offsets else np.full((1, 1, 1), np.nan)
-        i_normals = np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan) if return_normal_vectors else np.full(
-            (1, 1, 1, 1), np.nan)
+        i_triangles = (np.full((grid.nk, grid.nj, grid.ni - 1), -1, dtype = int) if return_triangles else np.full(
+            (1, 1, 1), -1, dtype = int))
+        i_depths = (np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_depths else np.full((1, 1, 1), np.nan))
+        i_offsets = (np.full((grid.nk, grid.nj, grid.ni - 1), np.nan) if return_offsets else np.full((1, 1, 1), np.nan))
+        i_normals = (np.full((grid.nk, grid.nj, grid.ni - 1, 3), np.nan) if return_normal_vectors else np.full(
+            (1, 1, 1, 1), np.nan))
         i_faces_d = cupy.asarray(i_faces)
         i_triangles_d = cupy.asarray(i_triangles)
         i_depths_d = cupy.asarray(i_depths)
@@ -639,10 +684,10 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
         axis = 0
         index1 = 0
         index2 = 1
-        blockSize = (p_tri_xyz.shape[0] - 1) // (gridSize - 1) if (
-            p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64  # prefer factors of 32 (threads per warp)
+        blockSize = ((p_tri_xyz.shape[0] - 1) // (gridSize - 1) if
+                     (p_tri_xyz.shape[0] < gridSize * maxBlockSize) else 64)  # prefer factors of 32 (threads per warp)
         log.debug(
-            f'Executing polygon-intersection GPU-kernel along i-axis using gridSize={gridSize}, blockSize={blockSize}')
+            f"Executing polygon-intersection GPU-kernel along i-axis using gridSize={gridSize}, blockSize={blockSize}")
         project_polygons_to_surfaces[gridSize, blockSize](
             i_faces_d,
             p_tri_xyz_d,
@@ -657,8 +702,8 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
             grid_dxyz[0],
             grid_dxyz[1],
             grid_dxyz[2],
-            0.,
-            0.,
+            0.0,
+            0.0,
             return_normal_vectors,
             i_normals_d,
             return_depths,
@@ -706,36 +751,36 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
-        k_tri_list = np.empty((0,)) if k_triangles is None else k_triangles[rgs_ff.where_true(k_faces)]
-        j_tri_list = np.empty((0,)) if j_triangles is None else j_triangles[rgs_ff.where_true(j_faces)]
-        i_tri_list = np.empty((0,)) if i_triangles is None else i_triangles[rgs_ff.where_true(i_faces)]
+        k_tri_list = (np.empty((0,)) if k_triangles is None else k_triangles[rgs_ff._where_true(k_faces)])
+        j_tri_list = (np.empty((0,)) if j_triangles is None else j_triangles[rgs_ff._where_true(j_faces)])
+        i_tri_list = (np.empty((0,)) if i_triangles is None else i_triangles[rgs_ff._where_true(i_faces)])
         all_tris = np.concatenate((k_tri_list, j_tri_list, i_tri_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
         assert all_tris.shape == (gcs_list[i_surface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
-        k_depths_list = np.empty((0,)) if k_depths is None else k_depths[rgs_ff.where_true(k_faces)]
-        j_depths_list = np.empty((0,)) if j_depths is None else j_depths[rgs_ff.where_true(j_faces)]
-        i_depths_list = np.empty((0,)) if i_depths is None else i_depths[rgs_ff.where_true(i_faces)]
+        k_depths_list = (np.empty((0,)) if k_depths is None else k_depths[rgs_ff._where_true(k_faces)])
+        j_depths_list = (np.empty((0,)) if j_depths is None else j_depths[rgs_ff._where_true(j_faces)])
+        i_depths_list = (np.empty((0,)) if i_depths is None else i_depths[rgs_ff._where_true(i_faces)])
         all_depths = np.concatenate((k_depths_list, j_depths_list, i_depths_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
         assert all_depths.shape == (gcs_list[i_surface].count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
-        k_offsets_list = np.empty((0,)) if k_offsets is None else k_offsets[rgs_ff.where_true(k_faces)]
-        j_offsets_list = np.empty((0,)) if j_offsets is None else j_offsets[rgs_ff.where_true(j_faces)]
-        i_offsets_list = np.empty((0,)) if i_offsets is None else i_offsets[rgs_ff.where_true(i_faces)]
+        k_offsets_list = (np.empty((0,)) if k_offsets is None else k_offsets[rgs_ff._where_true(k_faces)])
+        j_offsets_list = (np.empty((0,)) if j_offsets is None else j_offsets[rgs_ff._where_true(j_faces)])
+        i_offsets_list = (np.empty((0,)) if i_offsets is None else i_offsets[rgs_ff._where_true(i_faces)])
         all_offsets = np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs_list[i_surface].count,)
 
     if return_flange_bool:
-        flange_bool_uuid = surface.model.uuid(title = 'flange bool',
-                                              obj_type = 'DiscreteProperty',
+        flange_bool_uuid = surface.model.uuid(title = "flange bool",
+                                              obj_type = "DiscreteProperty",
                                               related_uuid = surface.uuid)
-        assert flange_bool_uuid is not None, f"No flange bool property found for surface: {surface.title}"
+        assert (flange_bool_uuid is not None), f"No flange bool property found for surface: {surface.title}"
         flange_bool = rqp.Property(surface.model, uuid = flange_bool_uuid)
         flange_array = flange_bool.array_ref()
         all_flange = np.take(flange_array, all_tris)
@@ -743,9 +788,9 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_normal_vectors:
-        k_normals_list = np.empty((0, 3)) if k_normals is None else k_normals[rgs_ff.where_true(k_faces)]
-        j_normals_list = np.empty((0, 3)) if j_normals is None else j_normals[rgs_ff.where_true(j_faces)]
-        i_normals_list = np.empty((0, 3)) if i_normals is None else i_normals[rgs_ff.where_true(i_faces)]
+        k_normals_list = (np.empty((0, 3)) if k_normals is None else k_normals[rgs_ff._where_true(k_faces)])
+        j_normals_list = (np.empty((0, 3)) if j_normals is None else j_normals[rgs_ff._where_true(j_faces)])
+        i_normals_list = (np.empty((0, 3)) if i_normals is None else i_normals[rgs_ff._where_true(i_faces)])
         all_normals = np.concatenate((k_normals_list, j_normals_list, i_normals_list), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all normals shape: {all_normals.shape}')
         assert all_normals.shape == (gcs_list[i_surface].count, 3)
@@ -762,17 +807,17 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     if return_properties:
         props_dict_list[i_surface] = {}
         if return_triangles:
-            props_dict_list[i_surface]['triangle'] = all_tris
+            props_dict_list[i_surface]["triangle"] = all_tris
         if return_depths:
-            props_dict_list[i_surface]['depth'] = all_depths
+            props_dict_list[i_surface]["depth"] = all_depths
         if return_offsets:
-            props_dict_list[i_surface]['offset'] = all_offsets
+            props_dict_list[i_surface]["offset"] = all_offsets
         if return_normal_vectors:
-            props_dict_list[i_surface]['normal vector'] = all_normals
+            props_dict_list[i_surface]["normal vector"] = all_normals
         if return_bisector:
-            props_dict_list[i_surface]['grid bisector'] = (bisector, is_curtain)
+            props_dict_list[i_surface]["grid bisector"] = (bisector, is_curtain)
         if return_flange_bool:
-            props_dict_list[i_surface]['flange bool'] = all_flange
+            props_dict_list[i_surface]["flange bool"] = all_flange
 
 
 def find_faces_to_represent_surface_regular_cuda_mgpu(
@@ -781,7 +826,7 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
     name,
     title = None,
     agitate = False,
-    feature_type = 'fault',
+    feature_type = "fault",
     progress_fn = None,
     return_properties = None,
 ):
@@ -823,21 +868,23 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
     props_dict_list = [None] * n_surfs
     threads = [None] * n_gpus
     for i_surface in range(n_surfs):
-        threads[i_surface % n_gpus] = threading.Thread(target = find_faces_to_represent_surface_regular_cuda_sgpu,
-                                                       args = (
-                                                           grid,
-                                                           surfaces,
-                                                           name,
-                                                           title,
-                                                           agitate,
-                                                           feature_type,
-                                                           progress_fn,
-                                                           return_properties,
-                                                           i_surface,
-                                                           i_surface % n_gpus,
-                                                           gcs_list,
-                                                           props_dict_list,
-                                                       ))
+        threads[i_surface % n_gpus] = threading.Thread(
+            target = find_faces_to_represent_surface_regular_cuda_sgpu,
+            args = (
+                grid,
+                surfaces,
+                name,
+                title,
+                agitate,
+                feature_type,
+                progress_fn,
+                return_properties,
+                i_surface,
+                i_surface % n_gpus,
+                gcs_list,
+                props_dict_list,
+            ),
+        )
         threads[i_surface % n_gpus].start()  # start parallel run
         # if this is the last GPU available or we're at the last array ...
         if (i_surface + 1) % n_gpus == 0 or (i_surface + 1) == n_surfs:
