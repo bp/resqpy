@@ -646,9 +646,9 @@ def point_in_polygon(x, y, polygon):    # pragma: no cover
     p2x = 0.0
     p2y = 0.0
     xints = 0.0
-    p1x,p1y = polygon[0]
+    p1x, p1y = polygon[0]
     for i in range(n+1):
-        p2x,p2y = polygon[i % n]
+        p2x, p2y = polygon[i % n]
         if y > min(p1y,p2y):
             if y <= max(p1y,p2y):
                 if x <= max(p1x,p2x):
@@ -656,7 +656,7 @@ def point_in_polygon(x, y, polygon):    # pragma: no cover
                         xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
                     if p1x == p2x or x <= xints:
                         inside = not inside
-        p1x,p1y = p2x,p2y
+        p1x, p1y = p2x, p2y
 
     return inside
 
