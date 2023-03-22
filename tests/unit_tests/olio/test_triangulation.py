@@ -1,5 +1,4 @@
 import math as maths
-
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
@@ -210,6 +209,8 @@ def test_edges_and_rims():
 
     re = tri.rim_edges(e, c)
     assert re.shape == (4 * 2 + 5 * 2 + 6 + 4, 2)
+    ie = tri.internal_edges(e, c)
+    assert ie.shape == (len(e) - re.shape[0], 2)
 
     rims_edge_list, rims_points_list = tri.rims(re)
     assert len(rims_edge_list) == 3
@@ -236,3 +237,100 @@ def test_edges_and_rims():
         else:
             assert set(rp) == (set(np.arange(6, dtype = int)) | set(24 + np.arange(6, dtype = int)) | set(
                 (6, 12, 18, 11, 17, 23)))
+
+
+def test_internal_edges():
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    e, c = tri.edges(t)
+    assert len(e) == 7
+    ie = tri.internal_edges(e, c)
+    assert ie.shape == (2, 2)
+    assert np.all(ie == np.array([(0, 4), (1, 4)], dtype = int))
+
+
+def test_triangles_using_point():
+    p = np.array([(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)], dtype = float)
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    assert tuple(tri.triangles_using_point(t, 1)) == (1, 2)
+    assert tuple(tri.triangles_using_point(t, 2)) == (2,)
+    assert np.all(tri.triangles_using_point(t, 4) == [0, 1, 2])
+    assert tuple(tri.triangles_using_point(t, 3)) == (0,)
+    assert len(tri.triangles_using_point(t, 5)) == 0
+
+
+def test_triangles_using_edge():
+    p = np.array([(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)], dtype = float)
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    assert set(tri.triangles_using_edge(t, 1, 4)) == set((1, 2))
+    assert set(tri.triangles_using_edge(t, 4, 1)) == set((1, 2))
+    assert set(tri.triangles_using_edge(t, 4, 0)) == set((0, 1))
+    assert set(tri.triangles_using_edge(t, 0, 4)) == set((0, 1))
+    assert set(tri.triangles_using_edge(t, 3, 4)) == set((0,))
+    assert set(tri.triangles_using_edge(t, 4, 3)) == set((0,))
+    assert set(tri.triangles_using_edge(t, 4, 2)) == set((2,))
+    assert len(tri.triangles_using_edge(t, 1, 3)) == 0
+
+
+def test_triangles_using_edges():
+    p = np.array([(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)], dtype = float)
+    t = np.array([(0, 3, 4), (0, 1, 4), (1, 2, 4)], dtype = int)
+    edges = np.array([(1, 4), (4, 1), (4, 0), (0, 4), (3, 4), (4, 3), (4, 2), (1, 3)], dtype = int)
+    e = np.array([(1, 2), (1, 2), (0, 1), (0, 1), (0, -1), (0, -1), (2, -1), (-1, -1)], dtype = int)
+    tue = tri.triangles_using_edges(t, edges)
+    assert np.all(tue == e)
+
+
+def test_first_false():
+    a = np.array((0, 0, 1, 0, 1, 1), dtype = bool)
+    assert tri._first_false(a) == 0
+    a = np.logical_not(a)
+    assert tri._first_false(a) == 2
+    a = np.zeros(5, dtype = bool)
+    assert tri._first_false(a) == 0
+    a = np.logical_not(a)
+    assert tri._first_false(a) == 5  # indication of no False values present
+
+
+def test_first_match():
+    a = np.array((0, 0, 1, 0, 1, 1), dtype = bool)
+    assert tri._first_match(a, False) == 0
+    assert tri._first_match(a, True) == 2
+    a = np.arange(7, dtype = int)
+    assert tri._first_match(a, 5) == 5
+    assert tri._first_match(a, -1) == 7
+    assert tri._first_match(a, 0) == 0
+    assert tri._first_match(a, 13487) == 7
+
+
+def test_first_unused():
+    ap = np.array([(2, 5), (5, 3), (7, 2), (3, 5), (5, 4), (3, 6), (5, 8)], dtype = int)
+    used = np.array((True, True, False, True, False, False, False))
+    i, v = tri._find_unused(ap, used, 0)
+    assert i == 7 and v == -1  # not found
+    i, v = tri._find_unused(ap, used, 2)
+    assert i == 2 and v == 7  # not found
+    i, v = tri._find_unused(ap, used, 7)
+    assert i == 2 and v == 2
+    i, v = tri._find_unused(ap, used, 8)
+    assert i == 6 and v == 5
+    i, v = tri._find_unused(ap, used, 5)
+    assert i == 4 and v == 4
+
+
+def test_surrounding_xy_ring():
+    p = np.array([(-23.0, -23.0, 457.0), (-23.0, 23.0, 457.0), (23.0, 23.0, 457.0), (23.0, -23.0, 457.0)],
+                 dtype = float)
+    P_radius = maths.sqrt(2 * 23.0 * 23.0)
+    for n in (5, 17):
+        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False)
+        assert ring.shape == (n, 3)
+        assert_array_almost_equal(ring[:, 2], 457.0)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r, 10.0 * P_radius)
+    for n in (6, 11):
+        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 2.0, radial_distance = 234.0, inner_ring = True)
+        assert ring.shape == (3 * n, 3)
+        assert_array_almost_equal(ring[:, 2], 457.0)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r[:2 * n], 1.1 * P_radius)  # inner ring points
+        assert_array_almost_equal(r[2 * n:], 234.0)

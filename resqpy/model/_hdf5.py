@@ -208,12 +208,15 @@ def _h5_array_element(model,
     if object is None:
         object = model
 
-    # Check if attribute has already be cached
+    if isinstance(dtype, str) and dtype == 'pack':
+        dtype = bool
+
+    # check if attribute has already been cached
     if array_attribute is not None:
         existing_value = getattr(object, array_attribute, None)
 
         # Watch out for np.array(None): check existing_value has a valid "shape"
-        if existing_value is not None and getattr(existing_value, "shape", False):
+        if existing_value is not None and getattr(existing_value, 'shape', False):
             if index is None:
                 return None  # this option allows caching of array without actually referring to any element
             return existing_value[tuple(index)]
@@ -222,14 +225,20 @@ def _h5_array_element(model,
     if h5_root is None:
         return None
     if cache_array:
+        str_dtype = str(dtype)
         shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
-        if required_shape is None or shape_tuple == required_shape:
-            object.__dict__[array_attribute] = np.zeros(shape_tuple, dtype = dtype)
+        if required_shape is None:
+            required_shape = shape_tuple
+        object.__dict__[array_attribute] = np.zeros(required_shape, dtype = dtype)
+        if shape_tuple == required_shape:
             object.__dict__[array_attribute][:] = h5_root[h5_key_pair[1]]
+        elif (len(shape_tuple) == len(required_shape) and ('bool' in str_dtype or 'int8' in str_dtype) and
+              8 * (shape_tuple[-1] - 1) < required_shape[-1] <= 8 * shape_tuple[-1]):
+            a = np.unpackbits(h5_root[h5_key_pair[1]], axis = -1).astype(bool)
+            object.__dict__[array_attribute][:] = a[..., :required_shape[-1]]
         else:
-            object.__dict__[array_attribute] = np.zeros(required_shape, dtype = dtype)
-            object.__dict__[array_attribute][:] = np.array(h5_root[h5_key_pair[1]],
-                                                           dtype = dtype).reshape(required_shape)
+            object.__dict__[array_attribute][:] =  \
+                np.array(h5_root[h5_key_pair[1]], dtype = dtype).reshape(required_shape)
         _h5_release(model)
         if index is None:
             return None
@@ -241,6 +250,7 @@ def _h5_array_element(model,
             result = h5_root[h5_key_pair[1]][tuple(index)]
         else:
             shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
+            # todo: handle unpacking of a single bit into a bool?
             if shape_tuple == required_shape:
                 result = h5_root[h5_key_pair[1]][tuple(index)]
             else:

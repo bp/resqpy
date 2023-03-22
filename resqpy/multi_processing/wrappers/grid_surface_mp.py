@@ -33,6 +33,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         trimmed: bool = False,
         is_curtain = False,
         extend_fault_representation: bool = False,
+        flange_inner_ring = False,
+        saucer_parameter = None,
         retriangulate: bool = False,
         related_uuid = None,
         progress_fn: Optional[Callable] = None,
@@ -150,6 +152,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                               convexity_parameter = 2.0,
                                               reorient = True,
                                               extend_with_flange = extend_fault_representation,
+                                              flange_inner_ring = flange_inner_ring,
+                                              saucer_parameter = saucer_parameter,
                                               flange_radial_distance = flange_radius,
                                               make_clockwise = False)
         extended = extend_fault_representation
@@ -181,6 +185,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                  convexity_parameter = 2.0,
                                                  reorient = True,
                                                  extend_with_flange = extend_fault_representation,
+                                                 flange_inner_ring = flange_inner_ring,
+                                                 saucer_parameter = saucer_parameter,
                                                  flange_radial_distance = flange_radius,
                                                  make_clockwise = False)
         del pset

@@ -928,3 +928,52 @@ def test_axial_edge_crossings(example_model_and_crs):
     assert_array_almost_equal(z_cross[yi[1:], 1] - z_cross[yi[:-1], 1], 50.0 * maths.sqrt(3.0) / 2.0)
     maths.isclose(z_cross[yi[0], 1], 0.0)
     assert_array_almost_equal(z_cross[:, 0], 125.0)
+
+
+def test_adjust_flange_z(example_model_and_crs):
+    model, crs = example_model_and_crs
+    # create a bowl like point set, but invert z values on one side of bowl
+    arc = np.array([(3, 0), (5, 1), (7, 3), (8, 6)], dtype = float) * 100.0
+    points = np.expand_dims(np.array((0.0, 0.0, 0.0), dtype = float), axis = 0)
+    for i in range(8):
+        theta = maths.pi * float(i) / 4.0
+        sin_theta = maths.sin(theta)
+        cos_theta = maths.cos(theta)
+        for j in range(len(arc)):
+            z = 0.0
+            if i < 3:
+                z = arc[j, 1]
+            elif 4 <= i < 7:
+                z = -arc[j, 1]
+            new_p = np.array((arc[j, 0] * cos_theta, arc[j, 0] * sin_theta, z), dtype = float)
+            points = np.concatenate((points, np.expand_dims(new_p, axis = 0)), axis = 0)
+    # add some flange extension points
+    outer_start = len(points)
+    outliers = np.array([(1, 1, 0), (-1, 1, 0), (-1, -1, 0), (1, -1, 0)], dtype = float) * 3000.0
+    ro = 1000.0 * maths.sqrt(18.0)
+    points = np.concatenate((points, outliers), axis = 0)
+    # triangulate in xy view
+    t = tri.dt(points)
+    # set up a flange property on the triangles, True for any triangle using an outlier point
+    tout_set = set()
+    for p_i in range(outer_start, len(points)):
+        tout_set |= set(tri.triangles_using_point(t, p_i))
+    flange = np.zeros(len(t), dtype = bool)
+    flange[np.array(tuple(tout_set), dtype = int)] = True
+    assert np.count_nonzero(flange) == 12
+    # manually derived +ve z values corresponding to the saucer parameter values below
+    ez = np.array((600.0 * ro / 800.0, 600.0 * (ro - 200.0) / 600.0, 50.0 + 550.0 *
+                   (ro - 400.0) / 400.0, 200.0 + 400.0 * (ro - 600.0) / 200.0, 300.0 + 300.0 * (ro - 700.0) / 100.0),
+                  dtype = float)
+    # for a selection of saucer parameter values
+    for i, sauciness in enumerate((0.0, 0.25, 0.5, 0.75, 0.9)):
+        p = points.copy()
+        # adjust z values of outliers using the function being tested
+        resqpy.surface._adjust_flange_z(model, crs.uuid, p, outer_start, t, flange, sauciness)
+        # check z values against expectation
+        assert_array_almost_equal(p[:, :2], points[:, :2])  # no change in x or y
+        assert_array_almost_equal(p[:outer_start, 2], points[:outer_start, 2])  # no change in z for non-outliers
+        assert maths.isclose(p[outer_start, 2], ez[i])
+        assert maths.isclose(p[outer_start + 1, 2], 0.0, abs_tol = 1.0e-6)
+        assert maths.isclose(p[outer_start + 2, 2], -ez[i])
+        assert maths.isclose(p[outer_start + 3, 2], 0.0, abs_tol = 1.0e-6)

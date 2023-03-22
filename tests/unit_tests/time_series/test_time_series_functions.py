@@ -133,3 +133,12 @@ def test_geologic_time_str(years_value, expected_result):
     result = rqts.geologic_time_str(test_years_value)
     # assert
     assert result == expected_result
+
+
+def test_colloquial_date():
+    assert rqts.colloquial_date('2023-11-17') == '17/11/2023'
+    assert rqts.colloquial_date('1908-03-02', usa_date_format = False) == '02/03/1908'
+    assert rqts.colloquial_date('2054-03-05T11:30:00Z') == '05/03/2054'
+    assert rqts.colloquial_date('2023-11-17', usa_date_format = True) == '11/17/2023'
+    assert rqts.colloquial_date('1908-03-02', usa_date_format = True) == '03/02/1908'
+    assert rqts.colloquial_date('2054-03-05T11:30:00Z', usa_date_format = True) == '03/05/2054'

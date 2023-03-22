@@ -33,6 +33,15 @@ def test_unit_vectors():
         assert_array_almost_equal(vec.unit_vector_from_azimuth(a), e)
 
 
+def test_nan_unit_vectors():
+    v_set = np.array([(3.0, 4.0, 0.0), (3.7, -3.7, np.NaN), (0.0, 0.0, 1.0), (0.0, np.NaN, 0.0)])
+    one_over_root_three = 1.0 / maths.sqrt(3.0)
+    expected = np.array([(3.0 / 5.0, 4.0 / 5.0, 0.0), (np.NaN, np.NaN, np.NaN), (0.0, 0.0, 1.0),
+                         (np.NaN, np.NaN, np.NaN)])
+    for v, e in zip(v_set, expected):
+        assert_array_almost_equal(vec.unit_vector(v), e)
+
+
 def test_angles():
     pi_by_2 = maths.pi / 2.0
     assert maths.isclose(vec.radians_from_degrees(90.0), pi_by_2)
@@ -304,3 +313,229 @@ def test_xy_sort():
     assert_array_almost_equal(spx, espx)
     assert_array_almost_equal(spy, espy)
     assert_array_almost_equal(spxy, espxy)
+
+
+def test_inclinations():
+    v_set = np.array([(3.0, 4.0, 0.0), (0.0, -3.7, 3.7), (0.0, 0.0, 1.0), (100.0 * maths.sqrt(3.0) / 2.0, 0.0, -50.0)],
+                     dtype = float)
+    e = np.array([90.0, 45.0, 0.0, 120.0], dtype = float)
+    inclines = vec.inclinations(v_set)
+    assert_array_almost_equal(inclines, e)
+
+
+def test_nan_inclinations():
+    v_set = np.array([(3.0, np.NaN, 0.0), (0.0, -3.7, 3.7), (np.NaN, 0.0, 1.0),
+                      (100.0 * maths.sqrt(3.0) / 2.0, 0.0, -50.0)],
+                     dtype = float)
+    e = np.array([np.NaN, 45.0, np.NaN, 120.0], dtype = float)
+    inclines = vec.nan_inclinations(v_set)
+    assert_array_almost_equal(inclines, e)
+
+
+def test_points_direction_vector():
+    p = np.zeros((3, 5, 3), dtype = float)
+    p[0, :, 0] = 100.0 * np.arange(5).astype(float)
+    p[1, :, 0] = p[0, :, 0] + 100.0
+    p[2, :, 0] = p[0, :, 0] - 100.0
+    p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
+    p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
+    e_0 = np.mean(p[2], axis = 0) - np.mean(p[0], axis = 0)
+    e_1 = np.mean(p[:, 4], axis = 0) - np.mean(p[:, 0], axis = 0)
+    pdv_0 = vec.points_direction_vector(p, axis = 0)
+    pdv_1 = vec.points_direction_vector(p, axis = 1)
+    assert_array_almost_equal(pdv_0, e_0)
+    assert_array_almost_equal(pdv_1, e_1)
+
+
+def test_points_direction_vector_some_nan():
+    p = np.zeros((3, 5, 3), dtype = float)
+    p[0, :, 0] = 100.0 * np.arange(5).astype(float)
+    p[1, :, 0] = p[0, :, 0] + 100.0
+    p[2, :, 0] = p[0, :, 0] - 100.0
+    p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
+    p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
+    p[0, 2, :] = np.NaN
+    p[1, 4, :] = np.NaN
+    e_0 = np.nanmean(p[2], axis = 0) - np.nanmean(p[0], axis = 0)
+    e_1 = np.nanmean(p[:, 4], axis = 0) - np.nanmean(p[:, 0], axis = 0)
+    pdv_0 = vec.points_direction_vector(p, axis = 0)
+    pdv_1 = vec.points_direction_vector(p, axis = 1)
+    assert_array_almost_equal(pdv_0, e_0)
+    assert_array_almost_equal(pdv_1, e_1)
+
+
+def test_points_direction_vector_nan_sloces():
+    p = np.zeros((3, 5, 3), dtype = float)
+    p[0, :, 0] = 100.0 * np.arange(5).astype(float)
+    p[1, :, 0] = p[0, :, 0] + 100.0
+    p[2, :, 0] = p[0, :, 0] - 100.0
+    p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
+    p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
+    p[0, :, :] = np.NaN
+    p[:, 4, :] = np.NaN
+    e_0 = np.nanmean(p[2], axis = 0) - np.nanmean(p[1], axis = 0)
+    e_1 = np.nanmean(p[:, 3], axis = 0) - np.nanmean(p[:, 0], axis = 0)
+    pdv_0 = vec.points_direction_vector(p, axis = 0)
+    pdv_1 = vec.points_direction_vector(p, axis = 1)
+    assert_array_almost_equal(pdv_0, e_0)
+    assert_array_almost_equal(pdv_1, e_1)
+
+
+def test_unit_corrected_length():
+    v = np.array((1.0, 0.0, 0.0), dtype = float)
+    unit_conversion = np.array((1.0, 23.0, 0.05), dtype = float)
+    assert maths.isclose(vec.unit_corrected_length(v, unit_conversion), 1.0)
+    v = np.ones(3, dtype = float)
+    uc = np.ones(3, dtype = float)
+    assert maths.isclose(vec.unit_corrected_length(v, uc), maths.sqrt(3))
+    uc[2] = 0.3048
+    e = maths.sqrt(2 + uc[2] * uc[2])
+    assert maths.isclose(vec.unit_corrected_length(v, uc), e)
+
+
+def test_no_rotation_matrix():
+    e = np.array([(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)], dtype = float)
+    assert_array_almost_equal(vec.no_rotation_matrix(), e)
+
+
+def test_project_points_onto_plane():
+    p = np.array([(1.0, 2.0, 3.0), (7.0, 6.0, 5.0)], dtype = float)
+    plane_xyz = np.array((0.0, 10.0, 0.0), dtype = float)
+    plane_nv = np.array((0.0, 1.0, 0.0), dtype = float)
+    vec.project_points_onto_plane(plane_xyz, plane_nv, p)
+    assert_array_almost_equal(p, np.array([(1.0, 10.0, 3.0), (7.0, 10.0, 5.0)], dtype = float))
+    p = np.array([(1.0, 2.0, 3.0), (7.0, 6.0, 5.0)], dtype = float)
+    plane_xyz = np.array((1.0, 2.0, 3.0), dtype = float)
+    plane_nv = np.array((1.0, 1.0, 1.0), dtype = float)
+    vec.project_points_onto_plane(plane_xyz, plane_nv, p)
+    assert_array_almost_equal(p, np.array([(3.0, 6.0, 9.0), (13.0, 10.0, 23.0)], dtype = float) / 3.0)
+
+
+def test_perspective_vector():
+    box = np.array([(0.0, 0.0, 0.0), (10.0, 10.0, 10.0)], dtype = float)
+    viewing = 2
+    vanish = 1.0
+    v = np.array((1.0, 1.0, 5.0), dtype = float)
+    vp = vec.perspective_vector(box, viewing, vanish, v)
+    assert_array_almost_equal(vp, (3.0, 3.0, 5.0))
+
+
+def test_in_triangle():
+    a = np.array((0.0, 0.0, 0.0), dtype = float)
+    b = np.array((2.0, 0.0, 1.3), dtype = float)
+    c = np.array((0.0, 4.0, -1.2), dtype = float)
+    d = np.array((1.0, 1.0, 1.0), dtype = float)
+    assert vec.in_triangle(a, b, c, d)
+    d = np.array((1.0, 2.5, 0.0), dtype = float)
+    assert not vec.in_triangle(a, b, c, d)
+    d = np.array((-0.1, 1.0, 0.0), dtype = float)
+    assert not vec.in_triangle(a, b, c, d)
+    d = np.array((0.1, -0.1, 0.0), dtype = float)
+    assert not vec.in_triangle(a, b, c, d)
+
+
+def test_point_in_polygon():
+    poly = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float)
+    assert vec.point_in_polygon(1.0, 1.0, poly)
+    assert not vec.point_in_polygon(1.0, 2.5, poly)
+    assert not vec.point_in_polygon(-1.0, 1.0, poly)
+    assert not vec.point_in_polygon(0.1, -0.1, poly)
+    poly = np.array([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (2.0, 2.0), (0.0, 4.0)], dtype = float)
+    assert vec.point_in_polygon(1.0, 1.0, poly)
+    assert vec.point_in_polygon(3.5, 3.0, poly)
+    assert not vec.point_in_polygon(2.0, 2.5, poly)
+    assert not vec.point_in_polygon(-1.0, 1.0, poly)
+    assert not vec.point_in_polygon(0.1, -0.1, poly)
+
+
+def test_point_in_triangle_again():
+    triangle = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float)
+    assert vec.point_in_triangle(1.0, 1.0, triangle)
+    assert not vec.point_in_triangle(1.0, 2.5, triangle)
+    assert not vec.point_in_triangle(-1.0, 1.0, triangle)
+    assert not vec.point_in_triangle(0.1, -0.1, triangle)
+
+
+def test_points_in_polygon():
+    poly = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float)
+    points = np.array([(1.0, 2.5), (1.0, 1.0), (-1.0, 1.0), (0.1, -0.1)], dtype = float)
+    within = vec.points_in_polygon(points, poly, 1, 23)
+    assert len(within) == 1
+    assert np.all(within[0] == (23, 1, 0))
+    within = vec.points_in_polygon(points, poly, 2, 23)
+    assert len(within) == 1
+    assert np.all(within[0] == (23, 0, 1))
+    poly = np.array([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (2.0, 2.0), (0.0, 4.0)], dtype = float)
+    points = np.array([(1.0, 2.5), (2.0, 2.5), (1.0, 1.0), (-1.0, 1.0), (3.5, 3.0), (0.1, -0.1)], dtype = float)
+    within = vec.points_in_polygon(points, poly, 3, 23)
+    assert len(within) == 3
+    assert np.all(within[0] == (23, 0, 0))
+    assert np.all(within[1] == (23, 0, 2))
+    assert np.all(within[2] == (23, 1, 1))
+
+
+def test_points_in_triangle():
+    triangle = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float)
+    points = np.array([(1.0, 2.5), (1.0, 1.0), (-1.0, 1.0), (0.1, -0.1)], dtype = float)
+    within = vec.points_in_triangle(points, triangle, 1, 23)
+    assert len(within) == 1
+    assert np.all(within[0] == (23, 1, 0))
+    within = vec.points_in_triangle(points, triangle, 2)
+    assert len(within) == 1
+    assert np.all(within[0] == (0, 0, 1))
+
+
+def test_mesh_points_in_triangle():
+    triangle = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float) + 0.5
+    within = vec.mesh_points_in_triangle(triangle, 7, 7)
+    assert len(within) == 4
+    assert np.all(within[0] == (0, 1, 1))
+    assert np.all(within[1] == (0, 1, 2))
+    assert np.all(within[2] == (0, 2, 1))
+    assert np.all(within[3] == (0, 3, 1))
+
+
+def test_points_in_polygons():
+    # note: order of returned rows is not specified and could change, causing this (and other) tests to wrongly fail
+    polygons = np.array([[(0.0, 4.0), (0.0, 8.0), (4.0, 8.0), (4.0, 4.0),
+                          (2.0, 6.0)], [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (2.0, 2.0), (0.0, 4.0)]],
+                        dtype = float)
+    points = np.array([(1.0, 2.5), (2.0, 2.5), (1.0, 1.0), (-1.0, 1.0), (3.5, 3.0), (0.1, -0.1)], dtype = float)
+    within = vec.points_in_polygons(points, polygons, 3)
+    assert len(within) == 3
+    assert np.all(within[0] == (1, 0, 0))
+    assert np.all(within[1] == (1, 0, 2))
+    assert np.all(within[2] == (1, 1, 1))
+    points = np.array([(1.0, 2.5), (1.0, 6.5), (1.0, 1.0), (-1.0, 1.0), (3.5, 3.0), (0.1, -0.1)], dtype = float)
+    within = vec.points_in_polygons(points, polygons, 2)
+    assert len(within) == 4
+    assert np.all(within[0] == (0, 0, 1))
+    assert np.all(within[1] == (1, 0, 0))
+    assert np.all(within[2] == (1, 1, 0))
+    assert np.all(within[3] == (1, 2, 0))
+
+
+def test_points_in_triangles_njit():
+    triangles = np.array([[(2.0, 4.0), (2.0, 0.0), (0.0, 4.0)], [(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)]], dtype = float)
+    points = np.array([(1.0, 2.5), (-1.0, 1.0), (0.1, -0.1), (1.0, 1.0), (2.5, 3.0)], dtype = float)
+    within = vec.points_in_polygons(points, triangles, 1)
+    assert len(within) == 2
+    assert np.all(within[0] == (0, 0, 0))
+    assert np.all(within[1] == (1, 3, 0))
+
+
+def test_meshgrid():
+    x = np.array((1.0, 3.5, 11.0), dtype = float)
+    y = np.array((-23.0, -7.3), dtype = float)
+    xx, yy = vec.meshgrid(x, y)
+    assert xx.shape == (2, 3)
+    assert_array_almost_equal(xx, [(1.0, 3.5, 11.0), (1.0, 3.5, 11.0)])
+    assert yy.shape == (2, 3)
+    assert_array_almost_equal(yy, [(-23.0, -23.0, -23.0), (-7.3, -7.3, -7.3)])
+
+
+def test_triangle_box():
+    triangle = np.array([(-0.1, 7.8), (-2.6, -3.1), (4.5, -1.2)], dtype = float)
+    min_max = vec.triangle_box(triangle)
+    assert len(min_max) == 4
+    assert_array_almost_equal(min_max, (-2.6, 4.5, -3.1, 7.8))

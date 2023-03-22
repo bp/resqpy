@@ -413,7 +413,7 @@ def print_xml_tree(root,
                                     log_level = log_level,
                                     max_lines = max_lines,
                                     line_count = line_count)
-        if line_count > max_lines:
+        if max_lines and line_count > max_lines:
             break
     return line_count
 
@@ -730,7 +730,7 @@ def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     else:
         line += '>'
         text = root.text
-        if (not text or text.isspace()) and tag == 'Title':
+        if (not text or text.isspace()) and tag.endswith('Title'):
             text = 'untitled'
         if text and not text.isspace():
             line += text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')

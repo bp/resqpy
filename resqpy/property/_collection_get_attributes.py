@@ -525,17 +525,15 @@ def _get_indexable_element(indexable_element, support_type):
     return indexable_element
 
 
-def _cached_part_array_ref_get_array(collection, part, dtype, model, cached_array_name):
+def _cached_part_array_ref_get_array(collection, part, dtype, model, cached_array_name, use_pack):
     const_value = collection.constant_value_for_part(part)
     if const_value is None:
-        _cached_part_array_ref_const_none(collection, part, dtype, model, cached_array_name)
+        _cached_part_array_ref_const_none(collection, part, dtype, model, cached_array_name, use_pack)
     else:
         _cached_part_array_ref_const_notnone(collection, part, const_value, cached_array_name)
-    if not hasattr(collection, cached_array_name):
-        return None
 
 
-def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_array_name):
+def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_array_name, use_pack):
     part_node = collection.node_for_part(part)
     if part_node is None:
         return None
@@ -543,6 +541,13 @@ def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_arr
         first_values_node, tag, dtype = _cached_part_array_ref_get_node_points(part_node, dtype)
     else:
         first_values_node, tag, dtype = _cached_part_array_ref_get_node_values(part_node, dtype)
+
+    # the required shape is required if a bool array may need to be unpacked from bits
+    required_shape = None
+    str_dtype = str(dtype)
+    if use_pack and ('bool' in str_dtype or 'int8' in str_dtype):
+        required_shape = collection.supporting_shape(indexable_element = collection.indexable_for_part(part),
+                                                     direction = _part_direction(collection, part))
 
     h5_key_pair = model.h5_uuid_and_path_for_node(first_values_node, tag = tag)
     if h5_key_pair is None:
@@ -552,6 +557,7 @@ def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_arr
                            cache_array = True,
                            object = collection,
                            array_attribute = cached_array_name,
+                           required_shape = required_shape,
                            dtype = dtype)
 
 

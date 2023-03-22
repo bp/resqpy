@@ -830,7 +830,7 @@ def make_all_clockwise_xy(t, p):
     return t
 
 
-def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None):
+def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None, inner_ring = False):
     """Creates a set of points surrounding the point set p, in the xy plane.
 
     arguments:
@@ -840,11 +840,22 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
           the 'radius' of the outermost points in p
        radial_distance (float): if present, the radius of the ring of points, unless radial_factor
           results in a greater distance in which case that is used
+       inner_ring (bool, default False): if True, an inner ring of points, with double count, is created
+          at a radius just outside that of the furthest flung original point; this improves triangulation
+          of the extended point set when the original has a non-convex hull
 
     returns:
-       numpy float array of shape (count, 3) being xyz points in surrounding ring; z is set constant to
-       mean value of z in p
+       numpy float array of shape (N, 3) being xyz points in surrounding ring(s); z is set constant to
+       mean value of z in p; N is count if inner_ring is False, 3 * count if True
     """
+
+    def make_ring(count, centre, radius):
+        delta_theta = 2.0 * maths.pi / float(count)
+        ring = np.zeros((count, 3))
+        for i in range(count):
+            theta = float(i) * delta_theta
+            ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+        return ring
 
     assert p.shape[-1] == 3
     assert radial_factor >= 1.0
@@ -854,11 +865,12 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
     radius = p_radius * radial_factor
     if radial_distance is not None and radial_distance > radius:
         radius = radial_distance
-    delta_theta = 2.0 * maths.pi / float(count)
-    ring = np.zeros((count, 3))
-    for i in range(count):
-        theta = float(i) * delta_theta
-        ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+    ring = make_ring(count, centre, radius)
+    if inner_ring:
+        inner_radius = p_radius * 1.1
+        assert radius > inner_radius
+        in_ring = make_ring(2 * count, centre, inner_radius)
+        return np.concatenate((in_ring, ring), axis = 0)
     return ring
 
 
@@ -889,12 +901,50 @@ def edges(t):
     return np.unique(all_edges, axis = 0, return_counts = True)
 
 
+def triangles_using_point(t, point_index):
+    """Returns list-like 1D int array of indices of triangles using vertex identified by point_index."""
+
+    assert t.ndim == 2 and t.shape[1] == 3 and isinstance(point_index, int)
+    mask = np.any(t == point_index, axis = -1)
+    return np.where(mask)[0]
+
+
+def triangles_using_edge(t, p1, p2):
+    """Returns list-like 1D int array of indices of triangles using edge identified by pair of point indices."""
+
+    assert t.ndim == 2 and t.shape[1] == 3 and p1 != p2
+    mask = np.logical_and(np.any(t == p1, axis = -1), np.any(t == p2, axis = -1))
+    return np.where(mask)[0]
+
+
+def triangles_using_edges(t, edges):
+    """Returns int array of shape (len(edges), 2) with indices of upto 2 triangles using each edge (-1 for unused)."""
+
+    assert t.ndim == 2 and t.shape[1] == 3 and edges.ndim == 2 and edges.shape[1] == 2
+    ti = np.full((len(edges), 2), -1, dtype = int)
+    for i in range(len(edges)):
+        te = triangles_using_edge(t, edges[i, 0], edges[i, 1])
+        c = len(te)
+        assert 0 <= c <= 2
+        if c:
+            ti[i, :c] = te
+    return ti
+
+
 def rim_edges(all_edges, edge_counts):
     """Returns a subset of all edges where the edge count is 1."""
 
     assert all_edges.ndim == 2 and all_edges.shape[1] == 2
     assert edge_counts.ndim == 1 and edge_counts.size == len(all_edges)
     return all_edges[edge_counts == 1, :]
+
+
+def internal_edges(all_edges, edge_counts):
+    """Returns a subset of all edges where the edge count is 2."""
+
+    assert all_edges.ndim == 2 and all_edges.shape[1] == 2
+    assert edge_counts.ndim == 1 and edge_counts.size == len(all_edges)
+    return all_edges[edge_counts == 2, :]
 
 
 def rims(all_rim_edges):
@@ -956,7 +1006,7 @@ def _find_unused(ap: np.ndarray, used_mask: np.ndarray, v: int):  # type: ignore
 
 @njit
 def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
-    """Returns the index of the first False value in the array."""
+    """Returns the index of the first False (or zero) value in the 1D array."""
     for idx, val in np.ndenumerate(array):
         if not val:
             return idx[0]
@@ -965,7 +1015,7 @@ def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
 
 @njit
 def _first_match(array: np.ndarray, v: int) -> Optional[int]:  # type: ignore
-    """Returns the index of the first True value in the array."""
+    """Returns the index of the first occurrence of value v in the 1D array."""
     for idx, val in np.ndenumerate(array):
         if val == v:
             return idx[0]
