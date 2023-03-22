@@ -1,5 +1,4 @@
 # test vector utilities
-
 import math as maths
 
 import numpy as np
@@ -164,6 +163,12 @@ def test_point_in_triangle():
     assert not vec.point_in_triangle(2.0, 7.0, t)
     assert not vec.point_in_triangle(2.0, 4.5, t)
     assert not vec.point_in_triangle(4.0, 4.5, t)
+
+    triangle = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float)
+    assert vec.point_in_triangle(1.0, 1.0, triangle)
+    assert not vec.point_in_triangle(1.0, 2.5, triangle)
+    assert not vec.point_in_triangle(-1.0, 1.0, triangle)
+    assert not vec.point_in_triangle(0.1, -0.1, triangle)
 
 
 def test_is_obtuse_2d():
@@ -446,14 +451,6 @@ def test_point_in_polygon():
     assert not vec.point_in_polygon(2.0, 2.5, poly)
     assert not vec.point_in_polygon(-1.0, 1.0, poly)
     assert not vec.point_in_polygon(0.1, -0.1, poly)
-
-
-def test_point_in_triangle_again():
-    triangle = np.array([(0.0, 0.0), (2.0, 0.0), (0.0, 4.0)], dtype = float)
-    assert vec.point_in_triangle(1.0, 1.0, triangle)
-    assert not vec.point_in_triangle(1.0, 2.5, triangle)
-    assert not vec.point_in_triangle(-1.0, 1.0, triangle)
-    assert not vec.point_in_triangle(0.1, -0.1, triangle)
 
 
 def test_points_in_polygon():

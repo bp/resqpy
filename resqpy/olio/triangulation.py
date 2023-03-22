@@ -992,7 +992,7 @@ def rims(all_rim_edges):
     return rim_edges_list, rim_points_list
 
 
-@njit
+@njit   # pragma: no cover
 def _find_unused(ap: np.ndarray, used_mask: np.ndarray, v: int):  # type: ignore
     """Finds the first unused occurence of v in pair list ap, returning index and paired value."""
     for idx, val in np.ndenumerate(ap[:, 0]):
@@ -1004,7 +1004,7 @@ def _find_unused(ap: np.ndarray, used_mask: np.ndarray, v: int):  # type: ignore
     return ap.shape[0], -1
 
 
-@njit
+@njit   # pragma: no cover
 def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
     """Returns the index of the first False (or zero) value in the 1D array."""
     for idx, val in np.ndenumerate(array):
@@ -1013,7 +1013,7 @@ def _first_false(array: np.ndarray) -> Optional[int]:  # type: ignore
     return array.size
 
 
-@njit
+@njit   # pragma: no cover
 def _first_match(array: np.ndarray, v: int) -> Optional[int]:  # type: ignore
     """Returns the index of the first occurrence of value v in the 1D array."""
     for idx, val in np.ndenumerate(array):

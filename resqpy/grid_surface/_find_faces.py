@@ -1240,13 +1240,13 @@ def get_boundary(  # type: ignore
     return boundary  # type: ignore
 
 
-@njit
+@njit   # pragma: no cover
 def _where_true(data: np.ndarray):
     """Jitted NumPy 'where' function to improve performance on subsequent calls."""
     return np.where(data)
 
 
-@njit
+@njit   # pragma: no cover
 def _first_true(array: np.ndarray) -> Optional[int]:  # type: ignore
     """Returns the index + 1 of the first True value in the array."""
     for idx, val in np.ndenumerate(array):
@@ -1255,7 +1255,7 @@ def _first_true(array: np.ndarray) -> Optional[int]:  # type: ignore
     return array.size
 
 
-@njit
+@njit   # pragma: no cover
 def intersect_numba(
     axis: int,
     index1: int,
@@ -1350,7 +1350,7 @@ def intersect_numba(
     return faces, offsets, triangle_per_face
 
 
-@njit
+@njit   # pragma: no cover
 def _seed_array(
     point: Tuple[int, int, int],
     k_faces: np.ndarray,

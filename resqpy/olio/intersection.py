@@ -76,7 +76,7 @@ def line_triangle_intersect(line_p, line_v, triangle, line_segment = False, l_to
     return line_p + t * line_v
 
 
-@njit
+@njit   # pragma: no cover
 def line_triangle_intersect_numba(
     line_p: np.ndarray,
     line_v: np.ndarray,
