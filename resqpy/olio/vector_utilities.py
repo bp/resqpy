@@ -628,36 +628,22 @@ def point_in_polygon(x, y, polygon):
     note:
         the polygon is assumed closed, the closing point should not be repeated
     """
-    length = len(polygon)-1
-    dy2 = y - polygon[0][1]
-    intersections = 0
-    ii = 0
-    jj = 1
-
-    while ii < length:
-        dy  = dy2
-        dy2 = y - polygon[jj][1]
-
-        # consider only lines which are not completely above/bellow/right from the point
-        if dy*dy2 <= 0.0 and (x >= polygon[ii][0] or x >= polygon[jj][0]):
-
-            # non-horizontal line
-            if dy<0 or dy2<0:
-                F = dy*(polygon[jj][0] - polygon[ii][0])/(dy-dy2) + polygon[ii][0]
-
-                if x > F: # if line is left from the point - the ray moving towards left, will intersect it
-                    intersections += 1
-                elif x == F: # point on line
-                    return 2
-
-            # point on upper peak (dy2=dx2=0) or horizontal line (dy=dy2=0 and dx*dx2<=0)
-            elif dy2==0 and (x==polygon[jj][0] or (dy==0 and (x-polygon[ii][0])*(x-polygon[jj][0])<=0)):
-                return 2
-
-        ii = jj
-        jj += 1
-
-    inside = intersections & 1
+    n = len(polygon)
+    inside = False
+    p2x = 0.0
+    p2y = 0.0
+    xints = 0.0
+    p1x, p1y = polygon[0]
+    for i in range(n+1):
+        p2x, p2y = polygon[i % n]
+        if y > min(p1y,p2y):
+            if y <= max(p1y,p2y):
+                if x <= max(p1x,p2x):
+                    if p1y != p2y:
+                        xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                    if p1x == p2x or x <= xints:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
 
     return inside
 
