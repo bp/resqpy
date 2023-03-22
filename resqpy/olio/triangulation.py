@@ -750,6 +750,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
        determine the triangulation;
        the numpy linear algebra option seems to be memory intensive, not recommended
     """
+
     def best_angles(points, mid_x, mid_y, steps, d_theta):
         best_range = None
         best_x_rotation = None

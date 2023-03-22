@@ -345,13 +345,11 @@ def rotation_3d_matrix(xzy_axis_angles):
     sin_a_sin_c = sin_a * sin_c
     sin_a_cos_c = sin_a * cos_c
 
-    rotation_matrix = np.array(
-        [
-            [cos_a * cos_b, -sin_a_cos_c * cos_b + sin_b * sin_c, cos_b * sin_a_sin_c + sin_b * cos_c],
-            [sin_a, cos_a * cos_c, -sin_c * cos_a],
-            [-sin_b * cos_a, sin_a_cos_c * sin_b + cos_b * sin_c, -sin_b * sin_a_sin_c + cos_b * cos_c],
-        ]
-    )
+    rotation_matrix = np.array([
+        [cos_a * cos_b, -sin_a_cos_c * cos_b + sin_b * sin_c, cos_b * sin_a_sin_c + sin_b * cos_c],
+        [sin_a, cos_a * cos_c, -sin_c * cos_a],
+        [-sin_b * cos_a, sin_a_cos_c * sin_b + cos_b * sin_c, -sin_b * sin_a_sin_c + cos_b * cos_c],
+    ])
     return rotation_matrix
 
 
@@ -365,13 +363,11 @@ def rotation_3d_matrix_njit(xzy_axis_angles):
     sin_a_sin_c = sin_a * sin_c
     sin_a_cos_c = sin_a * cos_c
 
-    rotation_matrix = np.array(
-        [
-            [cos_a * cos_b, -sin_a_cos_c * cos_b + sin_b * sin_c, cos_b * sin_a_sin_c + sin_b * cos_c],
-            [sin_a, cos_a * cos_c, -sin_c * cos_a],
-            [-sin_b * cos_a, sin_a_cos_c * sin_b + cos_b * sin_c, -sin_b * sin_a_sin_c + cos_b * cos_c],
-        ]
-    )
+    rotation_matrix = np.array([
+        [cos_a * cos_b, -sin_a_cos_c * cos_b + sin_b * sin_c, cos_b * sin_a_sin_c + sin_b * cos_c],
+        [sin_a, cos_a * cos_c, -sin_c * cos_a],
+        [-sin_b * cos_a, sin_a_cos_c * sin_b + cos_b * sin_c, -sin_b * sin_a_sin_c + cos_b * cos_c],
+    ])
     return rotation_matrix
 
 
@@ -647,13 +643,13 @@ def point_in_polygon(x, y, polygon):
     p2y = 0.0
     xints = 0.0
     p1x, p1y = polygon[0]
-    for i in range(n+1):
+    for i in range(n + 1):
         p2x, p2y = polygon[i % n]
-        if y > min(p1y,p2y):
-            if y <= max(p1y,p2y):
-                if x <= max(p1x,p2x):
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
                     if p1y != p2y:
-                        xints = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
                     if p1x == p2x or x <= xints:
                         inside = not inside
         p1x, p1y = p2x, p2y
@@ -732,7 +728,7 @@ def point_in_triangle(x, y, triangle):
     return inside
 
 
-@njit(parallel=True)
+@njit(parallel = True)
 def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
 
