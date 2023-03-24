@@ -301,7 +301,7 @@ def cut_extra_metadata(root):
     """Removes all the extra metadata children under root node."""
 
     for child in root:
-        if child.tag == 'ExtraMetadata':
+        if match(child.tag, 'ExtraMetadata'):
             root.remove(child)
 
 
