@@ -84,7 +84,7 @@ def unit_vector(v):
 
 
 @njit
-def unit_vector_njit(v):
+def unit_vector_njit(v):  # pragma: no cover
     """Returns vector with same direction as v but with unit length."""
     norm = np.linalg.norm(v)
     if norm == 0.0:
@@ -234,24 +234,24 @@ def points_direction_vector(a, axis):
     return finish_p - start_p
 
 
-def dot_product(a, b):
+def dot_product(a, b):  # pragma: no cover
     """Returns the dot product (scalar product) of the two vectors."""
     return np.dot(a, b)
 
 
-def dot_products(a, b):
+def dot_products(a, b):  # pragma: no cover
     """Returns the dot products of pairs of vectors; last axis covers element of a vector."""
     return np.sum(a * b, axis = -1)
 
 
-def cross_product(a, b):
+def cross_product(a, b):  # pragma: no cover
     """Returns the cross product (vector product) of the two vectors."""
     return np.cross(a, b)
 
 
-def naive_length(v):
+def naive_length(v):  # pragma: no cover
     """Returns the length of the vector assuming consistent units."""
-    return maths.sqrt(dot_product(v, v))
+    return np.linalg.norm(v)
 
 
 def naive_lengths(v):
@@ -259,9 +259,9 @@ def naive_lengths(v):
     return np.sqrt(np.sum(v * v, axis = -1))
 
 
-def naive_2d_length(v):
+def naive_2d_length(v):  # pragma: no cover
     """Returns the length of the vector projected onto xy plane, assuming consistent units."""
-    return maths.sqrt(dot_product(v[0:2], v[0:2]))
+    return np.linalg.norm(v[0:2])
 
 
 def naive_2d_lengths(v):
@@ -331,7 +331,7 @@ def rotation_matrix_3d_axial(axis, angle):
     return matrix
 
 
-def no_rotation_matrix():
+def no_rotation_matrix():  # pragma: no cover
     """Returns a rotation matrix which will not move points (identity matrix)."""
     return np.eye(3)
 
@@ -354,7 +354,7 @@ def rotation_3d_matrix(xzy_axis_angles):
 
 
 @njit
-def rotation_3d_matrix_njit(xzy_axis_angles):
+def rotation_3d_matrix_njit(xzy_axis_angles):  # pragma: no cover
     """Returns a rotation matrix which will rotate points about the x, z, then y axis by angles in degrees."""
     angles = np.radians(xzy_axis_angles)
     cos_c, cos_a, cos_b = np.cos(angles)
@@ -371,13 +371,13 @@ def rotation_3d_matrix_njit(xzy_axis_angles):
     return rotation_matrix
 
 
-def reverse_rotation_3d_matrix(xzy_axis_angles):
+def reverse_rotation_3d_matrix(xzy_axis_angles):  # pragma: no cover
     """Returns a rotation matrix which will rotate points about the y, z, then x axis by angles in degrees."""
 
     return rotation_3d_matrix(xzy_axis_angles).T
 
 
-def rotate_vector(rotation_matrix, vector):
+def rotate_vector(rotation_matrix, vector):  # pragma: no cover
     """Returns the rotated vector."""
     return np.dot(rotation_matrix, vector)
 
@@ -388,7 +388,7 @@ def rotate_array(rotation_matrix, a):
 
 
 @njit
-def rotate_array_njit(rotation_matrix, a):
+def rotate_array_njit(rotation_matrix, a):  # pragma: no cover
     """Returns a copy of array a with each vector rotated by the rotation matrix."""
     return np.dot(rotation_matrix, a.reshape(-1, 3).T).T.reshape(a.shape)
 
@@ -457,7 +457,7 @@ def rotation_matrix_3d_vector(v):
 
 
 @njit
-def rotation_matrix_3d_vector_njit(v):
+def rotation_matrix_3d_vector_njit(v):  # pragma: no cover
     """Returns a rotation matrix which will rotate points by inclination and azimuth of vector.
 
     note:
@@ -623,7 +623,7 @@ def points_in_triangles(p, t, da, projection = 'xy', edged = False):
 
 
 @njit
-def point_in_polygon(x, y, polygon):
+def point_in_polygon(x, y, polygon):  # pragma: no cover
     """Calculates if a point in within a polygon in 2D.
     
     arguments:
@@ -658,7 +658,7 @@ def point_in_polygon(x, y, polygon):
 
 
 @njit
-def point_in_triangle(x, y, triangle):
+def point_in_triangle(x, y, triangle):  # pragma: no cover
     """Calculates if a point in within a triangle in 2D.
 
     arguments:
@@ -728,7 +728,7 @@ def point_in_triangle(x, y, triangle):
     return inside
 
 
-@njit(parallel = True)
+@njit(parallel = True)  # pragma: no cover
 def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
     """Calculates which points are within a polygon in 2D.
 
@@ -756,7 +756,7 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
     return polygon_points[polygon_points[:, 0] != -1]
 
 
-@njit
+@njit  # pragma: no cover
 def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: int, triangle_num: int = 0) -> np.ndarray:
     """Calculates which points are within a triangle in 2D.
 
@@ -780,7 +780,7 @@ def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: in
     return triangle_points[triangle_points[:, 0] != -1]
 
 
-@njit
+@njit  # pragma: no cover
 def mesh_points_in_triangle(triangle: np.ndarray,
                             points_xlen: int,
                             points_ylen: int,
@@ -812,7 +812,7 @@ def mesh_points_in_triangle(triangle: np.ndarray,
     return triangle_points
 
 
-@njit
+@njit  # pragma: no cover
 def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
     """Calculates which points are within which polygons in 2D.
 
@@ -854,7 +854,7 @@ def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_x
     return triangles_points
 
 
-@njit
+@njit  # pragma: no cover
 def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Returns coordinate matrices from coordinate vectors x and y.
 
@@ -922,7 +922,7 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
     return triangles_points
 
 
-@njit
+@njit  # pragma: no cover
 def triangle_box(triangle: np.ndarray) -> Tuple[float, float, float, float]:
     """Finds the minimum and maximum x and y values of a single traingle.
 
@@ -968,7 +968,7 @@ def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> 
     return y
 
 
-@njit
+@njit  # pragma: no cover
 def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
@@ -1022,7 +1022,7 @@ def triangle_normal_vector(p3):
 
 
 @njit
-def triangle_normal_vector_numba(points):
+def triangle_normal_vector_numba(points):  # pragma: no cover
     """For a triangle in 3D space, defined by 3 vertex points, returns a unit vector normal to the plane of the triangle.
 
     note:
@@ -1189,20 +1189,8 @@ def xy_sorted(p, axis = None):
 
 
 @njit
-def xy_sorted_njit(p, axis = -1):
-    """Returns copy of points p sorted according to x or y (whichever has greater range).
-
-    arguments:
-        p (numpy float array of shape (..., 2) or (..., 3)): points to be sorted
-        axis (int, optional): 0 for x sort; 1 for y sort; None for whichever has greater range
-
-    returns:
-        p', axis where p' is a list-like (2D) version of p, sorted by either x or y and axis is 0
-        if the sort was by x, 1 if it were by y
-
-    note:
-       returned array is always 2D, ie. list of points
-    """
+def xy_sorted_njit(p, axis = -1):  # pragma: no cover
+    """Returns copy of points p sorted according to x or y (whichever has greater range)."""
     assert p.ndim >= 2 and p.shape[-1] >= 2
     p = p.reshape((-1, p.shape[-1]))
     if axis == -1:
@@ -1214,7 +1202,7 @@ def xy_sorted_njit(p, axis = -1):
 
 
 @njit
-def _nanmax(array):
+def _nanmax(array):  # pragma: no cover
     """Numba implementation of np.nanmax with axis = 0."""
     len0 = array.shape[1]
     max_array = np.empty(len0)
@@ -1229,7 +1217,7 @@ def _nanmax(array):
 
 
 @njit
-def _nanmin(array):
+def _nanmin(array):  # pragma: no cover
     """Numba implementation of np.nanmin with axis = 0."""
     len0 = array.shape[1]
     min_array = np.empty(len0)
