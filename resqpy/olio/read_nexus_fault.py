@@ -126,6 +126,9 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
                 ISRECORD = False
                 chunks = []
 
+    if not dfs:
+        return pd.DataFrame()
+
     fault_df = pd.concat(dfs).reset_index(drop = True)
 
     convert_dict = {'i1': int, 'i2': int, 'j1': int, 'j2': int, 'k1': int, 'k2': int, 'mult': float}
