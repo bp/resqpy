@@ -40,7 +40,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         progress_fn: Optional[Callable] = None,
         extra_metadata = None,
         return_properties: Optional[List[str]] = None,
-        raw_bisector: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
+        raw_bisector: bool = False,
+        use_pack: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     arguments:
@@ -81,6 +82,8 @@ def find_faces_to_represent_surface_regular_wrapper(
            the returned dictionary has the passed strings as keys and numpy arrays as values
         raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
            form without assessing which side is shallower (True values indicate same side as origin cell)
+        use_pack (bool, default False): if True, boolean properties will be stored in numpy packed format,
+           which will only be readable by resqpy based applications
 
     returns:
         Tuple containing:
@@ -351,13 +354,13 @@ def find_faces_to_represent_surface_regular_wrapper(
                 raise ValueError(f'unrecognised property name {p_name}')
         if property_collection.number_of_imports() > 0:
             # log.debug('writing gcs property hdf5 data')
-            property_collection.write_hdf5_for_imported_list()
+            property_collection.write_hdf5_for_imported_list(use_pack = use_pack)
             uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model(
                 find_local_property_kinds = True)
             uuid_list.extend(uuids_properties)
         if grid_pc is not None and grid_pc.number_of_imports() > 0:
             # log.debug('writing grid property (bisector) hdf5 data')
-            grid_pc.write_hdf5_for_imported_list()
+            grid_pc.write_hdf5_for_imported_list(use_pack = use_pack)
             # log.debug('creating xml for grid property (bisector)')
             uuids_properties = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(
                 find_local_property_kinds = True)
