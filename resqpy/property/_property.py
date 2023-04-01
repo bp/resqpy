@@ -336,6 +336,10 @@ class Property(BaseResqpy):
         """
         return self.collection.uom_for_part(self.part)
 
+    def realization(self):
+        """Returns int being the realization number of the property, or None."""
+        return self.collection.realization_for_part(self.part)
+
     def string_lookup_uuid(self):
         """Returns the uuid of the related string lookup table (for a categorical property, otherwise None)."""
         return self.collection.string_lookup_uuid_for_part(self.part)

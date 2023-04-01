@@ -21,8 +21,8 @@ def test_default_args(tmp_path):
                       ('IjkGridRepresentation', 1), ('LocalDepth3dCrs', 1), ('PropertyKind', 2), ('PropertySet', 7),
                       ('TimeSeries', 1)]
     pk_list_expected = [
-        'TNSC', 'cell length', 'code', 'depth', 'fluid volume', 'index', 'permeability thickness', 'pore volume',
-        'pressure', 'region initialization', 'rock volume', 'saturation', 'thickness', 'transmissibility'
+        'IGRID', 'TNSC', 'cell length', 'code', 'depth', 'fluid volume', 'index', 'permeability thickness',
+        'pore volume', 'pressure', 'rock volume', 'saturation', 'thickness', 'transmissibility'
     ]
     pc_titles_expected = {
         'MDEP', 'DEADCELL', 'SG', 'IGRID', 'OIP', 'SO', 'WIP', 'KID', 'GIP', 'DAD', 'DZN', 'TX', 'KH', 'SW', 'UID',
