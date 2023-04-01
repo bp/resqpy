@@ -552,3 +552,23 @@ def test_find_cell_for_point_xy(faulted_grid):
     assert j == 1 and i == 4
     j, i = pf.find_cell_for_point_xy(faulted_grid, 1530.0, 2370.0, k0 = 2, vertical_ref = 'base', local_coords = True)
     assert j == 3 and i == 5
+
+
+def test_find_cell_for_x_sect_xz(faulted_grid):
+    x_sect = pf.x_section_corner_points(faulted_grid,
+                                        axis = 'J',
+                                        ref_slice0 = 4,
+                                        plus_face = False,
+                                        masked = False,
+                                        rotate = False,
+                                        azimuth = None)
+    k, i = pf.find_cell_for_x_sect_xz(x_sect, 1150.0, 3045.0)
+    assert k == 2 and i == 1
+    x_sect = pf.x_section_corner_points(faulted_grid,
+                                        axis = 'I',
+                                        ref_slice0 = 7,
+                                        plus_face = False,
+                                        rotate = True,
+                                        azimuth = 0.0)
+    k, j = pf.find_cell_for_x_sect_xz(x_sect, 250.0, 3030.0)
+    assert k == 1 and j == 2
