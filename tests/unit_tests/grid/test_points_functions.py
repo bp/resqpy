@@ -406,7 +406,7 @@ def test_corner_points_cell_split_coordinate_lines(faulted_grid):
     np.testing.assert_array_almost_equal(corner_points, expected_corner_points)
 
 
-def test_centre_point_deafult(basic_regular_grid):
+def test_centre_point_default(basic_regular_grid):
     # Arrange
     expected_centre_points = np.array([[[[50.0, 25.0, 10.0], [150.0, 25.0, 10.0]],
                                         [[50.0, 75.0, 10.0], [150.0, 75.0, 10.0]]],
@@ -541,3 +541,34 @@ def test_split_horizons_points_s_bend_faulted_grid(s_bend_faulted_grid):
     np.testing.assert_array_almost_equal(split_horizons_points[4, 9, 30, 1, 1], np.array([4.415788, 80., 153.22144]))
     np.testing.assert_array_almost_equal(split_horizons_points[5, 0, 11, 0, 1], np.array([61.276311, 0., 119.895758]))
     np.testing.assert_array_almost_equal(split_horizons_points[3, 6, 44, 0, 0], np.array([12.382711, 48., 183.408551]))
+
+
+def test_find_cell_for_point_xy(faulted_grid):
+    j, i = pf.find_cell_for_point_xy(faulted_grid, 1150.0, 2450.0, k0 = 2, vertical_ref = 'top', local_coords = True)
+    assert j == 4 and i == 1
+    j, i = pf.find_cell_for_point_xy(faulted_grid, 1750.0, 2250.0, k0 = 0, vertical_ref = 'base', local_coords = True)
+    assert j == 2 and i == 7
+    j, i = pf.find_cell_for_point_xy(faulted_grid, 1460.0, 2140.0, k0 = 1, vertical_ref = 'top', local_coords = True)
+    assert j == 1 and i == 4
+    j, i = pf.find_cell_for_point_xy(faulted_grid, 1530.0, 2370.0, k0 = 2, vertical_ref = 'base', local_coords = True)
+    assert j == 3 and i == 5
+
+
+def test_find_cell_for_x_sect_xz(faulted_grid):
+    x_sect = pf.x_section_corner_points(faulted_grid,
+                                        axis = 'J',
+                                        ref_slice0 = 4,
+                                        plus_face = False,
+                                        masked = False,
+                                        rotate = False,
+                                        azimuth = None)
+    k, i = pf.find_cell_for_x_sect_xz(x_sect, 1150.0, 3045.0)
+    assert k == 2 and i == 1
+    x_sect = pf.x_section_corner_points(faulted_grid,
+                                        axis = 'I',
+                                        ref_slice0 = 7,
+                                        plus_face = False,
+                                        rotate = True,
+                                        azimuth = 0.0)
+    k, j = pf.find_cell_for_x_sect_xz(x_sect, 250.0, 3030.0)
+    assert k == 1 and j == 2

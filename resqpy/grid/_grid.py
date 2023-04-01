@@ -1673,7 +1673,7 @@ class Grid(BaseResqpy):
            horizon_points (numpy array, optional): if present, should be array as returned by
               horizon_points() method; pass for efficiency in case of multiple calls
         """
-        return pillar_distances_sqr(self, xy, ref_k0 = ref_k0, kp = ref_k0, horizon_points = horizon_points)
+        return pillar_distances_sqr(self, xy, ref_k0 = ref_k0, kp = kp, horizon_points = horizon_points)
 
     def nearest_pillar(self, xy, ref_k0 = 0, kp = 0):
         """Returns the (j0, i0) indices of the primary pillar with point closest in x,y plane to point xy."""
