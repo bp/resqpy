@@ -286,12 +286,19 @@ def test_property_extra_metadata(tmp_path):
     # add a grid property with some extra metadata
     a = np.arange(24).astype(float).reshape((2, 3, 4))
     em = {'important': 'something', 'also': 'nothing'}
-    uuid = rqdm.add_one_grid_property_array(epc, a, 'length', title = 'nonsense', uom = 'm', extra_metadata = em)
+    uuid = rqdm.add_one_grid_property_array(epc,
+                                            a,
+                                            'length',
+                                            title = 'nonsense',
+                                            uom = 'm',
+                                            realization = 7,
+                                            extra_metadata = em)
     # re-open the model and check that extra metadata has been preserved
     model = rq.Model(epc)
     p = rqp.Property(model, uuid = uuid)
     for item in em.items():
         assert item in p.extra_metadata.items()
+    assert p.realization() == 7
 
 
 def test_points_properties(tmp_path):
