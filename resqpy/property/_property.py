@@ -125,7 +125,9 @@ class Property(BaseResqpy):
                    expand_const_arrays = False,
                    dtype = None,
                    use_pack = False,
-                   extra_metadata = {}):
+                   extra_metadata = {},
+                   chunks = None,
+                   compression = None):
         """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
 
         arguments:
@@ -172,6 +174,9 @@ class Property(BaseResqpy):
            use_pack (bool, default False): if True, a bool array will be packed along its last axis; this
               will generally result in hdf5 data that is not readable by non-resqpy applications
            extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
+           chunks (str, optional): if not None, one of 'auto', 'all', or 'slice', controlling hdf5 chunks
+           compression (str, optional): if not None, one of 'gzip' or 'lzf' being the hdf5 compression
+              algorithm to be used; gzip gives better compression ratio but is slower
 
         returns:
            new Property object built from numpy array; the hdf5 data has been written, xml created and the part
@@ -216,7 +221,11 @@ class Property(BaseResqpy):
                             count = count,
                             points = points,
                             const_value = const_value)
-        prop.write_hdf5(expand_const_arrays = expand_const_arrays, dtype = dtype, use_pack = use_pack)
+        prop.write_hdf5(expand_const_arrays = expand_const_arrays,
+                        dtype = dtype,
+                        use_pack = use_pack,
+                        chunks = chunks,
+                        compression = compression)
         prop.create_xml(support_uuid = support_uuid,
                         time_series_uuid = time_series_uuid,
                         string_lookup_uuid = string_lookup_uuid,
@@ -393,7 +402,14 @@ class Property(BaseResqpy):
                                                           const_value = const_value,
                                                           points = points)
 
-    def write_hdf5(self, file_name = None, mode = 'a', expand_const_arrays = False, dtype = None, use_pack = False):
+    def write_hdf5(self,
+                   file_name = None,
+                   mode = 'a',
+                   expand_const_arrays = False,
+                   dtype = None,
+                   use_pack = False,
+                   chunks = None,
+                   compression = None):
         """Writes the array data to the hdf5 file; not usually called directly.
 
         arguments:
@@ -405,6 +421,9 @@ class Property(BaseResqpy):
            dtype (numpy dtype, optional): if present, the elemental data type to use when writing the array to hdf5
            use_pack (bool, default False): if True, a bool array will be packed along its last axis; this
               will generally result in hdf5 data that is not readable by non-resqpy applications
+           chunks (str, optional): if not None, one of 'auto', 'all', or 'slice', controlling hdf5 chunks
+           compression (str, optional): if not None, one of 'gzip' or 'lzf' being the hdf5 compression
+              algorithm to be used; gzip gives better compression ratio but is slower
 
         notes:
            see the documentation for the convenience method from_array()
@@ -418,7 +437,9 @@ class Property(BaseResqpy):
                                                      mode = mode,
                                                      expand_const_arrays = expand_const_arrays,
                                                      dtype = dtype,
-                                                     use_pack = use_pack)
+                                                     use_pack = use_pack,
+                                                     chunks = chunks,
+                                                     compression = compression)
 
     def create_xml(self,
                    ext_uuid = None,
