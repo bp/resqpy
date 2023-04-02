@@ -2,6 +2,7 @@ import pytest
 import os
 import numpy as np
 import h5py
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.grid as grr
 import resqpy.model as rq
@@ -81,3 +82,33 @@ def test_use_int32(tmp_path):
             assert b.dtype is np.int64 or str(b.dtype) in ['int', 'int64']
         else:  # covers both True option and None, as built in default is 32 bit for ints
             assert b.dtype is np.int32 or str(b.dtype).endswith('int32')
+
+
+def test_global_chunks_and_compression(tmp_path):
+    extent_kji = (100, 100, 100)
+    a = np.random.random(extent_kji)
+
+    for compression in ['lzf', 'gzip']:
+        for chunks in ['auto', 'all', 'slice']:
+
+            epc = os.path.join(tmp_path, f'h5_{chunks}_{compression}.epc')
+            model = rq.new_model(epc)
+            uuid = bu.new_uuid()
+
+            rqwh.set_global_default_chunks_and_compression(chunks, compression)
+
+            h5_reg = rqwh.H5Register(model)
+            h5_reg.register_dataset(uuid, 'tail', a, dtype = None, hdf5_internal_path = None, copy = False)
+            h5_reg.write(release_after = True)
+
+            # read the array from hdf5
+            h5_root = model.h5_access()
+            internal_path = '/RESQML/' + str(uuid) + '/tail'
+            bh5 = h5_root[internal_path]
+            assert bh5 is not None
+            b = np.array(bh5)
+            model.h5_release()
+            del model
+
+            assert b.shape == a.shape
+            assert_array_almost_equal(b, a)

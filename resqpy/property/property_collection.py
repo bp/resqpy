@@ -2295,7 +2295,9 @@ class PropertyCollection():
                                      expand_const_arrays = False,
                                      dtype = None,
                                      use_int32 = None,
-                                     use_pack = False):
+                                     use_pack = False,
+                                     chunks = None,
+                                     compression = None):
         """Create or append to an hdf5 file, writing datasets for the imported arrays.
 
         arguments:
@@ -2312,13 +2314,18 @@ class PropertyCollection():
               False, 64 bit data is written; ignored if dtype is not None
            use_pack (bool, default False): if True, bool arrays will be packed along their last axis; this
               will generally result in hdf5 data that is not readable by non-resqpy applications
+           chunks (str, optional): if not None, one of 'auto', 'all', or 'slice', controlling hdf5 chunks
+           compression (str, optional): if not None, one of 'gzip' or 'lzf' being the hdf5 compression
+              algorithm to be used; gzip gives better compression ratio but is slower
 
         :meta common:
         """
 
         # NB: imported array data must all have been cached prior to calling this function
         assert self.imported_list is not None
-        h5_reg = rwh5.H5Register(self.model)
+        assert chunks is None or (isinstance(chunks, str) and chunks in ['auto', 'all', 'slice'])
+        assert compression is None or (isinstance(compression, str) and compression in ['gzip', 'lzf'])
+        h5_reg = rwh5.H5Register(self.model, default_chunks = chunks, default_compression = compression)
         for ei, entry in enumerate(self.imported_list):
             if entry[17] is not None:  # array has constant value
                 if not expand_const_arrays:
@@ -2340,12 +2347,20 @@ class PropertyCollection():
             h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
         h5_reg.write(file = file_name, mode = mode, use_int32 = use_int32)
 
-    def write_hdf5_for_part(self, part, file_name = None, mode = 'a', use_pack = False):
+    def write_hdf5_for_part(self,
+                            part,
+                            file_name = None,
+                            mode = 'a',
+                            use_pack = False,
+                            chunks = None,
+                            compression = None):
         """Create or append to an hdf5 file, writing dataset for the specified part."""
 
+        assert chunks is None or (isinstance(chunks, str) and chunks in ['auto', 'all', 'slice'])
+        assert compression is None or (isinstance(compression, str) and compression in ['gzip', 'lzf'])
         if self.constant_value_for_part(part) is not None:
             return
-        h5_reg = rwh5.H5Register(self.model)
+        h5_reg = rwh5.H5Register(self.model, default_chunks = chunks, default_compression = compression)
         a = self.cached_part_array_ref(part)
         tail = 'points_patch0' if self.points_for_part(part) else 'values_patch0'
         dtype = None
