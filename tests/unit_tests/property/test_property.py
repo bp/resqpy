@@ -1662,6 +1662,41 @@ def test_indexable_list(example_model_with_properties):
     assert element == ['cells']
 
 
+def test_indexable_i0_j0(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    pc = grid.extract_property_collection()
+    nknj = grid.nk * grid.nj
+    nkni = grid.nk * grid.ni
+    a = np.arange(nknj, dtype = int).reshape((grid.nk, grid.nj))
+    b = np.arange(nkni, dtype = int).reshape((grid.nk, grid.ni))
+
+    # Act
+    pc.add_cached_array_to_imported_list(a,
+                                         source_info = 'test',
+                                         keyword = 'kj a',
+                                         discrete = True,
+                                         indexable_element = 'I0')
+    pc.add_cached_array_to_imported_list(b,
+                                         source_info = 'test',
+                                         keyword = 'ki a',
+                                         discrete = True,
+                                         indexable_element = 'J0')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    pc = grid.extract_property_collection()
+    a_reload = pc.single_array_ref(indexable = 'I0')
+    b_reload = pc.single_array_ref(indexable = 'J0')
+
+    # Assert
+    assert np.all(a_reload == a)
+    assert np.all(b_reload == b)
+
+
 def test_facet_type_list(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
