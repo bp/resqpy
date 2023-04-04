@@ -423,6 +423,10 @@ def _supporting_shape_grid(support, indexable_element, direction):
         shape_list = [support.nk, support.nj, support.ni, 2, 2, 2]
     elif indexable_element == 'nodes':
         shape_list = _supporting_shape_grid_nodes(support)
+    elif indexable_element == 'J0':
+        shape_list = [support.nk, support.ni]
+    elif indexable_element == 'I0':
+        shape_list = [support.nk, support.nj]
     return shape_list
 
 
