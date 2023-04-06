@@ -162,7 +162,7 @@ def _create_xml_uom_node(collection, p_node, uom, property_kind, min_value, max_
         collection.model.uom_node(p_node, uom)
     else:
         collection.model.uom_node(p_node, 'Euc')
-        rqet.create_metadata_xml(p_node, {'uom': uom})
+        rqet.create_metadata_xml(p_node, {'Uom': uom})
 
 
 def _create_xml_add_relationships(collection, p_node, support_root, property_kind_uuid, related_time_series_node,
