@@ -38,10 +38,10 @@ class PropertyCollection():
         """Initialise an empty Property Collection, optionally populate properties from a supporting representation.
 
         arguments:
-           support (optional): a grid.Grid object or a well.WellboreFrame object which belongs to a resqpy.Model which includes
-              associated properties; if this argument is given, and property_set_root is None, the properties in the support's
-              parent model which are for this representation (ie. have this grid or wellbore frame as the supporting representation)
-              are added to this collection as part of the initialisation
+           support (optional): a grid.Grid object, or a well.BlockedWell, or a well.WellboreFrame object which belongs to a
+              resqpy.Model which includes associated properties; if this argument is given, and property_set_root is None,
+              the properties in the support's parent model which are for this representation (ie. have this object as the
+              supporting representation) are added to this collection as part of the initialisation
            property_set_root (optional): if present, the collection is populated with the properties defined in the xml tree
               of the property set
            realization (integer, optional): if present, the single realisation (within an ensemble) that this collection is for;

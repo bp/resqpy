@@ -109,9 +109,15 @@ def _add_part_to_dict_get_uom(collection, part, continuous, xml_node, trust_uom,
     uom = None
     if continuous and not points:
         uom_node = rqet.find_tag(xml_node, 'UOM')
-        if uom_node is not None and (trust_uom or uom_node.text not in ['', 'Euc']):
-            uom = uom_node.text
-        else:
+        if uom_node is not None:
+            if uom_node.text == 'Euc':
+                em = rqet.load_metadata_from_xml(collection.model.root_for_part(part))
+                uom = em.get('Uom')
+                if uom is None and trust_uom:
+                    uom = 'Euc'
+            elif trust_uom or uom_node.text != '':
+                uom = uom_node.text
+        if uom is None:
             if not collection.guess_warning:
                 collection.guess_warning = True
                 log.warning("Guessing unit of measure for one or more properties")
