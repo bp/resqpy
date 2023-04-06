@@ -290,9 +290,10 @@ def test_property_extra_metadata(tmp_path):
                                             a,
                                             'length',
                                             title = 'nonsense',
-                                            uom = 'm',
+                                            uom = 'how long is a piece of string',
                                             realization = 7,
                                             extra_metadata = em)
+    em['Uom'] = 'how long is a piece of string'
     # re-open the model and check that extra metadata has been preserved
     model = rq.Model(epc)
     p = rqp.Property(model, uuid = uuid)
