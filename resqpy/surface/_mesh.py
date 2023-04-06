@@ -193,7 +193,7 @@ class Mesh(rqsb.BaseSurface):
         if em is None:
             em = {}
         if em_uom is not None:
-            em['uom'] = em_uom
+            em['Uom'] = em_uom
         mesh = cls(parent_model,
                    mesh_flavour = 'reg&z',
                    nj = grid.nj,

@@ -478,7 +478,7 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
                                          count = 1,
                                          indexable_element = 'faces per cell')
     pc.write_hdf5_for_imported_list()
-    pc.create_xml_for_imported_list_and_add_parts_to_model(extra_metadata = {'uom': 'm3.cP/(d.kPa)'})
+    pc.create_xml_for_imported_list_and_add_parts_to_model(extra_metadata = {'Uom': 'm3.cP/(d.kPa)'})
 
     model.store_epc()
 
