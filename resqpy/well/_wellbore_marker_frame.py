@@ -67,6 +67,7 @@ class WellboreMarkerFrame(BaseResqpy):
         self.node_count = None
         self.node_mds = None
         self.marker_list = None
+        self.trajectory = None
 
         super().__init__(model = parent_model,
                          uuid = uuid,

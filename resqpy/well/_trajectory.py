@@ -582,9 +582,7 @@ class Trajectory(BaseResqpy):
         df.to_csv(trajectory_file, sep = sep, index = False, mode = mode)
 
     def xyz_for_md(self, md):
-        """Returns an xyz triplet corresponding to the given measured depth; uses simple linear interpolation between
-
-        knots.
+        """Returns xyz corresponding to the given measured depth; uses simple linear interpolation between knots.
 
         args:
            md (float): measured depth for which xyz location is required; units must be those of self.md_uom
