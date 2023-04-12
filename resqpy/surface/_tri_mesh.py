@@ -200,8 +200,8 @@ class TriMesh(rqs.Mesh):
             base edge towards point 2; f1 is component towards point 1; f0 is component towards point 0;
             the trilinear coordinates sum to one and can be used as weights to interpolate z values at points
         """
-        x = xy_array[..., 0]
-        y = xy_array[..., 1]
+        x = xy_array[..., 0].copy()
+        y = xy_array[..., 1].copy()
         if self.origin is not None:
             x -= self.origin[0]
             y -= self.origin[1]
