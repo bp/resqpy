@@ -219,7 +219,12 @@ class PointSet(rqsb.BaseSurface):
             self.title = polyset.title
 
     def check_crs_match(self, crs_uuid):
-        """Checks if the model crs_uuid matches a given crs_uuid. If the current model crs_uuid is None, the new crs_uuid is used as the model crs_uuid. If a mismatch is found an assertion error is raised."""
+        """Checks if the point set's crs_uuid matches a given crs_uuid.
+
+        notes:
+            if the current model crs_uuid is None, the new crs_uuid is used as the model crs_uuid;
+            if a mismatch is found an assertion error is raised
+        """
         if self.crs_uuid is None:
             self.crs_uuid = crs_uuid
         else:
