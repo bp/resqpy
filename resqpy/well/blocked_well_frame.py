@@ -123,7 +123,7 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
     # 'well connection open' is a dynamic indicator used to identify time periods when a connection is open
     handled_property_kinds = [
         'active', 'well connection open', 'length', 'permeability length', 'skin', 'wellbore radius',
-        'non darcy flow coefficient'
+        'nonDarcy flow coefficient'
     ]
 
     def pk_pc_and_ts(pc, pk):
@@ -375,7 +375,7 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
                                                     realization = realization,
                                                     indexable_element = 'cells')
 
-    # TODO: non darcy flow coefficient
+    # TODO: non Darcy flow coefficient
     # D factor is complicated: it appears in the inflow equation as a rate dependent adjustment to skin
 
     wb_pc.write_hdf5_for_imported_list()
