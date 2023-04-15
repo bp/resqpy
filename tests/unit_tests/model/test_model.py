@@ -618,6 +618,10 @@ def test_catalogue_functions(example_model_and_crs):
     assert part is not None
     title = model.title(obj_type = 'IjkGridRepresentation', metadata = {'Nj': 4, 'Ni': '4'})
     assert title == 'GRID C'
+    # check parts count dictionary
+    pcbt_dict = model.parts_count_dict()
+    assert pcbt_dict['IjkGridRepresentation'] == 3
+    assert pcbt_dict['ContinuousProperty'] == 15
     # check exception is raised when multiple parts match criteria
     with pytest.raises(ValueError) as excinfo:
         part = model.part(obj_type = 'IjkGridRepresentation')
