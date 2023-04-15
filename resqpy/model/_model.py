@@ -792,6 +792,17 @@ class Model():
 
         return m_c._parts_count_by_type(self, type_of_interest = type_of_interest)
 
+    def parts_count_dict(self):
+        """Returns a dictionary mapping from RESQML object type to count of parts.
+
+        returns:
+           dict mapping string to int with key being RESQML class and value being count of number of parts
+
+        note:
+           only RESQML classes with at least one object present in the model will be included in the dictionary
+        """
+        return dict(self.parts_count_by_type())
+
     def parts_list_filtered_by_related_uuid(self, parts_list, uuid, uuid_is_source = None, related_mode = None):
         """From a list of parts, returns a list of those parts which have a relationship with the given uuid.
 

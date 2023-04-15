@@ -1764,7 +1764,7 @@ class BlockedWell(BaseResqpy):
         # 'well connection open' is a dynamic indicator used to identify time periods when a connection is open
         # handled_property_kinds = [
         #     'active', 'well connection open', 'length', 'permeability length', 'skin', 'wellbore radius',
-        #     'non darcy flow coefficient']
+        #     'nonDarcy flow coefficient']
 
         return bwf.add_blocked_well_properties_from_wellbore_frame(self,
                                                                    frame_uuid = frame_uuid,
