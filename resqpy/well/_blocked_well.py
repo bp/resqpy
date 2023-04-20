@@ -1299,8 +1299,9 @@ class BlockedWell(BaseResqpy):
            k_col (string, default 'L'): the column name to use for cell K index values
            one_based (boolean, default True): if True, simulator protocol i, j & k values are placed in I, J & K columns;
               if False, resqml zero based values; this does not affect the interpretation of min_k0 & max_k0 arguments
-           extra_columns_list (list of string, optional): list of WELLSPEC column names to include in the dataframe, from currently
-              recognised values: 'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'RADW', 'SKIN', 'PPERF', 'RADB', 'WI', 'WBC'
+           extra_columns_list (list of string, optional): list of WELLSPEC column names to include in the dataframe,
+              from currently recognised values: 'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y',
+              'RADW', 'SKIN', 'PPERF', 'RADB', 'WI', 'WBC'
            ntg_uuid (uuid.UUID, optional): the uuid of the net to gross ratio property; if present is used to downgrade the i & j
               permeabilities in the calculation of KH; ignored if 'KH' not in the extra column list and min_kh is not specified;
               the argument may also be a dictionary mapping from grid uuid to ntg uuid; if no net to gross data is provided, it
@@ -1322,7 +1323,7 @@ class BlockedWell(BaseResqpy):
            region_uuid (uuid.UUID, optional): the uuid of a discrete or categorical property, required if region_list is not None;
               may also be a dictionary mapping from grid uuid to region uuid; ignored if region_list is None
            radw (float, optional): if present, the wellbore radius used for all perforations; must be in correct units for intended
-              use of the WELLSPEC style dataframe; will default to 0.25 if 'RADW' is included in the extra column list
+              use of the WELLSPEC style dataframe; will default to 0.33 ft or 0.1 m if 'RADW' is included in the extra column list
            skin (float, optional): if present, a skin column is included with values set to this constant
            stat (string, optional): if present, should be 'ON' or 'OFF' and is used for all perforations; will default to 'ON' if
               'STAT' is included in the extra column list
@@ -1427,14 +1428,15 @@ class BlockedWell(BaseResqpy):
                 pc = pc_timeless
         pc_titles = [] if pc is None else pc.titles()
 
-        column_list, add_as_properties, use_properties, skin, stat, radw = BlockedWell.__verify_extra_properties_to_be_added_to_dataframe(
-            extra_columns_list = extra_columns_list,
-            column_list = column_list,
-            add_as_properties = add_as_properties,
-            use_properties = use_properties,
-            skin = skin,
-            stat = stat,
-            radw = radw)
+        column_list, add_as_properties, use_properties, skin, stat, radw =  \
+            BlockedWell.__verify_extra_properties_to_be_added_to_dataframe(
+                extra_columns_list = extra_columns_list,
+                column_list = column_list,
+                add_as_properties = add_as_properties,
+                use_properties = use_properties,
+                skin = skin,
+                stat = stat,
+                radw = radw)
 
         max_satw, min_sato, max_satg = BlockedWell.__verify_saturation_ranges_and_property_uuids(
             max_satw, min_sato, max_satg, satw_uuid, sato_uuid, satg_uuid)
@@ -1609,13 +1611,17 @@ class BlockedWell(BaseResqpy):
             if skip_interval_due_to_min_kh:
                 continue
 
-            length, radw, skin, radb, wi, wbc = BlockedWell.__get_pc_arrays_for_interval(pc = pc,
-                                                                                         pc_timeless = pc_timeless,
-                                                                                         pc_titles = pc_titles,
-                                                                                         ci = ci,
-                                                                                         length = length,
-                                                                                         radw = radw,
-                                                                                         skin = skin)
+            length, radw_i, skin_i, radb, wi, wbc = BlockedWell.__get_pc_arrays_for_interval(pc = pc,
+                                                                                             pc_timeless = pc_timeless,
+                                                                                             pc_titles = pc_titles,
+                                                                                             ci = ci,
+                                                                                             length = length,
+                                                                                             radw = radw,
+                                                                                             skin = skin)
+            if skin_i is None:
+                skin_i = 0.0
+            if radw_i is None:
+                radw_i = (0.33 if length_uom == 'ft' else 0.1)
 
             radb, wi, wbc = BlockedWell.__get_well_inflow_parameters_for_interval(do_well_inflow = do_well_inflow,
                                                                                   isotropic_perm = isotropic_perm,
@@ -1629,11 +1635,11 @@ class BlockedWell(BaseResqpy):
                                                                                   cosine_angla = cosine_angla,
                                                                                   grid = grid,
                                                                                   cell_kji0 = cell_kji0,
-                                                                                  radw = radw,
+                                                                                  radw = radw_i,
                                                                                   radb = radb,
                                                                                   wi = wi,
                                                                                   wbc = wbc,
-                                                                                  skin = skin,
+                                                                                  skin = skin_i,
                                                                                   kh = kh,
                                                                                   length_uom = length_uom,
                                                                                   column_list = column_list)
@@ -1660,8 +1666,8 @@ class BlockedWell(BaseResqpy):
 
             df = BlockedWell.__append_interval_data_to_dataframe(df = df,
                                                                  grid_name = grid_name,
-                                                                 radw = radw,
-                                                                 skin = skin,
+                                                                 radw = radw_i,
+                                                                 skin = skin_i,
                                                                  angla = angla,
                                                                  anglv = anglv,
                                                                  length = length,
@@ -1924,8 +1930,6 @@ class BlockedWell(BaseResqpy):
 
         if skin is not None and 'SKIN' not in column_list:
             column_list.append('SKIN')
-        if skin is None:
-            skin = 0.0
 
         if stat is not None:
             assert str(stat).upper() in ['ON', 'OFF']
@@ -1937,8 +1941,6 @@ class BlockedWell(BaseResqpy):
 
         if radw is not None and 'RADW' not in column_list:
             column_list.append('RADW')
-        if radw is None:
-            radw = 0.25
 
         return column_list, skin, stat, radw
 
@@ -2407,8 +2409,10 @@ class BlockedWell(BaseResqpy):
             log.debug('no timeless data for blocked well properties')
         length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci)
         radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci)
-        assert radw > 0.0  # todo: allow zero for inactive intervals?
+        assert radw is None or radw > 0.0  # todo: allow zero for inactive intervals?
         skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci)
+        if skin is None:
+            skin = get_item(None, 'skin', pc_titles, pc, pc_timeless, ci)
         radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci)
         if radb is None:
             radb = get_item(None, 'block equivalent radius', pc_titles, pc, pc_timeless, ci)

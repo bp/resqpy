@@ -807,7 +807,7 @@ def test_dataframe_from_trajectory(example_model_and_crs):
 
     # --------- Assert ----------
     assert bw.trajectory is not None
-    assert set(df['RADW']) == {0.25}
+    assert set(df['RADW']) == {0.33}
     assert set(df['STAT']) == {'ON'}
     assert all(df['X']) == all(df['Y']) == all(df['DEPTH'])  # successfully got xyz points from trajectory and
     # converted them to ft
