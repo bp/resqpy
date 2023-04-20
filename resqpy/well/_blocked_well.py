@@ -1411,6 +1411,22 @@ class BlockedWell(BaseResqpy):
         anglv_ref, angla_plane_ref = BlockedWell.__verify_angle_references(anglv_ref, angla_plane_ref)
         column_list = [i_col, j_col, k_col]
 
+        pc = None
+        pc_timeless = None
+        if use_properties:
+            pc = rqp.PropertyCollection(support = self)
+            pc_timeless = rqp.selective_version_of_collection(pc, time_series_uuid = 'none')
+            if pc_timeless is None or pc_timeless.number_of_parts() == 0:
+                pc_timeless = None
+            if property_time_index is not None:
+                property_time_index = int(property_time_index)
+                pc = rqp.selective_version_of_collection(pc, time_index = property_time_index)
+            if pc is None or pc.number_of_parts() == 0:
+                log.error(
+                    f'no blocked well properties found for time index {property_time_index} for well {self.title}')
+                pc = pc_timeless
+        pc_titles = [] if pc is None else pc.titles()
+
         column_list, add_as_properties, use_properties, skin, stat, radw = BlockedWell.__verify_extra_properties_to_be_added_to_dataframe(
             extra_columns_list = extra_columns_list,
             column_list = column_list,
@@ -1419,17 +1435,6 @@ class BlockedWell(BaseResqpy):
             skin = skin,
             stat = stat,
             radw = radw)
-
-        pc = None
-        if use_properties:
-            pc = rqp.PropertyCollection(support = self)
-            if property_time_index is not None:
-                pc = rqp.selective_version_of_collection(pc, time_index = property_time_index)
-            if pc is None or pc.number_of_parts() == 0:
-                log.error(
-                    f'no blocked well properties found for time index {property_time_index} for well {self.title}')
-                pc = None
-        pc_titles = [] if pc is None else pc.titles()
 
         max_satw, min_sato, max_satg = BlockedWell.__verify_saturation_ranges_and_property_uuids(
             max_satw, min_sato, max_satg, satw_uuid, sato_uuid, satg_uuid)
@@ -1605,6 +1610,7 @@ class BlockedWell(BaseResqpy):
                 continue
 
             length, radw, skin, radb, wi, wbc = BlockedWell.__get_pc_arrays_for_interval(pc = pc,
+                                                                                         pc_timeless = pc_timeless,
                                                                                          pc_titles = pc_titles,
                                                                                          ci = ci,
                                                                                          length = length,
@@ -2374,23 +2380,25 @@ class BlockedWell(BaseResqpy):
         return kh
 
     @staticmethod
-    def __get_pc_arrays_for_interval(pc, pc_titles, ci, length, radw, skin):
+    def __get_pc_arrays_for_interval(pc, pc_timeless, pc_titles, ci, length, radw, skin):
         """Get the property collection arrays for the interval."""
 
-        if 'LENGTH' in pc_titles:
-            length = pc.single_array_ref(citation_title = 'LENGTH')[ci]
-        if 'RADW' in pc_titles:
-            radw = pc.single_array_ref(citation_title = 'RADW')[ci]
+        def get_item(v, title, pc_titles, pc, pc_timeless, ci):
+            if title in pc_titles:
+                v = pc.single_array_ref(citation_title = title)[ci]
+            elif pc_timeless is not None:
+                a = pc_timeless.single_array_ref(citation_title = title)
+                if a is not None:
+                    v = a[ci]
+            return v
+
+        length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci)
+        radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci)
         assert radw > 0.0  # todo: allow zero for inactive intervals?
-        if 'SKIN' in pc_titles:
-            skin = pc.single_array_ref(citation_title = 'SKIN')[ci]
-        radb = wi = wbc = None
-        if 'RADB' in pc_titles:
-            radb = pc.single_array_ref(citation_title = 'RADB')[ci]
-        if 'WI' in pc_titles:
-            wi = pc.single_array_ref(citation_title = 'WI')[ci]
-        if 'WBC' in pc_titles:
-            wbc = pc.single_array_ref(citation_title = 'WBC')[ci]
+        skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci)
+        radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci)
+        wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci)
+        wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci)
 
         return length, radw, skin, radb, wi, wbc
 
