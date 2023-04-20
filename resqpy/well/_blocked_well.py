@@ -2401,11 +2401,17 @@ class BlockedWell(BaseResqpy):
                     v = a[ci]
             return v
 
+        if pc_timeless is not None:
+            log.debug(f'timeless BlockedWell property titles: {pc_timeless.titles()}')
+        else:
+            log.debug('no timeless data for blocked well properties')
         length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci)
         radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci)
         assert radw > 0.0  # todo: allow zero for inactive intervals?
         skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci)
         radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci)
+        if radb is None:
+            radb = get_item(None, 'block equivalent radius', pc_titles, pc, pc_timeless, ci)
         wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci)
         wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci)
         log.debug(f'RADB from blocked well property: {radb}')
