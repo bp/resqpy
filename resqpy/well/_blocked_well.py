@@ -2384,10 +2384,19 @@ class BlockedWell(BaseResqpy):
         """Get the property collection arrays for the interval."""
 
         def get_item(v, title, pc_titles, pc, pc_timeless, ci):
+
+            def pk_for_title(title):
+                d = {'RADW': 'wellbore radius', 'RADB': 'block equivalent radius', 'SKIN': 'skin'}
+                return d.get(title)
+
             if title in pc_titles:
                 v = pc.single_array_ref(citation_title = title)[ci]
             elif pc_timeless is not None:
                 a = pc_timeless.single_array_ref(citation_title = title)
+                if a is None:
+                    pk = pk_for_title(title)
+                    if pk is not None:
+                        a = pc_timeless.single_array_ref(property_kind = pk)
                 if a is not None:
                     v = a[ci]
             return v
