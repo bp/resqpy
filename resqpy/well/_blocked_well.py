@@ -2408,6 +2408,7 @@ class BlockedWell(BaseResqpy):
         radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci)
         wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci)
         wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci)
+        log.debug(f'RADB from blocked well property: {radb}')
 
         return length, radw, skin, radb, wi, wbc
 
@@ -2436,20 +2437,20 @@ class BlockedWell(BaseResqpy):
             d2 = np.empty(3)
             for axis in range(3):
                 d2[axis] = np.sum(cell_axial_vectors[axis] * cell_axial_vectors[axis])
-            radb_e = BlockedWell.__calculate_radb_e(k_ei = k_ei,
-                                                    k_ej = k_ej,
-                                                    k_ek = k_ek,
-                                                    k_i = k_i,
-                                                    k_j = k_j,
-                                                    k_k = k_k,
-                                                    d2 = d2,
-                                                    sine_anglv = sine_anglv,
-                                                    cosine_anglv = cosine_anglv,
-                                                    sine_angla = sine_angla,
-                                                    cosine_angla = cosine_angla)
-
             if radb is None:
+                radb_e = BlockedWell.__calculate_radb_e(k_ei = k_ei,
+                                                        k_ej = k_ej,
+                                                        k_ek = k_ek,
+                                                        k_i = k_i,
+                                                        k_j = k_j,
+                                                        k_k = k_k,
+                                                        d2 = d2,
+                                                        sine_anglv = sine_anglv,
+                                                        cosine_anglv = cosine_anglv,
+                                                        sine_angla = sine_angla,
+                                                        cosine_angla = cosine_angla)
                 radb = radw * radb_e / radw_e
+                log.debug(f'RADB value calculated in BlockedWell dataframe method as: {radb}')
             if wi is None:
                 wi = 0.0 if radb <= 0.0 else 2.0 * maths.pi / (maths.log(radb / radw) + skin)
             if 'WBC' in column_list and wbc is None:
