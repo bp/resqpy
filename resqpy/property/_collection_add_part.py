@@ -141,7 +141,14 @@ def _check_not_none_and_not_equals(attrib, method, part):
 
 
 def _check_not_none_and_not_uuid_match(uuid, method, part):
-    return uuid is not None and not bu.matching_uuids(uuid, method(part))
+    if uuid is None:
+        return False
+    if isinstance(uuid, str):
+        if uuid == '*':
+            return method(part) is None
+        elif uuid == 'none':
+            return method(part) is not None
+    return not bu.matching_uuids(uuid, method(part))
 
 
 def _check_citation_title(citation_title, citation_title_match_mode, other, part):

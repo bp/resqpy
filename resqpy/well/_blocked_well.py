@@ -1299,8 +1299,9 @@ class BlockedWell(BaseResqpy):
            k_col (string, default 'L'): the column name to use for cell K index values
            one_based (boolean, default True): if True, simulator protocol i, j & k values are placed in I, J & K columns;
               if False, resqml zero based values; this does not affect the interpretation of min_k0 & max_k0 arguments
-           extra_columns_list (list of string, optional): list of WELLSPEC column names to include in the dataframe, from currently
-              recognised values: 'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'RADW', 'SKIN', 'PPERF', 'RADB', 'WI', 'WBC'
+           extra_columns_list (list of string, optional): list of WELLSPEC column names to include in the dataframe,
+              from currently recognised values: 'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y',
+              'RADW', 'SKIN', 'PPERF', 'RADB', 'WI', 'WBC'
            ntg_uuid (uuid.UUID, optional): the uuid of the net to gross ratio property; if present is used to downgrade the i & j
               permeabilities in the calculation of KH; ignored if 'KH' not in the extra column list and min_kh is not specified;
               the argument may also be a dictionary mapping from grid uuid to ntg uuid; if no net to gross data is provided, it
@@ -1322,7 +1323,7 @@ class BlockedWell(BaseResqpy):
            region_uuid (uuid.UUID, optional): the uuid of a discrete or categorical property, required if region_list is not None;
               may also be a dictionary mapping from grid uuid to region uuid; ignored if region_list is None
            radw (float, optional): if present, the wellbore radius used for all perforations; must be in correct units for intended
-              use of the WELLSPEC style dataframe; will default to 0.25 if 'RADW' is included in the extra column list
+              use of the WELLSPEC style dataframe; will default to 0.33 ft or 0.1 m if 'RADW' is included in the extra column list
            skin (float, optional): if present, a skin column is included with values set to this constant
            stat (string, optional): if present, should be 'ON' or 'OFF' and is used for all perforations; will default to 'ON' if
               'STAT' is included in the extra column list
@@ -1411,25 +1412,31 @@ class BlockedWell(BaseResqpy):
         anglv_ref, angla_plane_ref = BlockedWell.__verify_angle_references(anglv_ref, angla_plane_ref)
         column_list = [i_col, j_col, k_col]
 
-        column_list, add_as_properties, use_properties, skin, stat, radw = BlockedWell.__verify_extra_properties_to_be_added_to_dataframe(
-            extra_columns_list = extra_columns_list,
-            column_list = column_list,
-            add_as_properties = add_as_properties,
-            use_properties = use_properties,
-            skin = skin,
-            stat = stat,
-            radw = radw)
-
         pc = None
+        pc_timeless = None
         if use_properties:
             pc = rqp.PropertyCollection(support = self)
+            pc_timeless = rqp.selective_version_of_collection(pc, time_series_uuid = 'none')
+            if pc_timeless is None or pc_timeless.number_of_parts() == 0:
+                pc_timeless = None
             if property_time_index is not None:
+                property_time_index = int(property_time_index)
                 pc = rqp.selective_version_of_collection(pc, time_index = property_time_index)
             if pc is None or pc.number_of_parts() == 0:
                 log.error(
                     f'no blocked well properties found for time index {property_time_index} for well {self.title}')
-                pc = None
+                pc = pc_timeless
         pc_titles = [] if pc is None else pc.titles()
+
+        column_list, add_as_properties, use_properties, skin, stat, radw =  \
+            BlockedWell.__verify_extra_properties_to_be_added_to_dataframe(
+                extra_columns_list = extra_columns_list,
+                column_list = column_list,
+                add_as_properties = add_as_properties,
+                use_properties = use_properties,
+                skin = skin,
+                stat = stat,
+                radw = radw)
 
         max_satw, min_sato, max_satg = BlockedWell.__verify_saturation_ranges_and_property_uuids(
             max_satw, min_sato, max_satg, satw_uuid, sato_uuid, satg_uuid)
@@ -1604,12 +1611,17 @@ class BlockedWell(BaseResqpy):
             if skip_interval_due_to_min_kh:
                 continue
 
-            length, radw, skin, radb, wi, wbc = BlockedWell.__get_pc_arrays_for_interval(pc = pc,
-                                                                                         pc_titles = pc_titles,
-                                                                                         ci = ci,
-                                                                                         length = length,
-                                                                                         radw = radw,
-                                                                                         skin = skin)
+            length, radw_i, skin_i, radb, wi, wbc = BlockedWell.__get_pc_arrays_for_interval(pc = pc,
+                                                                                             pc_timeless = pc_timeless,
+                                                                                             pc_titles = pc_titles,
+                                                                                             ci = ci,
+                                                                                             length = length,
+                                                                                             radw = radw,
+                                                                                             skin = skin)
+            if skin_i is None:
+                skin_i = 0.0
+            if radw_i is None:
+                radw_i = (0.33 if length_uom == 'ft' else 0.1)
 
             radb, wi, wbc = BlockedWell.__get_well_inflow_parameters_for_interval(do_well_inflow = do_well_inflow,
                                                                                   isotropic_perm = isotropic_perm,
@@ -1623,11 +1635,11 @@ class BlockedWell(BaseResqpy):
                                                                                   cosine_angla = cosine_angla,
                                                                                   grid = grid,
                                                                                   cell_kji0 = cell_kji0,
-                                                                                  radw = radw,
+                                                                                  radw = radw_i,
                                                                                   radb = radb,
                                                                                   wi = wi,
                                                                                   wbc = wbc,
-                                                                                  skin = skin,
+                                                                                  skin = skin_i,
                                                                                   kh = kh,
                                                                                   length_uom = length_uom,
                                                                                   column_list = column_list)
@@ -1654,8 +1666,8 @@ class BlockedWell(BaseResqpy):
 
             df = BlockedWell.__append_interval_data_to_dataframe(df = df,
                                                                  grid_name = grid_name,
-                                                                 radw = radw,
-                                                                 skin = skin,
+                                                                 radw = radw_i,
+                                                                 skin = skin_i,
                                                                  angla = angla,
                                                                  anglv = anglv,
                                                                  length = length,
@@ -1918,8 +1930,6 @@ class BlockedWell(BaseResqpy):
 
         if skin is not None and 'SKIN' not in column_list:
             column_list.append('SKIN')
-        if skin is None:
-            skin = 0.0
 
         if stat is not None:
             assert str(stat).upper() in ['ON', 'OFF']
@@ -1931,8 +1941,6 @@ class BlockedWell(BaseResqpy):
 
         if radw is not None and 'RADW' not in column_list:
             column_list.append('RADW')
-        if radw is None:
-            radw = 0.25
 
         return column_list, skin, stat, radw
 
@@ -2374,23 +2382,38 @@ class BlockedWell(BaseResqpy):
         return kh
 
     @staticmethod
-    def __get_pc_arrays_for_interval(pc, pc_titles, ci, length, radw, skin):
+    def __get_pc_arrays_for_interval(pc, pc_timeless, pc_titles, ci, length, radw, skin):
         """Get the property collection arrays for the interval."""
 
-        if 'LENGTH' in pc_titles:
-            length = pc.single_array_ref(citation_title = 'LENGTH')[ci]
-        if 'RADW' in pc_titles:
-            radw = pc.single_array_ref(citation_title = 'RADW')[ci]
-        assert radw > 0.0  # todo: allow zero for inactive intervals?
-        if 'SKIN' in pc_titles:
-            skin = pc.single_array_ref(citation_title = 'SKIN')[ci]
-        radb = wi = wbc = None
-        if 'RADB' in pc_titles:
-            radb = pc.single_array_ref(citation_title = 'RADB')[ci]
-        if 'WI' in pc_titles:
-            wi = pc.single_array_ref(citation_title = 'WI')[ci]
-        if 'WBC' in pc_titles:
-            wbc = pc.single_array_ref(citation_title = 'WBC')[ci]
+        def get_item(v, title, pc_titles, pc, pc_timeless, ci):
+
+            def pk_for_title(title):
+                d = {'RADW': 'wellbore radius', 'RADB': 'block equivalent radius', 'SKIN': 'skin'}
+                return d.get(title)
+
+            if title in pc_titles:
+                v = pc.single_array_ref(citation_title = title)[ci]
+            elif pc_timeless is not None:
+                a = pc_timeless.single_array_ref(citation_title = title)
+                if a is None:
+                    pk = pk_for_title(title)
+                    if pk is not None:
+                        a = pc_timeless.single_array_ref(property_kind = pk)
+                if a is not None:
+                    v = a[ci]
+            return v
+
+        length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci)
+        radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci)
+        assert radw is None or radw > 0.0  # todo: allow zero for inactive intervals?
+        skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci)
+        if skin is None:
+            skin = get_item(None, 'skin', pc_titles, pc, pc_timeless, ci)
+        radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci)
+        if radb is None:
+            radb = get_item(None, 'block equivalent radius', pc_titles, pc, pc_timeless, ci)
+        wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci)
+        wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci)
 
         return length, radw, skin, radb, wi, wbc
 
@@ -2419,20 +2442,20 @@ class BlockedWell(BaseResqpy):
             d2 = np.empty(3)
             for axis in range(3):
                 d2[axis] = np.sum(cell_axial_vectors[axis] * cell_axial_vectors[axis])
-            radb_e = BlockedWell.__calculate_radb_e(k_ei = k_ei,
-                                                    k_ej = k_ej,
-                                                    k_ek = k_ek,
-                                                    k_i = k_i,
-                                                    k_j = k_j,
-                                                    k_k = k_k,
-                                                    d2 = d2,
-                                                    sine_anglv = sine_anglv,
-                                                    cosine_anglv = cosine_anglv,
-                                                    sine_angla = sine_angla,
-                                                    cosine_angla = cosine_angla)
-
             if radb is None:
+                radb_e = BlockedWell.__calculate_radb_e(k_ei = k_ei,
+                                                        k_ej = k_ej,
+                                                        k_ek = k_ek,
+                                                        k_i = k_i,
+                                                        k_j = k_j,
+                                                        k_k = k_k,
+                                                        d2 = d2,
+                                                        sine_anglv = sine_anglv,
+                                                        cosine_anglv = cosine_anglv,
+                                                        sine_angla = sine_angla,
+                                                        cosine_angla = cosine_angla)
                 radb = radw * radb_e / radw_e
+                log.debug(f'RADB value calculated in BlockedWell dataframe method as: {radb}')
             if wi is None:
                 wi = 0.0 if radb <= 0.0 else 2.0 * maths.pi / (maths.log(radb / radw) + skin)
             if 'WBC' in column_list and wbc is None:
@@ -3348,7 +3371,6 @@ class BlockedWell(BaseResqpy):
             if add_relationships:
                 self.model.create_reciprocal_relationship(bw_node, 'destinationObject', self.trajectory.root,
                                                           'sourceObject')
-
                 for grid in self.grid_list:
                     self.model.create_reciprocal_relationship(bw_node, 'destinationObject', grid.root, 'sourceObject')
                 if interp_root is not None:
@@ -3401,23 +3423,25 @@ class BlockedWell(BaseResqpy):
         # filter to only those properties on the grid
         parts = self.model.parts_list_filtered_by_supporting_uuid(part_list, grid.uuid)
         if len(parts) < len(uuid_list):
-            log.warning(f"{len(uuid_list)-len(parts)} uuids ignored as they do not belong to the same grid as the gcs")
+            log.warning(
+                f"{len(uuid_list)-len(parts)} uuids ignored as they do not belong to the same grid as the blocked well")
 
         gridpc = grid.extract_property_collection()
         # only 'cell' properties are handled
         cell_parts = [part for part in parts if gridpc.indexable_for_part(part) == 'cells']
         if len(cell_parts) < len(parts):
-            log.warning(f"{len(parts)-len(cell_parts)} uuids ignored as they do not have indexableelement of cells")
+            log.warning(f"{len(parts)-len(cell_parts)} uuids ignored as they do not have indexable element of cells")
 
         if len(cell_parts) > 0:
             bwpc = rqp.PropertyCollection(support = self)
             if len(gridpc.time_series_uuid_list()) > 0:
-                time_dict = {
-                }  # Dictionary with keys for time_series uuids and None for static properties. Values for each key are a list of property parts associated with that time_series_uuid, or None
+                # dictionary with keys for time_series uuids and None for static properties
+                # values for each key are a list of property parts associated with that time_series_uuid, or None
+                time_dict = {}
                 for part in cell_parts:
                     if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
-                        time_dict[gridpc.time_series_uuid_for_part(
-                            part)] = time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
+                        time_dict[gridpc.time_series_uuid_for_part(part)] =  \
+                            time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
                     else:
                         time_dict[gridpc.time_series_uuid_for_part(part)] = [part]
             else:
