@@ -58,6 +58,10 @@ class TriMesh(rqs.Mesh):
 
         returns:
            the newly created TriMesh object
+
+        note:
+           using the z_uom argument will result in the tri mesh's full_array_ref() method returning data with
+           x and y values in the object's crs, whilst z values will be in the given uom
         """
 
         if uuid is None:

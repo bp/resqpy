@@ -3348,7 +3348,6 @@ class BlockedWell(BaseResqpy):
             if add_relationships:
                 self.model.create_reciprocal_relationship(bw_node, 'destinationObject', self.trajectory.root,
                                                           'sourceObject')
-
                 for grid in self.grid_list:
                     self.model.create_reciprocal_relationship(bw_node, 'destinationObject', grid.root, 'sourceObject')
                 if interp_root is not None:
@@ -3401,23 +3400,25 @@ class BlockedWell(BaseResqpy):
         # filter to only those properties on the grid
         parts = self.model.parts_list_filtered_by_supporting_uuid(part_list, grid.uuid)
         if len(parts) < len(uuid_list):
-            log.warning(f"{len(uuid_list)-len(parts)} uuids ignored as they do not belong to the same grid as the gcs")
+            log.warning(
+                f"{len(uuid_list)-len(parts)} uuids ignored as they do not belong to the same grid as the blocked well")
 
         gridpc = grid.extract_property_collection()
         # only 'cell' properties are handled
         cell_parts = [part for part in parts if gridpc.indexable_for_part(part) == 'cells']
         if len(cell_parts) < len(parts):
-            log.warning(f"{len(parts)-len(cell_parts)} uuids ignored as they do not have indexableelement of cells")
+            log.warning(f"{len(parts)-len(cell_parts)} uuids ignored as they do not have indexable element of cells")
 
         if len(cell_parts) > 0:
             bwpc = rqp.PropertyCollection(support = self)
             if len(gridpc.time_series_uuid_list()) > 0:
-                time_dict = {
-                }  # Dictionary with keys for time_series uuids and None for static properties. Values for each key are a list of property parts associated with that time_series_uuid, or None
+                # dictionary with keys for time_series uuids and None for static properties
+                # values for each key are a list of property parts associated with that time_series_uuid, or None
+                time_dict = {}
                 for part in cell_parts:
                     if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
-                        time_dict[gridpc.time_series_uuid_for_part(
-                            part)] = time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
+                        time_dict[gridpc.time_series_uuid_for_part(part)] =  \
+                            time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
                     else:
                         time_dict[gridpc.time_series_uuid_for_part(part)] = [part]
             else:
