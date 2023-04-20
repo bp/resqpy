@@ -499,6 +499,8 @@ def _supporting_shape_gridconnectionset(support, indexable_element):
 def _supporting_shape_other(support, indexable_element):
     if indexable_element is None or indexable_element == 'cells':
         shape_list = [support.cell_count]
+    elif indexable_element == 'nodes':
+        shape_list = [support.node_count]
     elif indexable_element == 'faces per cell':
         support.cache_all_geometry_arrays()
         shape_list = [len(support.faces_per_cell)]
