@@ -15,7 +15,7 @@ def check_load_snapshot(data, filename):
     # Compare the actual data against the stored expected array
     loaded_array = np.loadtxt(filename)
     expected_array = loaded_array.reshape(loaded_array.shape[0], loaded_array.shape[1] // data.shape[2], data.shape[2])
-    np.testing.assert_array_almost_equal(data, expected_array)
+    np.testing.assert_array_almost_equal(data, expected_array, decimal = 4)
 
 
 def test_check_transmisibility_output(test_data_path):
@@ -26,6 +26,10 @@ def test_check_transmisibility_output(test_data_path):
     grid_model = rq.Model(resqml_file_root)
     resqml_grid = grid_model.grid()
     k, j, i = resqml_grid.transmissibility()
+    # snapshots were taken with inflated transmissibilities
+    k *= 100.0
+    j *= 100.0
+    i *= 100.0
 
     snapshot_filename = current_filename + "/snapshots/transmissibility/"
     check_load_snapshot(i, f'{snapshot_filename}block_i.txt')
