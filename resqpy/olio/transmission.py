@@ -50,7 +50,7 @@ def half_cell_t(grid,
     notes:
        calls either for half_cell_t_irregular() or half_cell_t_regular() depending on class of grid;
        see also notes for half_cell_t_irregular() and half_cell_t_regular();
-       prior to resqpy v4.6.0 the built in Darcy constant for metric units was two orders of magnitude
+       prior to resqpy v4.8.0 the built in Darcy constant for metric units was two orders of magnitude
        too great (yielding transmissibilities in m3.cP/(bar.d) instead of m3.cP/(kPa.d)), sorry
     """
 
