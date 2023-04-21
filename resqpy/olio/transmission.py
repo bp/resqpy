@@ -49,7 +49,9 @@ def half_cell_t(grid,
 
     notes:
        calls either for half_cell_t_irregular() or half_cell_t_regular() depending on class of grid;
-       see also notes for half_cell_t_irregular() and half_cell_t_regular()
+       see also notes for half_cell_t_irregular() and half_cell_t_regular();
+       prior to resqpy v4.6.0 the built in Darcy constant for metric units was two orders of magnitude
+       too great (yielding transmissibilities in m3.cP/(bar.d) instead of m3.cP/(kPa.d)), sorry
     """
 
     import resqpy.grid as grr
@@ -58,7 +60,8 @@ def half_cell_t(grid,
         length_units = grid.xy_units()
         assert length_units == 'm' or length_units.startswith('ft'), "Darcy constant must be specified"
         assert grid.z_units() == length_units
-        darcy_constant = 0.008527 if length_units == 'm' else 0.001127  # these values from Nexus keyword ref.
+        # following values are for m3.cP/(kPa.d) and bbl.cP/(psi.d) respectively, source: Wikipedia
+        darcy_constant = 8.527017e-5 if length_units == 'm' else 1.127116e-3
 
     if perm_k is None or perm_j is None or perm_i is None or ntg is None:
         pc = grid.extract_property_collection()
@@ -107,9 +110,9 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
     returns:
        numpy float array of shape (nk, nj, ni, 3) where the 3 covers K,J,I;
           units will depend on the length units of the coordinate reference system for
-          the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
-          the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
-          respectively
+          the grid (and implicitly on the units of the darcy_constant);
+          the units will typically be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
+          respectively, depending on the correct darcy_constant being passed
 
     notes:
        the same half cell transmissibility value is applicable to both - and + polarity faces;
@@ -126,6 +129,7 @@ def half_cell_t_regular(grid, perm_k = None, perm_j = None, perm_i = None, ntg =
     """
 
     assert perm_k is not None and perm_j is not None and perm_i is not None
+    assert darcy_constant is not None
     if ntg is None:
         ntg = 1.0
 
@@ -166,8 +170,8 @@ def half_cell_t_irregular(grid,
           face polarity: - (0) and + (1);
           units will depend on the length units of the coordinate reference system for
           the grid (and implicitly on the units of the darcy_constant); if darcy_constant is None,
-          the units will be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
-          respectively
+          the units will typically be m3.cP/(kPa.d) or bbl.cP/(psi.d) for grid length units of m and ft
+          respectively, depending on the correct darcy_constant being passed
 
     notes:
        the algorithm is equivalent to the half cell transmissibility element of the Nexus NEWTRAN
@@ -188,6 +192,7 @@ def half_cell_t_irregular(grid,
     # NB: axis argument is KJI index; this function also uses axes in xyz space
 
     assert perm_k is not None and perm_j is not None and perm_i is not None
+    assert darcy_constant is not None
 
     tolerance_sqr = tolerance * tolerance
 
@@ -382,8 +387,10 @@ def half_cell_t_vertical_prism(vpg,
     returns:
        numpy float array of shape (N, 5) being the per-face half cell transmissibilities for each cell
 
-    note:
-       order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces
+    notes:
+       order of 5 faces matches those of faces per cell, ie. top, base, then the 3 vertical faces;
+       if no Darcy constant is provided, the returned values will have unite of m3.cP/(kPa.d) if the
+       grid has length units of metres, or bbl.cP/(psi.d) if in feet
     """
 
     assert triple_perm_horizontal is not None
@@ -394,7 +401,8 @@ def half_cell_t_vertical_prism(vpg,
         length_units = vpg.xy_units()
         assert length_units == 'm' or length_units.startswith('ft')
         assert vpg.z_units() == length_units
-        darcy_constant = 0.008527 if length_units == 'm' else 0.001127  # these values from Nexus keyword ref.
+        # following values are for m3.cP/(kPa.d) and bbl.cP/(psi.d) respectively, source: Wikipedia
+        darcy_constant = 8.527017e-5 if length_units == 'm' else 1.127116e-3
 
     # fetch triangulation and call precursor function
     p = vpg.points_ref()
