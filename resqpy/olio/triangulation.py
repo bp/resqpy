@@ -809,7 +809,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
         if incl > max_dip:
             azi = vec.azimuth(v)
             rotation_m = vec.tilt_3d_matrix(azi, max_dip)  # TODO: check whether any reverse direction errors here
-        normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
+            normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
 
     p = points.copy()
 
