@@ -726,7 +726,7 @@ def triangulated_polygons(p, v, centres = None):
     return points, triangles
 
 
-def reorient(points, rough = True, max_dip = None, use_linalg = False):
+def reorient(points, rough = True, max_dip = None, use_linalg = True):
     """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
 
     arguments:
@@ -735,7 +735,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
           if False, that reduces to around 2.5 degrees of the optimum; iugnored if use_linalg is True
        max_dip (float, optional): if present, the reorientation of perspective off vertical is
           limited to this angle in degrees
-       use_linalg (bool, default False): if True, the numpy linear algebra svd function is used and rough is ignored
+       use_linalg (bool, default True): if True, the numpy linear algebra svd function is used and rough is ignored
 
     returns:
        numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
@@ -809,7 +809,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = False):
         if incl > max_dip:
             azi = vec.azimuth(v)
             rotation_m = vec.tilt_3d_matrix(azi, max_dip)  # TODO: check whether any reverse direction errors here
-        normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
+            normal_vector = vec.rotate_vector(rotation_m.T, np.array((0.0, 0.0, 1.0)))
 
     p = points.copy()
 

@@ -178,6 +178,28 @@ def test_reorient():
     assert d_azi < 5.0
 
 
+def test_reorient_vertical_pointset():
+    points = np.array([(0.0, 0.0, 1000.0), (100.0, 100.0, 1000.0), (-100.0, -100.0, 1000.0), (0.0, 0.0, 1100.0),
+                       (100.0, 100.0, 1100.0), (-100.0, -100.0, 1100.0)],
+                      dtype = float)
+    p, nv, m = tri.reorient(points, rough = False)
+    if nv[0] < 0.0:
+        nv = -nv
+    assert_array_almost_equal(nv, (1.0 / maths.sqrt(2.0), -1.0 / maths.sqrt(2.0), 0.0), decimal = 2)
+    np.max(p[:, 2]) - np.min(p[:, 2]) < 5.0
+
+
+def test_reorient_vertical_pointset_2():
+    points = np.array([[941.42146238, 234.31468119, 120.47005384], [234.31468119, 941.42146238, 120.47005384],
+                       [941.42146238, 234.31468119, 195.47005384], [234.31468119, 941.42146238, 195.47005384],
+                       [941.42146238, 234.31468119, 270.47005384], [234.31468119, 941.42146238, 270.47005384],
+                       [587.86807178, 587.86807178, 157.97005384], [587.86807178, 587.86807178, 232.97005384]],
+                      dtype = float)
+    p, nv, m = tri.reorient(points, rough = False, use_linalg = True)
+    assert_array_almost_equal(nv, (-1.0 / maths.sqrt(2.0), -1.0 / maths.sqrt(2.0), 0.0), decimal = 2)
+    np.max(p[:, 2]) - np.min(p[:, 2]) < 5.0
+
+
 def test_edges_and_rims():
     p = np.zeros((5, 6, 3), dtype = float)
     p[:, :, 0] = np.expand_dims(100.0 * np.arange(6, dtype = int).astype(float), axis = 0)
