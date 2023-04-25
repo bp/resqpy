@@ -726,7 +726,7 @@ def triangulated_polygons(p, v, centres = None):
     return points, triangles
 
 
-def reorient(points, rough = True, max_dip = None, use_linalg = True):
+def reorient(points, rough = True, max_dip = None, use_linalg = True, sample = 500):
     """Returns a reoriented copy of a set of points, such that z axis is approximate normal to average plane of points.
 
     arguments:
@@ -736,6 +736,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True):
        max_dip (float, optional): if present, the reorientation of perspective off vertical is
           limited to this angle in degrees
        use_linalg (bool, default True): if True, the numpy linear algebra svd function is used and rough is ignored
+       sample (int, default 500): downsample points to this number for the purposes of determining normal vector
 
     returns:
        numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
@@ -748,7 +749,9 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True):
        implicit xy & z units for points are assumed to be the same;
        the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
        determine the triangulation;
-       the numpy linear algebra option seems to be memory intensive, not recommended
+       the numpy linear algebra option seems to be memory intensive, not recommended;
+       downsampling will occur (for normal vector determination) when the number of points exceeds double that
+       given in the sample argument; set sample to None to use all points for normal vector determination
     """
 
     def best_angles(points, mid_x, mid_y, steps, d_theta):
@@ -780,8 +783,14 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True):
 
     assert points.ndim >= 2 and points.shape[-1] == 3
 
+    if sample is not None and len(points) > 2 * sample:
+        step = len(points) // sample
+        p = points[::step, :]
+    else:
+        p = points
+
     if use_linalg:
-        normal_vector = linalg_normal_vector(points)
+        normal_vector = linalg_normal_vector(p)
         incl = vec.inclination(normal_vector)
         if incl == 0.0:
             rotation_m = vec.no_rotation_matrix()
@@ -790,14 +799,14 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True):
             rotation_m = vec.tilt_3d_matrix(azi, incl)
     else:
         # coarse iteration trying a few different angles
-        best_x_rotation, best_y_rotation = best_angles(points, 0.0, 0.0, 7, 30.0)
+        best_x_rotation, best_y_rotation = best_angles(p, 0.0, 0.0, 7, 30.0)
 
         # finer iteration searching around the best coarse rotation
-        best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 5, 10.0)
+        best_x_rotation, best_y_rotation = best_angles(p, best_x_rotation, best_y_rotation, 5, 10.0)
 
         if not rough:
             # finer iteration searching around the best coarse rotation
-            best_x_rotation, best_y_rotation = best_angles(points, best_x_rotation, best_y_rotation, 7, 2.5)
+            best_x_rotation, best_y_rotation = best_angles(p, best_x_rotation, best_y_rotation, 7, 2.5)
 
         rotation_m = vec.rotation_3d_matrix((best_x_rotation, 0.0, best_y_rotation))
 
