@@ -222,6 +222,34 @@ def test_rotation():
     assert_array_almost_equal(p, ppp)
 
 
+def test_rotation_not_relying_on_reverse_rotation():
+    x = 30.0
+    y = 0.0
+    p = np.array((1.0, 0.0, 1.0))
+    m = vec.rotation_3d_matrix((x, 0.0, y))
+    pp = vec.rotate_vector(m, p)
+    assert_array_almost_equal(pp, (1.0, -0.5, maths.sqrt(3.0) / 2.0))
+    x = 0.0
+    y = 30.0
+    p = np.array((0.0, 3.0, 1.0))
+    m = vec.rotation_3d_matrix((x, 0.0, y))
+    pp = vec.rotate_vector(m, p)
+    assert_array_almost_equal(pp, (0.5, 3.0, maths.sqrt(3.0) / 2.0))
+    x = 45.0
+    y = -45.0
+    p = np.array((maths.sqrt(2.0), 1.0, 1.0))
+    m = vec.rotation_3d_matrix((x, 0.0, y))
+    pp = vec.rotate_vector(m, p)
+    assert_array_almost_equal(pp, (0.0, 0.0, 2.0))
+    x = 45.0
+    y = -45.0
+    z = 180.0
+    p = np.array((maths.sqrt(2.0), 1.0, 1.0))
+    m = vec.rotation_3d_matrix((x, z, y))
+    pp = vec.rotate_vector(m, p)
+    assert_array_almost_equal(pp, (-2.0, 0.0, 0.0))
+
+
 def test_vector_rotation():
     v = vec.unit_vector((3.0, 4.0, 5.0))
     m = vec.rotation_matrix_3d_vector(v)
