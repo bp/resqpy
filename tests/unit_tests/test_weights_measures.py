@@ -272,3 +272,7 @@ def test_nexus_units():
                                       english_volume_flavour = 'saturation') == 'ft3/ft3'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'volume', english_volume_flavour = 'PV') == 'ft3'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'volume', english_volume_flavour = 'OVER PV') == 'bbl'
+    assert wam.nexus_uom_for_quantity('METRIC', 'volume per time') == 'm3/d'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per time') == 'bbl/d'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per time',
+                                      english_volume_flavour = 'surface gas rate') == '1000 ft3/d'
