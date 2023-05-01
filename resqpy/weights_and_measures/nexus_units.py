@@ -10,10 +10,12 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
         nexus_unit_system (str): one of 'METRIC', 'METKG/CM2', 'METBAR', 'LAB', or 'ENGLISH'
         quantity (str): the RESQML quantity class of interest; currently suppported:
             'length', 'area', 'volume', 'volume per volume', 'permeability rock',
-            'time', 'thermodynamic temperature', 'mass per volume', 'pressure'
-        english_volume_flavour (str, optional): only needed for ENGLISH unit system and volume
-            or volume per volume quantity; one of 'PV', 'OVER PV', 'FVF', 'GOR', or 'saturation';
-            see notes regarding FVF
+            'time', 'thermodynamic temperature', 'mass per volume', 'pressure',
+            'volume per time'
+        english_volume_flavour (str, optional): only needed for ENGLISH unit system and volume,
+            volume per volume, or volume per time quantity; one of 'PV', 'OVER PV', 'FVF', 'GOR',
+            'surface gas rate', or 'saturation'; see notes regarding FVF, also regarding flow
+            rates
 
     returns:
         str: the RESQML uom string for the units required by Nexus
@@ -27,7 +29,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
         in the ENHLISH unit system, Nexus expacts gas formation volume factors in bbl / 1000 ft3
         but that is not a valid RESQML uom – this function will return bbl/bbl for ENGLISH FVF;
         also be wary of pore volume units when using the medieval ENGLISH unit system: the OVER
-        keyword expects different units than GRID or recurrent override input
+        keyword expects different units than GRID or recurrent override input; ENGLISH fluid flow
+        rates will be returned as bbl/d unless the flavour is specified as 'surface gas rate'
     """
 
     nexus_unit_system = nexus_unit_system.upper()
@@ -35,7 +38,7 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
     # todo: add other quantities as needed
     assert quantity in [
         'length', 'area', 'volume', 'volume per volume', 'permeability rock', 'rock permeability', 'time',
-        'thermodynamic temperature', 'mass per volume', 'pressure'
+        'thermodynamic temperature', 'mass per volume', 'pressure', 'volume per time'
     ]
     if quantity == 'rock permeability':
         quantity = 'permeability rock'
@@ -48,6 +51,9 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
         elif english_volume_flavour == 'over pv':
             assert quantity == 'volume'
             return 'bbl'  # for static override of pv (Nexus OVER)
+        elif english_volume_flavour == 'surface gas rate':
+            assert quantity == 'volume per time'
+            return '1000 ft3/d'
         assert quantity == 'volume per volume'
         if english_volume_flavour == 'fvf':
             return 'bbl/bbl'
@@ -66,7 +72,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'time': 'd',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'kg/m3',
-            'pressure': 'kPa'
+            'pressure': 'kPa',
+            'volume per time': 'm3/d'
         },
         'METKG/CM2': {
             'length': 'm',
@@ -77,7 +84,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'time': 'd',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'kg/m3',
-            'pressure': 'kgf/cm2'
+            'pressure': 'kgf/cm2',
+            'volume per time': 'm3/d'
         },
         'METBAR': {
             'length': 'm',
@@ -88,7 +96,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'time': 'd',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'kg/m3',
-            'pressure': 'bar'
+            'pressure': 'bar',
+            'volume per time': 'm3/d'
         },
         'LAB': {
             'length': 'cm',
@@ -99,7 +108,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'time': 'h',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'g/cm3',
-            'pressure': 'psi'
+            'pressure': 'psi',
+            'volume per time': 'cm3/h'
         },
         'ENGLISH': {
             'length': 'ft',
@@ -110,7 +120,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'time': 'd',
             'thermodynamic temperature': 'degF',
             'mass per volume': 'lbm/ft3',
-            'pressure': 'psi'
+            'pressure': 'psi',
+            'volume per time': 'bbl/d'  # surface gas is special case handled above
         }
     }
 
