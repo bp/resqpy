@@ -427,6 +427,8 @@ def _supporting_shape_grid(support, indexable_element, direction):
         shape_list = [support.nk, support.ni]
     elif indexable_element == 'I0':
         shape_list = [support.nk, support.nj]
+    else:
+        raise ValueError(f'unsupported grid indexable element: {indexable_element}')
     return shape_list
 
 
@@ -549,7 +551,7 @@ def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_arr
     # the required shape is required if a bool array may need to be unpacked from bits
     required_shape = None
     str_dtype = str(dtype)
-    if use_pack and ('bool' in str_dtype or 'int8' in str_dtype):
+    if use_pack and ('bool' in str_dtype or 'uint8' in str_dtype):
         required_shape = collection.supporting_shape(indexable_element = collection.indexable_for_part(part),
                                                      direction = _part_direction(collection, part))
 

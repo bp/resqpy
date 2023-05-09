@@ -229,10 +229,12 @@ def _h5_array_element(model,
         shape_tuple = tuple(h5_root[h5_key_pair[1]].shape)
         if required_shape is None:
             required_shape = shape_tuple
+        else:
+            required_shape = tuple(required_shape)
         object.__dict__[array_attribute] = np.zeros(required_shape, dtype = dtype)
         if shape_tuple == required_shape:
             object.__dict__[array_attribute][:] = h5_root[h5_key_pair[1]]
-        elif (len(shape_tuple) == len(required_shape) and ('bool' in str_dtype or 'int8' in str_dtype) and
+        elif (len(shape_tuple) == len(required_shape) and ('bool' in str_dtype or 'uint8' in str_dtype) and
               8 * (shape_tuple[-1] - 1) < required_shape[-1] <= 8 * shape_tuple[-1]):
             a = np.unpackbits(h5_root[h5_key_pair[1]], axis = -1).astype(bool)
             object.__dict__[array_attribute][:] = a[..., :required_shape[-1]]

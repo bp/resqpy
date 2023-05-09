@@ -2423,3 +2423,81 @@ def test_pack_unpack_bits_larger_unaligned(example_model_and_crs):
     b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
     assert b is not None and b.shape == shape
     assert np.all(b == brray)
+
+
+def test_pack_unpack_bits_ni_one(example_model_and_crs):
+
+    shape = (3, 9, 1)
+
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model, extent_kji = shape, crs_uuid = crs.uuid, title = 'ni one')
+    grid.create_xml()
+    pc = grid.extract_property_collection()
+    array = (np.random.random(shape) > 0.5)
+    brray = np.logical_not(array)
+
+    pc.add_cached_array_to_imported_list(cached_array = array.copy(),
+                                         source_info = 'testy',
+                                         keyword = 'random',
+                                         property_kind = 'shale',
+                                         discrete = True)
+    pc.write_hdf5_for_imported_list(use_pack = True)
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    bp = rqp.Property.from_array(model,
+                                 brray,
+                                 'nonsense',
+                                 'negated',
+                                 grid.uuid,
+                                 property_kind = 'sandy',
+                                 discrete = True,
+                                 use_pack = True)
+    model.store_epc()
+
+    model = rq.Model(model.epc_file)
+    grid = grr.RegularGrid(model, uuid = grid.uuid)
+    pc = grid.extract_property_collection()
+    a = pc.single_array_ref(property_kind = 'shale', dtype = bool, use_pack = True)  # with unpacking
+    assert a is not None and a.shape == shape
+    assert np.all(a == array)
+    b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
+    assert b is not None and b.shape == shape
+    assert np.all(b == brray)
+
+
+def test_no_pack_unpack_bits_ni_one(example_model_and_crs):
+
+    shape = (3, 9, 1)
+
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model, extent_kji = shape, crs_uuid = crs.uuid, title = 'ni one')
+    grid.create_xml()
+    pc = grid.extract_property_collection()
+    array = (np.random.random(shape) > 0.5)
+    brray = np.logical_not(array)
+
+    pc.add_cached_array_to_imported_list(cached_array = array.copy(),
+                                         source_info = 'testy',
+                                         keyword = 'random',
+                                         property_kind = 'shale',
+                                         discrete = True)
+    pc.write_hdf5_for_imported_list(use_pack = False)
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    bp = rqp.Property.from_array(model,
+                                 brray,
+                                 'nonsense',
+                                 'negated',
+                                 grid.uuid,
+                                 property_kind = 'sandy',
+                                 discrete = True,
+                                 use_pack = True)
+    model.store_epc()
+
+    model = rq.Model(model.epc_file)
+    grid = grr.RegularGrid(model, uuid = grid.uuid)
+    pc = grid.extract_property_collection()
+    a = pc.single_array_ref(property_kind = 'shale', dtype = bool, use_pack = True)  # with unpacking
+    assert a is not None and a.shape == shape
+    assert np.all(a == array)
+    b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
+    assert b is not None and b.shape == shape
+    assert np.all(b == brray)
