@@ -386,6 +386,94 @@ class RegularGrid(grr_g.Grid):
 
         return half_t
 
+    def corner_points(self, cell_kji0 = None, points_root = None, cache_resqml_array = None, cache_cp_array = False):
+        """Returns a numpy array of corner points for a single cell or the whole grid.
+
+        arguments:
+            cell_kji0 (triple float, optional): if present, index of cell for which corner points are required; if None,
+                an array holding corner points for all cells is returned
+            points_root (ignored): not used; exists for signature compatibility with parent class method
+            cache_resqml_array (ignored): not used; exists for signature compatibility with parent class method
+            cache_cp_array (bool, default False): if True (or cell_kji0 is None), the full corner point array is
+                cached as an attribute of the grid
+
+        notes:
+           if cell_kji0 is not None, a 4D array of shape (2, 2, 2, 3) holding single cell corner points in logical order
+           [kp, jp, ip, xyz] is returned; if cell_kji0 is None, a pagoda style 7D array [k, j, i, kp, jp, ip, xyz] is
+           cached and returned;
+           the ordering of the corner points is in the logical order, which is not the same as that used by Nexus CORP data;
+           olio.grid_functions.resequence_nexus_corp() can be used to switch back and forth between this pagoda ordering
+           and Nexus corp ordering;
+           this is the usual way to access full corner points for cells where working with native resqml data is undesirable;
+           this method returns coordinates in the local crs space
+
+        :meta common:
+        """
+
+        if cell_kji0 is None:
+            cache_cp_array = True
+        if hasattr(self, 'array_corner_points'):
+            if cell_kji0 is None:
+                return self.array_corner_points
+            return self.array_corner_points[tuple(cell_kji0)]
+        if not self.is_aligned:
+            return super().corner_points(cell_kji0 = cell_kji0, points_root = points_root,
+                                         cache_resqml_array = cache_resqml_array, cache_cp_array = cache_cp_array)
+
+        if cache_cp_array:
+            acp = np.zeros((self.nk, self.nj, self.ni, 2, 2, 2, 3), dtype = float)
+            # set x coordinates
+            acp[:, :, :, 0, 0, 0, 0] = np.linspace(0.0,
+                                                   self.block_dxyz_dkji[2, 0] * self.ni,
+                                                   num = self.ni,
+                                                   endpoint = False).reshape((1, 1, self.ni))
+            acp[:, :, :, 0, 0, 1, 0] = acp[:, :, :, 0, 0, 0, 0] + self.block_dxyz_dkji[2, 0]
+            acp[:, :, :, 0, 1, :, 0] = acp[:, :, :, 0, 0, :, 0]
+            acp[:, :, :, 1, :, :, 0] = acp[:, :, :, 0, :, :, 0]
+            # set y coordinates
+            acp[:, :, :, 0, 0, 0, 1] = np.linspace(0.0,
+                                                   self.block_dxyz_dkji[1, 1] * self.nj,
+                                                   num = self.nj,
+                                                   endpoint = False).reshape((1, self.nj, 1))
+            acp[:, :, :, 0, 1, 0, 1] = acp[:, :, :, 0, 0, 0, 1] + self.block_dxyz_dkji[1, 1]
+            acp[:, :, :, 0, :, 1, 1] = acp[:, :, :, 0, :, 0, 1]
+            acp[:, :, :, 1, :, :, 1] = acp[:, :, :, 0, :, :, 1]
+            # set z coordinates
+            acp[:, :, :, 0, 0, 0, 2] = np.linspace(0.0,
+                                                   self.block_dxyz_dkji[0, 2] * self.nk,
+                                                   num = self.nk,
+                                                   endpoint = False).reshape((self.nk, 1, 1))
+            acp[:, :, :, 1, 0, 0, 2] = acp[:, :, :, 0, 0, 0, 2] + self.block_dxyz_dkji[0, 2]
+            acp[:, :, :, :, 0, 1, 2] = acp[:, :, :, :, 0, 0, 2]
+            acp[:, :, :, :, 1, :, 2] = acp[:, :, :, :, 0, :, 2]
+            # translate by regular grid origin
+            acp[:] += np.array(self.block_origin, dtype = float).reshape((1, 1, 1, 1, 1, 1, 3))
+            self.array_corner_points = acp
+            if cell_kji0 is None:
+                return acp
+            return acp[tuple(cell_kji0)]
+
+        # setup corner point array for a single cell only
+        cp = np.zeros((2, 2, 2, 3), dtype = float)
+        # set x coordinates
+        cp[0, 0, 0, 0] = self.block_dxyz_dkji[2, 0] * cell_kji0[2]
+        cp[0, 0, 1, 0] = cp[0, 0, 0, 0] + self.block_dxyz_dkji[2, 0]
+        cp[0, 1, :, 0] = cp[0, 0, :, 0]
+        cp[1, :, :, 0] = cp[0, :, :, 0]
+        # set y coordinates
+        cp[0, 0, 0, 1] = self.block_dxyz_dkji[1, 1] * cell_kji0[1]
+        cp[0, 1, 0, 1] = cp[0, 0, 0, 1] + self.block_dxyz_dkji[1, 1]
+        cp[0, :, 1, 1] = cp[0, :, 0, 1]
+        cp[1, :, :, 1] = cp[0, :, :, 1]
+        # set z coordinates
+        cp[0, 0, 0, 2] = self.block_dxyz_dkji[0, 2] * cell_kji0[0]
+        cp[1, 0, 0, 2] = cp[0, 0, 0, 2] + self.block_dxyz_dkji[0, 2]
+        cp[:, 0, 1, 2] = cp[:, 0, 0, 2]
+        cp[:, 1, :, 2] = cp[:, 0, :, 2]
+        # translate by regular grid origin
+        cp[:] += np.array(self.block_origin, dtype = float).reshape((1, 1, 1, 3))
+        return cp
+
     def centre_point(self, cell_kji0 = None, cache_centre_array = False, use_origin = True):
         """Returns centre point of a cell or array of centre points of all cells.
 
