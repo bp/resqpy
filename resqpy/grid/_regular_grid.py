@@ -417,8 +417,10 @@ class RegularGrid(grr_g.Grid):
                 return self.array_corner_points
             return self.array_corner_points[tuple(cell_kji0)]
         if not self.is_aligned:
-            return super().corner_points(cell_kji0 = cell_kji0, points_root = points_root,
-                                         cache_resqml_array = cache_resqml_array, cache_cp_array = cache_cp_array)
+            return super().corner_points(cell_kji0 = cell_kji0,
+                                         points_root = points_root,
+                                         cache_resqml_array = cache_resqml_array,
+                                         cache_cp_array = cache_cp_array)
 
         if cache_cp_array:
             acp = np.zeros((self.nk, self.nj, self.ni, 2, 2, 2, 3), dtype = float)

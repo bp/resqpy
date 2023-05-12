@@ -23,8 +23,8 @@ consolidatable_list = [
 ]
 
 ordering_list = consolidatable_list + [
-    'MdDatum', 'WellboreTrajectoryRepresentation', 'WellboreFrameRepresentation',
-    'WellboreMarkerFrameRepresentation', 'IjkGridRepresentation', 'BlockedWellboreRepresentation'
+    'MdDatum', 'WellboreTrajectoryRepresentation', 'WellboreFrameRepresentation', 'WellboreMarkerFrameRepresentation',
+    'IjkGridRepresentation', 'BlockedWellboreRepresentation'
 ]
 # todo: add to this list as other classes gain an is_equivalent() method
 
