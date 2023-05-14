@@ -887,6 +887,8 @@ def test_uuid_consolidation(tmp_path):
                 assert bu.matching_uuids(offset_uuid, uuid_expected)
 
     combined_model.check_catalogue_dictionaries()
+    crs_uuid = combined_model.uuid(obj_type = 'LocalDepth3dCrs')
+    assert len(combined_model.uuids(obj_type = 'IjkGridRepresentation', related_uuid = crs_uuid)) == 3
 
 
 def test_untitled(tmp_path):
