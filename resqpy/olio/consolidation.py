@@ -22,6 +22,10 @@ consolidatable_list = [
     'LocalTime3dCrs', 'TimeSeries', 'StringTableLookup', 'PropertyKind'
 ]
 
+ordering_list = consolidatable_list + [
+    'MdDatum', 'WellboreTrajectoryRepresentation', 'WellboreFrameRepresentation', 'WellboreMarkerFrameRepresentation',
+    'IjkGridRepresentation', 'BlockedWellboreRepresentation'
+]
 # todo: add to this list as other classes gain an is_equivalent() method
 
 
@@ -165,9 +169,9 @@ class Consolidation:
 
 
 def _ordering(obj_type):
-    if obj_type in consolidatable_list:
-        return consolidatable_list.index(obj_type)
-    seq = len(consolidatable_list)
+    if obj_type in ordering_list:
+        return ordering_list.index(obj_type)
+    seq = len(ordering_list)
     if obj_type.endswith('Interpretation'):
         seq += 1
     elif obj_type.endswith('Representation'):

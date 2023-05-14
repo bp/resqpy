@@ -654,12 +654,16 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
         return
     for ref_uuid_int in relatives[0]:  # using dict in other model instead of duplicated xml
         if ref_uuid_int in model.uuid_part_dict:
+            m_x._create_reciprocal_relationship(model, root_node, 'sourceObject',
+                                                m_c._root_for_uuid(model, ref_uuid_int), 'destinationObject')
             continue
         if not force:
             referred_part = m_c._part_for_uuid(other_model, bu.uuid_from_int(ref_uuid_int))
             if m_c._type_of_part(other_model, referred_part) == 'obj_EpcExternalPartReference':
                 continue
             if referred_part in m_c._list_of_parts(model):
+                m_x._create_reciprocal_relationship(model, root_node, 'sourceObject',
+                                                    m_c._root_for_part(model, referred_part), 'destinationObject')
                 continue
             resident_part = _copy_part_from_other_model(model,
                                                         other_model,

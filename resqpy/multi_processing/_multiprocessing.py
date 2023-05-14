@@ -38,7 +38,8 @@ def function_multiprocessing(function: Callable,
                              consolidate: bool = True,
                              require_success = False,
                              tmp_dir_path: Union[Path, str] = '.',
-                             backend: str = 'dask') -> List[bool]:
+                             backend: str = 'dask',
+                             clean_up: bool = True) -> List[bool]:
     """Calls a function concurrently with the specfied arguments.
 
     arguments:
@@ -62,6 +63,9 @@ def function_multiprocessing(function: Callable,
             the calling code directory
         backend (str): the joblib parallel backend used. Dask is used by default
             so a Dask cluster must be passed to the cluster argument
+        clean_up (bool, default True): if True, the temporary directory used during
+            multi processing is deleted; if False, it is left in place with its
+            contents (to facilitate debugging)
 
     returns:
         success_list (List[bool]): A boolean list of successful function calls
@@ -156,7 +160,8 @@ def function_multiprocessing(function: Callable,
 
     # Deleting temporary directory.
     # log.debug(f"deleting the temporary directory {tmp_dir}")
-    rm_tree(tmp_dir)
+    if clean_up:
+        rm_tree(tmp_dir)
 
     model_recombined.store_epc(quiet = True)
     if model is not None:
