@@ -184,7 +184,7 @@ def _fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thro
     # this function introduces new data into the RESQML arrays representing split pillars
     # familiarity with those array representations is needed if working on this function
 
-    if full_pillar_list is None or len(full_pillar_list) < 3:
+    if full_pillar_list is None or len(full_pillar_list) < 2:
         return
     assert grid.z_units() == grid.xy_units(),  \
         'crs used by grid has differing xy and z units – mix not supported when adding faults'
@@ -192,6 +192,7 @@ def _fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thro
     assert hasattr(grid, 'points_cached')
     # make grid into a faulted grid if hitherto unfaulted
     if not grid.has_split_coordinate_lines:
+        log.debug('converting grid to split pillar representation')
         grid.points_cached = grid.points_cached.reshape((grid.nk_plus_k_gaps + 1, (grid.nj + 1) * (grid.ni + 1), 3))
         grid.split_pillar_indices_cached = np.array([], dtype = int)
         grid.cols_for_split_pillars = np.array([], dtype = int)
@@ -204,8 +205,12 @@ def _fault_from_pillar_list(grid, full_pillar_list, delta_throw_left, delta_thro
         cl = grid.cols_for_split_pillars_cl[-1]
     original_p = np.zeros((grid.nk_plus_k_gaps + 1, 3), dtype = float)
     n_primaries = (grid.nj + 1) * (grid.ni + 1)
-    for p_index in range(1, len(full_pillar_list) - 1):
+    for p_index in range(len(full_pillar_list)):
         primary_ji0 = full_pillar_list[p_index]
+        # if end pillar is internal to model, do not split
+        if p_index == 0 or p_index == len(full_pillar_list) - 1:
+            if not (primary_ji0[0] in (0, grid.nj) or primary_ji0[1] in (0, grid.ni)):
+                continue
         primary = primary_ji0[0] * (grid.ni + 1) + primary_ji0[1]
         p_vector = np.array(_pillar_vector(grid, primary), dtype = float)
         if p_vector is None:
