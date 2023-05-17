@@ -108,6 +108,7 @@ def add_faults(epc_file,
     # build pillar list dict for polylines if necessary
     if full_pillar_list_dict is None:
         full_pillar_list_dict = {}
+        log.debug('using polylines for defining faults')
         _populate_composite_face_sets_for_polylines(model, grid, polylines, lines_crs_uuid, grid.crs, lines_file_list,
                                                     full_pillar_list_dict, composite_face_set_dict)
 
@@ -115,7 +116,7 @@ def add_faults(epc_file,
         _populate_composite_face_sets_for_pillar_lists(source_grid, full_pillar_list_dict, composite_face_set_dict)
 
     # log.debug(f'full_pillar_list_dict:\n{full_pillar_list_dict}')
-
+    log.debug(f'number of faults to be added: {len(full_pillar_list_dict)}')
     _process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict)
 
     collection = rqdm_c._prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_realization,
@@ -344,6 +345,7 @@ def _processs_foursome(grid, n_primaries, primary, original_p, existing_foursome
 
 def _process_full_pillar_list_dict(grid, full_pillar_list_dict, left_right_throw_dict):
     for fault_key in full_pillar_list_dict:
+        log.debug(f'processing fault: {fault_key}')
         full_pillar_list = full_pillar_list_dict[fault_key]
         left_right_throw = None
         if left_right_throw_dict is not None:

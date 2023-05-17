@@ -2566,7 +2566,8 @@ class PropertyCollection():
         if find_local_property_kinds and property_kind in ['continuous', 'discrete', 'categorical']:
             property_kind = title
 
-        d_or_c_text, xsd_type, hdf5_type, null_value = pcga._get_property_type_details(discrete, string_lookup_uuid, points, null_value)
+        d_or_c_text, xsd_type, hdf5_type, null_value = pcga._get_property_type_details(
+            discrete, string_lookup_uuid, points, null_value)
         p_node, p_uuid = pcxml._create_xml_get_p_node(self, p_uuid, d_or_c_text)
 
         pcxml._create_xml_add_basics_to_p_node(self, p_node, title, originator, extra_metadata, source, count,
