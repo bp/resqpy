@@ -2549,8 +2549,7 @@ class PropertyCollection():
         # currently assumes discrete properties to be 32 bit integers and continuous to be 64 bit reals
         # also assumes property_kind is one of the standard resqml property kinds; todo: allow local p kind node as optional arg
         support_root, support_uuid, ext_uuid = pcxml._create_xml_get_basics(self, discrete, points, const_value,
-                                                                            facet_type, null_value, support_uuid,
-                                                                            ext_uuid)
+                                                                            facet_type, support_uuid, ext_uuid)
 
         support_type = self.model.type_of_part(self.model.part_for_uuid(support_uuid))
         indexable_element = pcga._get_indexable_element(indexable_element, support_type)
@@ -2567,8 +2566,8 @@ class PropertyCollection():
         if find_local_property_kinds and property_kind in ['continuous', 'discrete', 'categorical']:
             property_kind = title
 
-        pcga._get_property_type_details(self, discrete, string_lookup_uuid, points)
-        p_node, p_uuid = pcxml._create_xml_get_p_node(self, p_uuid)
+        d_or_c_text, xsd_type, hdf5_type, null_value = pcga._get_property_type_details(discrete, string_lookup_uuid, points, null_value)
+        p_node, p_uuid = pcxml._create_xml_get_p_node(self, p_uuid, d_or_c_text)
 
         pcxml._create_xml_add_basics_to_p_node(self, p_node, title, originator, extra_metadata, source, count,
                                                indexable_element)
@@ -2579,11 +2578,11 @@ class PropertyCollection():
         property_kind_uuid = pcxml._create_xml_property_kind(self, p_node, find_local_property_kinds, property_kind,
                                                              uom, discrete, property_kind_uuid)
         pcxml._create_xml_patch_node(self, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
-                                     expand_const_arrays)
+                                     expand_const_arrays, hdf5_type, xsd_type, null_value)
         pcxml._create_xml_facet_node(facet_type, facet, p_node)
 
         pcxml._create_xml_property_min_max(self, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                           max_value, string_lookup_uuid is not None, null_value, points)
+                                           max_value, string_lookup_uuid is not None, null_value, points, xsd_type)
 
         if discrete:
             sl_root = pcxml._create_xml_lookup_node(self, p_node, string_lookup_uuid)
@@ -2593,7 +2592,7 @@ class PropertyCollection():
             sl_root = None
         pcxml._create_xml_add_as_part(self, add_as_part, p_uuid, p_node, add_relationships, support_root,
                                       property_kind_uuid, related_time_series_node, sl_root, discrete,
-                                      string_lookup_uuid, const_value, ext_uuid)
+                                      string_lookup_uuid, const_value, ext_uuid, d_or_c_text)
 
         return p_node
 

@@ -21,9 +21,9 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 def _create_xml_add_as_part(collection, add_as_part, p_uuid, p_node, add_relationships, support_root,
                             property_kind_uuid, related_time_series_node, sl_root, discrete, string_lookup_uuid,
-                            const_value, ext_uuid):
+                            const_value, ext_uuid, d_or_c_text):
     if add_as_part:
-        collection.model.add_part('obj_' + collection.d_or_c_text + 'Property', p_uuid, p_node)
+        collection.model.add_part('obj_' + d_or_c_text + 'Property', p_uuid, p_node)
         if add_relationships:
             _create_xml_add_relationships(collection, p_node, support_root, property_kind_uuid,
                                           related_time_series_node, sl_root, discrete, string_lookup_uuid, const_value,
@@ -42,14 +42,11 @@ def _create_property_set_xml_add_as_part(collection, ps_node, ps_uuid, add_relat
             collection.model.create_reciprocal_relationship(ps_node, 'destinationObject', prop_node, 'sourceObject')
 
 
-def _create_xml_get_basics(collection, discrete, points, const_value, facet_type, null_value, support_uuid, ext_uuid):
+def _create_xml_get_basics(collection, discrete, points, const_value, facet_type, support_uuid, ext_uuid):
     assert not discrete or not points
     assert not points or const_value is None
     assert not points or facet_type is None
     assert collection.model is not None
-
-    if null_value is not None:
-        collection.null_value = null_value
 
     if support_uuid is None:
         support_uuid = collection.support_uuid
@@ -88,7 +85,7 @@ def _create_xml_property_kind(collection, p_node, find_local_property_kinds, pro
 
 
 def _create_xml_patch_node(collection, p_node, points, const_value, indexable_element, direction, p_uuid, ext_uuid,
-                           expand_const_arrays):
+                           expand_const_arrays, hdf5_type, xsd_type, null_value):
     # create patch node
     const_count = None
     if const_value is not None and not expand_const_arrays:
@@ -100,30 +97,30 @@ def _create_xml_patch_node(collection, p_node, points, const_value, indexable_el
     _ = collection.model.create_patch(p_uuid,
                                       ext_uuid,
                                       root = p_node,
-                                      hdf5_type = collection.hdf5_type,
-                                      xsd_type = collection.xsd_type,
-                                      null_value = collection.null_value,
+                                      hdf5_type = hdf5_type,
+                                      xsd_type = xsd_type,
+                                      null_value = null_value,
                                       const_value = const_value,
                                       const_count = const_count,
                                       points = points)
 
 
 def _create_xml_property_min_max(collection, property_array, const_value, discrete, add_min_max, p_node, min_value,
-                                 max_value, categorical, null_value, points):
+                                 max_value, categorical, null_value, points, xsd_type):
     if add_min_max and not categorical and not points:
         # todo: use active cell mask on numpy min and max operations; exclude null values on discrete min max
         min_value, max_value = pcga._get_property_array_min_max_value(collection, property_array, const_value, discrete,
                                                                       min_value, max_value, categorical, null_value)
         if min_value is not None:
             min_node = rqet.SubElement(p_node, ns['resqml2'] + 'MinimumValue')
-            min_node.set(ns['xsi'] + 'type', ns['xsd'] + collection.xsd_type)
+            min_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
             if discrete:
                 min_node.text = str(maths.floor(min_value))
             else:
                 min_node.text = str(min_value)
         if max_value is not None:
             max_node = rqet.SubElement(p_node, ns['resqml2'] + 'MaximumValue')
-            max_node.set(ns['xsi'] + 'type', ns['xsd'] + collection.xsd_type)
+            max_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)
             if discrete:
                 max_node.text = str(maths.ceil(max_value))
             else:
@@ -227,8 +224,8 @@ def _create_xml_time_series_node(collection, time_series_uuid, time_index, p_nod
     return related_time_series_node
 
 
-def _create_xml_get_p_node(collection, p_uuid):
-    p_node = collection.model.new_obj_node(collection.d_or_c_text + 'Property')
+def _create_xml_get_p_node(collection, p_uuid, d_or_c_text):
+    p_node = collection.model.new_obj_node(d_or_c_text + 'Property')
     if p_uuid is None:
         p_uuid = bu.uuid_from_string(p_node.attrib['uuid'])
     else:
