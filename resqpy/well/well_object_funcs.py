@@ -167,6 +167,7 @@ def well_name(well_object, model = None):
     def better_root(model, root_a, root_b):
         a = rqet.citation_title_for_node(root_a)
         b = rqet.citation_title_for_node(root_b)
+        log.warning(f'......better_root() called; a: {a}; b: {b}')
         if a is None or len(a) == 0:
             return root_b
         if b is None or len(b) == 0:
@@ -190,6 +191,7 @@ def well_name(well_object, model = None):
         return root_a
 
     def best_root(model, roots_list):
+        log.warning(f'.....best_root() called with list length: {len(roots_list)}')
         if len(roots_list) == 0:
             return None
         if len(roots_list) == 1:
@@ -254,7 +256,7 @@ def well_name(well_object, model = None):
             obj_uuid = well_object.uuid
             obj_root = model.root_for_uuid(obj_uuid)
 
-        log.warning(f'best_root_for_object() called: type: {obj_type}; uuid: {obj_uuid}')
+        log.warning(f'....best_root_for_object() called: type: {obj_type}; uuid: {obj_uuid}')
 
         if obj_type == 'WellboreFeature':
             interp_parts = model.parts(obj_type = 'WellboreInterpretation')
@@ -281,7 +283,7 @@ def well_name(well_object, model = None):
                     feat_parts = model.parts_list_filtered_by_related_uuid(all_feat_parts, model.uuid_for_part(part))
                     all_parts += feat_parts
             if all_parts is not None:
-                log.warning(f'brfo(): related parts: {all_parts}')
+                log.warning(f'....brfo(): related parts: {all_parts}')
                 root_list = [model.root_for_part(part) for part in all_parts]
         elif obj_type in [
                 'BlockedWellboreRepresentation', 'WellboreMarkerFrameRepresentation', 'WellboreFrameRepresentation'
