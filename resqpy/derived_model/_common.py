@@ -67,6 +67,11 @@ def _prepare_simple_inheritance(grid, source_grid, inherit_properties, inherit_r
             collection.set_grid(grid)
             collection.extend_imported_list_copying_properties_from_other_grid_collection(
                 source_collection, realization = inherit_realization, copy_all_realizations = inherit_all_realizations)
+        if source_grid.model is not grid.model:
+            uuids = source_collection.time_series_uuid_list(sort_list = False)
+            uuids += source_collection.string_lookup_uuid_list(sort_list = False)
+            for uuid in uuids:
+                grid.model.copy_uuid_from_other_model(source_grid.model, uuid)
     return collection
 
 

@@ -553,12 +553,17 @@ def columns_to_nearest_split_face(grid):
 def left_right_foursome(full_pillar_list, p_index):
     """Returns (2, 2) bool numpy array indicating which columns around a primary pillar are to the right of a line."""
 
-    assert 0 < p_index < len(full_pillar_list) - 1
+    assert 0 <= p_index <= len(full_pillar_list) - 1
     here = np.array(full_pillar_list[p_index], dtype = int)
-    previous = np.array(full_pillar_list[p_index - 1], dtype = int)
-    next = np.array(full_pillar_list[p_index + 1], dtype = int)
-    entry = tuple(here - previous)
-    exit = tuple(next - here)
+    previous = np.array(full_pillar_list[p_index - 1], dtype = int) if p_index > 0 else None
+    next = np.array(full_pillar_list[p_index + 1], dtype = int) if p_index < len(full_pillar_list) - 1 else None
+    assert previous is not None or next is not None
+    entry = None if previous is None else tuple(here - previous)
+    exit = None if next is None else tuple(next - here)
+    if entry is None:
+        entry = exit
+    elif exit is None:
+        exit = entry
     # yapf: disable
     entry_tuples_list = [(0, 1), (0, -1), (1, 0), (-1, 0)]
     exit_tuples_list = [[(-1, 0), (0, 1),  (1, 0)],

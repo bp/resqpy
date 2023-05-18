@@ -58,25 +58,26 @@ def _get_property_kind_uuid(collection, property_kind_uuid, property_kind, uom, 
     return property_kind_uuid
 
 
-def _get_property_type_details(collection, discrete, string_lookup_uuid, points):
+def _get_property_type_details(discrete, string_lookup_uuid, points, null_value):
+    d_or_c_text = xsd_type = hdf5_type = None
     if discrete:
         if string_lookup_uuid is None:
-            collection.d_or_c_text = 'Discrete'
-
+            d_or_c_text = 'Discrete'
         else:
-            collection.d_or_c_text = 'Categorical'
-        collection.xsd_type = 'integer'
-        collection.hdf5_type = 'IntegerHdf5Array'
+            d_or_c_text = 'Categorical'
+        xsd_type = 'integer'
+        hdf5_type = 'IntegerHdf5Array'
     elif points:
-        collection.d_or_c_text = 'Points'
-        collection.xsd_type = 'double'
-        collection.hdf5_type = 'Point3dHdf5Array'
-        collection.null_value = None
+        d_or_c_text = 'Points'
+        xsd_type = 'double'
+        hdf5_type = 'Point3dHdf5Array'
+        null_value = None
     else:
-        collection.d_or_c_text = 'Continuous'
-        collection.xsd_type = 'double'
-        collection.hdf5_type = 'DoubleHdf5Array'
-        collection.null_value = None
+        d_or_c_text = 'Continuous'
+        xsd_type = 'double'
+        hdf5_type = 'DoubleHdf5Array'
+        null_value = None
+    return d_or_c_text, xsd_type, hdf5_type, null_value
 
 
 def _get_property_array_min_max_value(collection, property_array, const_value, discrete, min_value, max_value,

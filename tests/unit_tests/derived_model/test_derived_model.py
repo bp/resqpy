@@ -970,12 +970,12 @@ def test_add_faults(tmp_path):
         model = rq.Model(epc)
         assert len(model.titles(obj_type = 'IjkGridRepresentation')) == 8
         g1 = model.grid(title = 'ttt_f7')
-        assert g1.split_pillars_count == 5
+        assert g1.split_pillars_count == 9
         cpm = g1.create_column_pillar_mapping()
         assert cpm.shape == (3, 3, 2, 2)
         extras = (cpm >= 16)
-        assert np.count_nonzero(extras) == 7
-        assert np.all(np.sort(np.unique(cpm)) == np.arange(21))
+        assert np.count_nonzero(extras) == 11
+        assert np.all(np.sort(np.unique(cpm)) == np.arange(25))
 
 
 def test_add_faults_and_scaling(tmp_path):
@@ -1019,7 +1019,7 @@ def test_add_faults_and_scaling(tmp_path):
     # prepare dictionaries to define more faults and their throws
     pillar_list_dict = {}
     pillar_list_dict['step_fault'] = [(1, 0), (1, 1), (2, 1), (2, 2), (2, 3), (2, 4), (1, 4), (1, 5)]
-    pillar_list_dict['north_south_fault'] = [(0, 3), (4, 3)]
+    pillar_list_dict['north_south_fault'] = [(0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]
     throw_dict = {}
     throw_dict['step_fault'] = (7.0, -7.0)
     throw_dict['north_south_fault'] = (-3.3, 4.8)
@@ -1069,8 +1069,8 @@ def test_add_faults_and_scaling(tmp_path):
 
     g = grr.Grid(model, uuid = f2a_grid_uuid)
     gbox = g.xyz_box(lazy = False)
-    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.3), (500.0, 750.0, 71.8)]))
-    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -7.0), (500.0, 750.0, 67.0)]))
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.3), (500.0, 750.0, 71.8)]))
+    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -7.0), (500.0, 750.0, 67.0)]))
 
     g = grr.Grid(model, uuid = f1b_grid_uuid)
     gbox = g.xyz_box(lazy = False)
@@ -1079,7 +1079,8 @@ def test_add_faults_and_scaling(tmp_path):
 
     g = grr.Grid(model, uuid = f2b_grid_uuid)
     gbox = g.xyz_box(lazy = False)
-    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.5), (500.0, 750.0, 70.5)]))
+    # assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -10.5), (500.0, 750.0, 70.5)]))
+    assert_array_almost_equal(gbox, np.array([(0.0, 0.0, -18.4), (500.0, 750.0, 79.9)]))
 
 
 def test_drape_to_surface(tmp_path):
