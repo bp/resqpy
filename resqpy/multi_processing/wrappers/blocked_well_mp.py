@@ -15,19 +15,6 @@ import resqpy.well as rqw
 import resqpy.multi_processing as rqmp
 
 
-def debug_well_name(trajectory):
-    import resqpy.organize as rqo
-    log.warning(f'blocked well being formed from trajectory: {trajectory.title}; traj uuid: {trajectory.uuid}')
-    m = trajectory.model
-    interp_uuid = m.uuid(obj_type = 'WellboreInterpretation', related_uuid = trajectory.uuid)
-    if interp_uuid is None:
-        log.error('...no related wellbore interpretation')
-    else:
-        interp = rqo.WellboreInterpretation(m, uuid = interp_uuid)
-        log.warning(f'...related wellbore interpretation: {interp.title}; interp uuid: {interp_uuid}')
-    log.warning(f'...well name from function: {rqw.well_name(trajectory)}')
-
-
 def blocked_well_from_trajectory_wrapper(
     index: int,
     parent_tmp_dir: str,
@@ -76,7 +63,6 @@ def blocked_well_from_trajectory_wrapper(
     for trajectory_uuid in trajectory_uuids:
         model.copy_uuid_from_other_model(trajectory_model, uuid = trajectory_uuid)
         trajectory = rqw.Trajectory(model, trajectory_uuid)
-        debug_well_name(trajectory)
         blocked_well = rqw.BlockedWell(model, grid = grid, trajectory = trajectory)
         if blocked_well is None or blocked_well.cell_count is None or blocked_well.node_count is None:
             success = False
