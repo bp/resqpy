@@ -1459,12 +1459,12 @@ def test_add_faults(tmp_path):
         model = rq.Model(epc)
         assert len(model.titles(obj_type = 'IjkGridRepresentation')) == 8
         g1 = model.grid(title = 'ttt_f7')
-        assert g1.split_pillars_count == 5
+        assert g1.split_pillars_count == 9
         cpm = g1.create_column_pillar_mapping()
         assert cpm.shape == (3, 3, 2, 2)
         extras = (cpm >= 16)
-        assert np.count_nonzero(extras) == 7
-        assert np.all(np.sort(np.unique(cpm)) == np.arange(21))
+        assert np.count_nonzero(extras) == 11
+        assert np.all(np.sort(np.unique(cpm)) == np.arange(25))
 
 
 def test_gcs_face_surface_normal_vectors(example_model_with_properties):
