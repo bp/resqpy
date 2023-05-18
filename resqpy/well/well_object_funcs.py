@@ -174,14 +174,6 @@ def well_name(well_object, model = None):
         if b is None or len(b) == 0:
             log.warning('.......better_root() returning a at 2')
             return root_a
-        parts_like_a = model.parts(title = a)
-        parts_like_b = model.parts(title = b)
-        if len(parts_like_a) > 1 and len(parts_like_b) == 1:
-            log.warning(f'.......better_root() returning b at 3; parts like a: {len(parts_like_a)}; parts like b: {len(parts_like_b)}')
-            return root_b
-        elif len(parts_like_b) > 1 and len(parts_like_a) == 1:
-            log.warning(f'.......better_root() returning a at 4; parts like a: {len(parts_like_a)}; parts like b: {len(parts_like_b)}')
-            return root_a
         a_digits = 0
         for c in a:
             if c.isdigit():
@@ -193,6 +185,14 @@ def well_name(well_object, model = None):
         log.warning(f'.......better_root(): a_digits: {a_digits}; b_digits: {b_digits}')
         if a_digits < b_digits:
             log.warning('.......better_root() returning b at 5')
+            return root_b
+        elif b_digits < a_digits:
+            log.warning('.......better_root() returning a at 7')
+            return root_a
+        parts_like_a = model.parts(title = a)
+        parts_like_b = model.parts(title = b)
+        if len(parts_like_a) > len(parts_like_b):
+            log.warning(f'.......better_root() returning b at 3; parts like a: {len(parts_like_a)}; parts like b: {len(parts_like_b)}')
             return root_b
         log.warning('.......better_root() returning a at 6')
         return root_a
