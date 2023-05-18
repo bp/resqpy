@@ -45,7 +45,7 @@ numpy = "^1.23"
 pandas = "^1.4"
 h5py = "^3.7"
 lxml = "^4.9"
-lasio = "^0.30"
+lasio = "^0.31"
 scipy = "^1.9"
 numba = ">=0.56, < 1.0"
 joblib = "^1.2"
@@ -115,5 +115,6 @@ filterwarnings = [
     "error::DeprecationWarning:.*resqpy.*",
     # Ignore warnings that are entirely from 3rd party libs outside our control
     "ignore:.*importing the ABCs from 'collections'.*:DeprecationWarning:.*pyreadline.*",
-    "ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning:.*pywintypes.*"
+    "ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning:.*pywintypes.*",
+    "ignore:.*distutils package is deprecated.*:DeprecationWarning:.*joblib.*",
     ]
