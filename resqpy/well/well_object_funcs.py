@@ -177,10 +177,10 @@ def well_name(well_object, model = None):
         parts_like_a = model.parts(title = a)
         parts_like_b = model.parts(title = b)
         if len(parts_like_a) > 1 and len(parts_like_b) == 1:
-            log.warning('.......better_root() returning b at 3')
+            log.warning(f'.......better_root() returning b at 3; parts like a: {len(parts_like_a)}; parts like b: {len(parts_like_b)}')
             return root_b
         elif len(parts_like_b) > 1 and len(parts_like_a) == 1:
-            log.warning('.......better_root() returning a at 4')
+            log.warning(f'.......better_root() returning a at 4; parts like a: {len(parts_like_a)}; parts like b: {len(parts_like_b)}')
             return root_a
         a_digits = 0
         for c in a:
@@ -212,6 +212,7 @@ def well_name(well_object, model = None):
         if well_object is None:
             return None
         if model is None:
+            log.warning('brfo(): using model from object')
             model = well_object.model
         root_list = []
         obj_root = None
