@@ -171,12 +171,6 @@ def well_name(well_object, model = None):
             return root_b
         if b is None or len(b) == 0:
             return root_a
-        parts_like_a = model.parts(title = a)
-        parts_like_b = model.parts(title = b)
-        if len(parts_like_a) > 1 and len(parts_like_b) == 1:
-            return root_b
-        elif len(parts_like_b) > 1 and len(parts_like_a) == 1:
-            return root_a
         a_digits = 0
         for c in a:
             if c.isdigit():
@@ -186,6 +180,12 @@ def well_name(well_object, model = None):
             if c.isdigit():
                 b_digits += 1
         if a_digits < b_digits:
+            return root_b
+        elif b_digits < a_digits:
+            return root_a
+        parts_like_a = model.parts(title = a)
+        parts_like_b = model.parts(title = b)
+        if len(parts_like_a) > len(parts_like_b):
             return root_b
         return root_a
 

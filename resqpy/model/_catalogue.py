@@ -721,11 +721,12 @@ def _filtered_by_title(model, parts_list, title, title_mode, title_case_sensitiv
     assert title_mode in [
         'is', 'starts', 'ends', 'contains', 'is not', 'does not start', 'does not end', 'does not contain'
     ]
+    title = title.strip()
     if not title_case_sensitive:
         title = title.upper()
     filtered_list = []
     for part in parts_list:
-        part_title = _citation_title_for_part(model, part)
+        part_title = _citation_title_for_part(model, part).strip()
         if not title_case_sensitive:
             part_title = part_title.upper()
         if title_mode == 'is':
