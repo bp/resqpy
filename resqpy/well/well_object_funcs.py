@@ -169,14 +169,18 @@ def well_name(well_object, model = None):
         b = rqet.citation_title_for_node(root_b)
         log.warning(f'......better_root() called; a: {a}; b: {b}')
         if a is None or len(a) == 0:
+            log.warning('.......better_root() returning b at 1')
             return root_b
         if b is None or len(b) == 0:
+            log.warning('.......better_root() returning a at 2')
             return root_a
         parts_like_a = model.parts(title = a)
         parts_like_b = model.parts(title = b)
         if len(parts_like_a) > 1 and len(parts_like_b) == 1:
+            log.warning('.......better_root() returning b at 3')
             return root_b
         elif len(parts_like_b) > 1 and len(parts_like_a) == 1:
+            log.warning('.......better_root() returning a at 4')
             return root_a
         a_digits = 0
         for c in a:
@@ -186,8 +190,11 @@ def well_name(well_object, model = None):
         for c in b:
             if c.isdigit():
                 b_digits += 1
+        log.warning(f'.......better_root(): a_digits: {a_digits}; b_digits: {b_digits}')
         if a_digits < b_digits:
+            log.warning('.......better_root() returning b at 5')
             return root_b
+        log.warning('.......better_root() returning a at 6')
         return root_a
 
     def best_root(model, roots_list):
