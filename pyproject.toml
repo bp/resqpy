@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Development Status :: 5 - Production/Stable",
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Filesystems",
@@ -39,12 +40,12 @@ include = ["data/*.json"]
 #   - https://semver.org/
 # See here for "caret" style dependency specifications:
 #   - https://python-poetry.org/docs/dependency-specification/
-python = ">= 3.8.1, < 3.11"
+python = ">= 3.8.1, < 3.12"
 numpy = "^1.23"
 pandas = "^1.4"
 h5py = "^3.7"
 lxml = "^4.9"
-lasio = "^0.30"
+lasio = "^0.31"
 scipy = "^1.9"
 numba = ">=0.56, < 1.0"
 joblib = "^1.2"
@@ -114,5 +115,6 @@ filterwarnings = [
     "error::DeprecationWarning:.*resqpy.*",
     # Ignore warnings that are entirely from 3rd party libs outside our control
     "ignore:.*importing the ABCs from 'collections'.*:DeprecationWarning:.*pyreadline.*",
-    "ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning:.*pywintypes.*"
+    "ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning:.*pywintypes.*",
+    "ignore:.*distutils package is deprecated.*:DeprecationWarning:.*joblib.*",
     ]
