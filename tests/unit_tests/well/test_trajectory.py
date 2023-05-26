@@ -364,3 +364,33 @@ def test_dataframe(example_model_and_crs):
 
     # -------- Assert ---------
     pd.testing.assert_frame_equal(source_dataframe.astype(float), returned_dataframe)
+
+
+def test_trajectory_inclinations(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                                crs_uuid = crs.uuid,
+                                location = (100.0, 500.0, -100.0),
+                                md_reference = 'kelly bushing')
+    source_dataframe = pd.DataFrame({
+        'MD': [0, 1100, 1200, 1300, 1400],
+        'X': [100, 100, 150, 250, 300],
+        'Y': [500, 500, 450, 450, 400],
+        'Z': [-100, 1000, 1070.710678, 1070.710678, 1000],
+    })
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        data_frame = source_dataframe,
+                                        md_datum = datum,
+                                        length_uom = 'm')
+
+    # --------- Act ----------
+    # Get the inclination data
+    incl = trajectory.inclinations()
+
+    # -------- Assert ---------
+    assert incl.shape == (4,)
+    np.testing.assert_array_almost_equal(incl, (0.0, 45.0, 90.0, 135.0))
