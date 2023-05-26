@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from functools import partial
 
+import resqpy.crs as rqc
 import resqpy.lines as rql
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
@@ -21,7 +22,7 @@ import resqpy.olio.wellspec_keywords as wsk
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
-import resqpy.weights_and_measures as bwam
+import resqpy.weights_and_measures as wam
 import resqpy.well
 import resqpy.well._md_datum as rqmdd
 import resqpy.well._wellbore_frame as rqwbf
@@ -366,8 +367,7 @@ class Trajectory(BaseResqpy):
             self.knot_count = len(data_frame)
             assert self.knot_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
             self.line_kind_index = 5  # assume minimum curvature spline
-            #         self.md_uom = bwam.p_length_unit(md_uom)
-            self.md_uom = bwam.rq_length_unit(md_uom)
+            self.md_uom = wam.rq_length_unit(md_uom)
             start = data_frame.iloc[0]
             finish = data_frame.iloc[-1]
             if title:
@@ -401,7 +401,7 @@ class Trajectory(BaseResqpy):
 
         knot_count = len(cell_kji0_list) + 2
         self.line_kind_index = 5  # 5 means minimum curvature spline; todo: set to cubic spline value?
-        self.md_uom = bwam.rq_length_unit(md_uom)
+        self.md_uom = wam.rq_length_unit(md_uom)
         self.start_md = 0.0
         points = np.empty((knot_count, 3))
         points[1:-1] = cell_centres
@@ -621,6 +621,29 @@ class Trajectory(BaseResqpy):
             return interpolate(np.array(self.md_datum.location), self.control_points[0], md / self.start_md)
         return search(md, 0, self.knot_count - 1)
 
+    def inclinations(self):
+        """Returns a numpy array of inclinations in degrees, zero being vertical, with a value per interval.
+
+        note:
+           this method returns inclinations of piecewise linear line segments between control points;
+           calling code can alternatively use the tangent vectors at knots to derive similar information
+        """
+        assert self.knot_count >= 2 and self.control_points.shape == (self.knot_count, 3)
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+        interval_vectors = self.control_points[1:] - self.control_points[:-1]
+        if crs.xy_units != crs.z_units:
+            wam.convert_lengths(interval_vectors[:, 2], crs.z_units, crs.xy_units)
+        if not crs.z_inc_down:
+            interval_vectors[:, 2] = -interval_vectors[:, 2]
+        interval_h = np.sqrt((interval_vectors[:, 0] * interval_vectors[:, 0]) +
+                             (interval_vectors[:, 1] * interval_vectors[:, 1]))
+        restore = np.seterr(all = 'ignore')
+        incl_radians = np.arctan(interval_h / interval_vectors[:, 2])  # horizontal / vertical
+        np.seterr(**restore)
+        incl_radians = np.where(interval_vectors[:, 2] == 0.0, maths.pi / 2.0, incl_radians)
+        incl_radians = np.where(incl_radians < 0.0, incl_radians + maths.pi, incl_radians)
+        return np.degrees(incl_radians)
+
     def splined_trajectory(self,
                            well_name,
                            min_subdivisions = 1,
@@ -838,7 +861,7 @@ class Trajectory(BaseResqpy):
 
         md_uom = rqet.SubElement(wbt_node, ns['resqml2'] + 'MdUom')
         md_uom.set(ns['xsi'] + 'type', ns['eml'] + 'LengthUom')
-        md_uom.text = bwam.rq_length_unit(self.md_uom)
+        md_uom.text = wam.rq_length_unit(self.md_uom)
 
         if self.md_domain:
             domain_node = rqet.SubElement(wbt_node, ns['resqml2'] + 'MdDomain')
