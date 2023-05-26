@@ -633,6 +633,8 @@ class Trajectory(BaseResqpy):
         interval_vectors = self.control_points[1:] - self.control_points[:-1]
         if crs.xy_units != crs.z_units:
             wam.convert_lengths(interval_vectors[:, 2], crs.z_units, crs.xy_units)
+        if not crs.z_inc_down:
+            interval_vectors[:, 2] = -interval_vectors[:, 2]
         interval_h = np.sqrt((interval_vectors[:, 0] * interval_vectors[:, 0]) +
                              (interval_vectors[:, 1] * interval_vectors[:, 1]))
         restore = np.seterr(all = 'ignore')
