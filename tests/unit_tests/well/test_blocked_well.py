@@ -1025,8 +1025,10 @@ def test_add_grid_properties(example_model_and_crs):
 
     ts = rqts.TimeSeries(model, first_timestamp = '1997-03-03', yearly = 2, title = 'an example time series')
     ts.create_xml()
-    slup = rqp.StringLookup(model, title = 'example lookup', int_to_str_dict = {1: 'one', 2: 'two', 3: 'three'})
-    slup.create_xml()
+    slup1 = rqp.StringLookup(model, title = 'example lookup 1', int_to_str_dict = {1: 'one', 2: 'two', 3: 'three'})
+    slup1.create_xml()
+    slup2 = rqp.StringLookup(model, title = 'example lookup 2', int_to_str_dict = {4: 'four', 5: 'five', 6: 'six'})
+    slup2.create_xml()
 
     grid_pc = grid.property_collection
     for ti in range(3):
@@ -1042,7 +1044,7 @@ def test_add_grid_properties(example_model_and_crs):
     array = np.random.randint(1, 3, size = (3, 5, 3, 3))
 
     for ti in range(3):
-        grid_pc.add_cached_array_to_imported_list(array[0],
+        grid_pc.add_cached_array_to_imported_list(array[ti],
                                                   'unit test',
                                                   'time step and sl data',
                                                   discrete = True,
@@ -1050,7 +1052,15 @@ def test_add_grid_properties(example_model_and_crs):
                                                   time_index = ti)
     grid_pc.write_hdf5_for_imported_list()
     uuids_sl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid,
-                                                                           string_lookup_uuid = slup.uuid)
+                                                                           string_lookup_uuid = slup1.uuid)
+    array2 = np.random.randint(4, 6, size = (5, 3, 3))
+    grid_pc.add_cached_array_to_imported_list(array2,
+                                              'unit test',
+                                              'sl data',
+                                              discrete = True,
+                                              property_kind = 'example data')
+    grid_pc.write_hdf5_for_imported_list()
+    uuids_static = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = slup2.uuid)
 
     well_name = 'VERTICAL'
     bw = rqw.BlockedWell(model, well_name = well_name, trajectory = trajectory)
@@ -1058,7 +1068,7 @@ def test_add_grid_properties(example_model_and_crs):
     bw.create_xml()
     model.store_epc()
 
-    uuids_to_add = uuids_nosl + uuids_sl
+    uuids_to_add = uuids_nosl + uuids_sl + uuids_static
     orig_counts_dict = model.parts_count_dict()
 
     # ---------- Act ------------
@@ -1069,10 +1079,10 @@ def test_add_grid_properties(example_model_and_crs):
     reload = rq.Model(model.epc_file)
     new_counts_dict = reload.parts_count_dict()
 
-    assert new_counts_dict['CategoricalProperty'] - orig_counts_dict['CategoricalProperty'] == 3
+    assert new_counts_dict['CategoricalProperty'] - orig_counts_dict['CategoricalProperty'] == 4
     assert new_counts_dict['DiscreteProperty'] - orig_counts_dict['DiscreteProperty'] == 3
 
     bw = rqw.BlockedWell(reload, uuid = bw.uuid)
     bw_pc = bw.extract_property_collection()
     assert len(bw_pc.time_series_uuid_list()) == 1
-    assert len(bw_pc.string_lookup_uuid_list()) == 1
+    assert len(bw_pc.string_lookup_uuid_list()) == 2
