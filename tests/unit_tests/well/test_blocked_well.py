@@ -987,6 +987,7 @@ IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 15
 
+
 def test_add_grid_properties(example_model_and_crs):
 
     # --------- Arrange ----------
@@ -1024,34 +1025,35 @@ def test_add_grid_properties(example_model_and_crs):
 
     ts = rqts.TimeSeries(model, first_timestamp = '1997-03-03', yearly = 2, title = 'an example time series')
     ts.create_xml()
-    slup = rqp.StringLookup(model, title='example lookup', int_to_str_dict={1: 'one', 2: 'two', 3: 'three'})
+    slup = rqp.StringLookup(model, title = 'example lookup', int_to_str_dict = {1: 'one', 2: 'two', 3: 'three'})
     slup.create_xml()
 
     grid_pc = grid.property_collection
     for ti in range(3):
-        grid_pc.add_cached_array_to_imported_list(np.full(shape=grid.extent_kji, fill_value=ti),
+        grid_pc.add_cached_array_to_imported_list(np.full(shape = grid.extent_kji, fill_value = ti),
                                                   'unit test',
                                                   'time step data',
                                                   discrete = True,
                                                   property_kind = 'example data',
                                                   time_index = ti)
     grid_pc.write_hdf5_for_imported_list()
-    uuids_nosl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid=ts.uuid)
+    uuids_nosl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid)
 
-    array = np.random.randint(1,3,size=(3,5,3,3))
+    array = np.random.randint(1, 3, size = (3, 5, 3, 3))
 
     for ti in range(3):
         grid_pc.add_cached_array_to_imported_list(array[0],
-                                                  'unit test', 
+                                                  'unit test',
                                                   'time step and sl data',
-                                                  discrete = True, 
+                                                  discrete = True,
                                                   property_kind = 'example data',
                                                   time_index = ti)
     grid_pc.write_hdf5_for_imported_list()
-    uuids_sl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid=ts.uuid, string_lookup_uuid=slup.uuid)
+    uuids_sl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid,
+                                                                           string_lookup_uuid = slup.uuid)
 
     well_name = 'VERTICAL'
-    bw = rqw.BlockedWell(model, well_name = well_name, trajectory=trajectory)
+    bw = rqw.BlockedWell(model, well_name = well_name, trajectory = trajectory)
     bw.write_hdf5()
     bw.create_xml()
     model.store_epc()

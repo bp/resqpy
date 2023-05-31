@@ -3444,7 +3444,7 @@ class BlockedWell(BaseResqpy):
                         sl_dict[gridpc.string_lookup_uuid_for_part(part)] = [part]
             else:
                 sl_dict = {None: cell_parts}
-            
+
             sl_ts_dict = {}
             for sl_uuid in sl_dict.keys():
                 if len(gridpc.time_series_uuid_list()) > 0:
@@ -3486,7 +3486,8 @@ class BlockedWell(BaseResqpy):
                             realization = gridpc.realization_for_part(part),
                             indexable_element = 'cells')
                     bwpc.write_hdf5_for_imported_list()
-                    bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_uuid, string_lookup_uuid = sl_uuid)
+                    bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_uuid,
+                                                                             string_lookup_uuid = sl_uuid)
         else:
             log.debug(
                 "no properties added - uuids either not 'cell' properties or blocked well is associated with multiple grids"
