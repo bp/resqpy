@@ -3448,8 +3448,8 @@ class BlockedWell(BaseResqpy):
             sl_ts_dict = {}
             for sl_uuid in sl_dict.keys():
                 if len(gridpc.time_series_uuid_list()) > 0:
-                    # dictionary with keys for time_series uuids and None for static properties
-                    # values for each key are a list of property parts associated with that time_series_uuid, or None
+                    # dictionary with keys for string_lookup uuids and None where missing
+                    # values for each key are a list of property parts associated with that lookup uuid, or None
                     time_dict = {}
                     for part in sl_dict[sl_uuid]:
                         if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
@@ -3458,7 +3458,7 @@ class BlockedWell(BaseResqpy):
                         else:
                             time_dict[gridpc.time_series_uuid_for_part(part)] = [part]
                 else:
-                    time_dict = {None: cell_parts}
+                    time_dict = {None: sl_dict[sl_uuid]}
                 sl_ts_dict[sl_uuid] = time_dict
 
             for sl_uuid in sl_ts_dict.keys():
