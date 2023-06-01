@@ -3434,43 +3434,60 @@ class BlockedWell(BaseResqpy):
 
         if len(cell_parts) > 0:
             bwpc = rqp.PropertyCollection(support = self)
-            if len(gridpc.time_series_uuid_list()) > 0:
-                # dictionary with keys for time_series uuids and None for static properties
-                # values for each key are a list of property parts associated with that time_series_uuid, or None
-                time_dict = {}
+            if len(gridpc.string_lookup_uuid_list()) > 0:
+                sl_dict = {}
                 for part in cell_parts:
-                    if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
-                        time_dict[gridpc.time_series_uuid_for_part(part)] =  \
-                            time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
+                    if gridpc.string_lookup_uuid_for_part(part) in sl_dict.keys():
+                        sl_dict[gridpc.string_lookup_uuid_for_part(part)] =  \
+                            sl_dict[gridpc.string_lookup_uuid_for_part(part)] + [part]
                     else:
-                        time_dict[gridpc.time_series_uuid_for_part(part)] = [part]
+                        sl_dict[gridpc.string_lookup_uuid_for_part(part)] = [part]
             else:
-                time_dict = {None: cell_parts}
+                sl_dict = {None: cell_parts}
 
-            for time_uuid in time_dict.keys():
-                parts = time_dict[time_uuid]
-                for part in parts:
-                    array = gridpc.cached_part_array_ref(part)
-                    indices = self.cell_indices_for_grid_uuid(grid.uuid)
-                    bwarray = np.empty(shape = (indices.shape[0],))
-                    for i, ind in enumerate(indices):
-                        bwarray[i] = array[tuple(ind)]
-                    bwpc.add_cached_array_to_imported_list(
-                        bwarray,
-                        source_info = f'property from grid {grid.title}',
-                        keyword = gridpc.citation_title_for_part(part),
-                        discrete = (not gridpc.continuous_for_part(part)),
-                        uom = gridpc.uom_for_part(part),
-                        time_index = gridpc.time_index_for_part(part),
-                        null_value = gridpc.null_value_for_part(part),
-                        property_kind = gridpc.property_kind_for_part(part),
-                        local_property_kind_uuid = gridpc.local_property_kind_uuid(part),
-                        facet_type = gridpc.facet_type_for_part(part),
-                        facet = gridpc.facet_for_part(part),
-                        realization = gridpc.realization_for_part(part),
-                        indexable_element = 'cells')
-                bwpc.write_hdf5_for_imported_list()
-                bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_uuid)
+            sl_ts_dict = {}
+            for sl_uuid in sl_dict.keys():
+                if len(gridpc.time_series_uuid_list()) > 0:
+                    # dictionary with keys for time_series uuids and None for static properties
+                    # values for each key are a list of property parts associated with that time_series_uuid, or None
+                    time_dict = {}
+                    for part in sl_dict[sl_uuid]:
+                        if gridpc.time_series_uuid_for_part(part) in time_dict.keys():
+                            time_dict[gridpc.time_series_uuid_for_part(part)] =  \
+                                time_dict[gridpc.time_series_uuid_for_part(part)] + [part]
+                        else:
+                            time_dict[gridpc.time_series_uuid_for_part(part)] = [part]
+                else:
+                    time_dict = {None: cell_parts}
+                sl_ts_dict[sl_uuid] = time_dict
+
+            for sl_uuid in sl_ts_dict.keys():
+                time_dict = sl_ts_dict[sl_uuid]
+                for time_uuid in time_dict.keys():
+                    parts = time_dict[time_uuid]
+                    for part in parts:
+                        array = gridpc.cached_part_array_ref(part)
+                        indices = self.cell_indices_for_grid_uuid(grid.uuid)
+                        bwarray = np.empty(shape = (indices.shape[0],))
+                        for i, ind in enumerate(indices):
+                            bwarray[i] = array[tuple(ind)]
+                        bwpc.add_cached_array_to_imported_list(
+                            bwarray,
+                            source_info = f'property from grid {grid.title}',
+                            keyword = gridpc.citation_title_for_part(part),
+                            discrete = (not gridpc.continuous_for_part(part)),
+                            uom = gridpc.uom_for_part(part),
+                            time_index = gridpc.time_index_for_part(part),
+                            null_value = gridpc.null_value_for_part(part),
+                            property_kind = gridpc.property_kind_for_part(part),
+                            local_property_kind_uuid = gridpc.local_property_kind_uuid(part),
+                            facet_type = gridpc.facet_type_for_part(part),
+                            facet = gridpc.facet_for_part(part),
+                            realization = gridpc.realization_for_part(part),
+                            indexable_element = 'cells')
+                    bwpc.write_hdf5_for_imported_list()
+                    bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_uuid,
+                                                                             string_lookup_uuid = sl_uuid)
         else:
             log.debug(
                 "no properties added - uuids either not 'cell' properties or blocked well is associated with multiple grids"

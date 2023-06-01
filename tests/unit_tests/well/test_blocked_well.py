@@ -986,3 +986,103 @@ IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    
     # Assert
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 1
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 15
+
+
+def test_add_grid_properties(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, use_lattice = False)
+
+    elevation = 100.0
+    location = (0.0, 0.0, -elevation)
+    datum = rqw.MdDatum(parent_model = model, crs_uuid = crs.uuid, location = location, md_reference = 'kelly bushing')
+    mds = np.array([0.0, 100, 210, 230, 240, 250])
+    zs = mds * 1.03 - elevation
+    well_name = 'TestWell'
+    source_dataframe = pd.DataFrame({
+        'MD': mds,
+        'X': [location[0], 25.0, 50, 75, 100, 100],
+        'Y': [location[1], 25.0, -50, -75, -100, -100],
+        'Z': zs,
+        'WELL': [well_name, well_name, well_name, well_name, well_name, well_name]
+    })
+    # Create a trajectory from dataframe
+    trajectory = rqw.Trajectory(parent_model = model,
+                                data_frame = source_dataframe,
+                                well_name = well_name,
+                                md_datum = datum,
+                                length_uom = 'm')
+    trajectory.write_hdf5()
+    trajectory.create_xml()
+
+    ts = rqts.TimeSeries(model, first_timestamp = '1997-03-03', yearly = 2, title = 'an example time series')
+    ts.create_xml()
+    slup1 = rqp.StringLookup(model, title = 'example lookup 1', int_to_str_dict = {1: 'one', 2: 'two', 3: 'three'})
+    slup1.create_xml()
+    slup2 = rqp.StringLookup(model, title = 'example lookup 2', int_to_str_dict = {4: 'four', 5: 'five', 6: 'six'})
+    slup2.create_xml()
+
+    grid_pc = grid.property_collection
+    for ti in range(3):
+        grid_pc.add_cached_array_to_imported_list(np.full(shape = grid.extent_kji, fill_value = ti),
+                                                  'unit test',
+                                                  'time step data',
+                                                  discrete = True,
+                                                  property_kind = 'example data',
+                                                  time_index = ti)
+    grid_pc.write_hdf5_for_imported_list()
+    uuids_nosl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid)
+
+    array = np.random.randint(1, 3, size = (3, 5, 3, 3))
+
+    for ti in range(3):
+        grid_pc.add_cached_array_to_imported_list(array[ti],
+                                                  'unit test',
+                                                  'time step and sl data',
+                                                  discrete = True,
+                                                  property_kind = 'example data',
+                                                  time_index = ti)
+    grid_pc.write_hdf5_for_imported_list()
+    uuids_sl = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = ts.uuid,
+                                                                           string_lookup_uuid = slup1.uuid)
+    array2 = np.random.randint(4, 6, size = (5, 3, 3))
+    grid_pc.add_cached_array_to_imported_list(array2,
+                                              'unit test',
+                                              'sl data',
+                                              discrete = True,
+                                              property_kind = 'example data')
+    grid_pc.write_hdf5_for_imported_list()
+    uuids_static = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = slup2.uuid)
+
+    well_name = 'VERTICAL'
+    bw = rqw.BlockedWell(model, well_name = well_name, trajectory = trajectory)
+    bw.write_hdf5()
+    bw.create_xml()
+    model.store_epc()
+
+    uuids_to_add = uuids_nosl + uuids_sl + uuids_static
+    orig_counts_dict = model.parts_count_dict()
+
+    # ---------- Act ------------
+    bw.add_grid_property_to_blocked_well(uuids_to_add)
+    model.store_epc()
+
+    # --------- Assert ----------
+    reload = rq.Model(model.epc_file)
+    new_counts_dict = reload.parts_count_dict()
+
+    assert new_counts_dict['CategoricalProperty'] - orig_counts_dict['CategoricalProperty'] == 4
+    assert new_counts_dict['DiscreteProperty'] - orig_counts_dict['DiscreteProperty'] == 3
+
+    bw = rqw.BlockedWell(reload, uuid = bw.uuid)
+    bw_pc = bw.extract_property_collection()
+    assert len(bw_pc.time_series_uuid_list()) == 1
+    assert len(bw_pc.string_lookup_uuid_list()) == 2
