@@ -3458,7 +3458,7 @@ class BlockedWell(BaseResqpy):
                         else:
                             time_dict[gridpc.time_series_uuid_for_part(part)] = [part]
                 else:
-                    time_dict = {None: cell_parts}
+                    time_dict = {None: sl_dict[sl_uuid]}
                 sl_ts_dict[sl_uuid] = time_dict
 
             for sl_uuid in sl_ts_dict.keys():
