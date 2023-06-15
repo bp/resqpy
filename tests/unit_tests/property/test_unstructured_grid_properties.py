@@ -12,13 +12,13 @@ import resqpy.unstructured as rug
 from resqpy.crs import Crs
 # from resqpy.property import property_kind_and_facet_from_keyword, guess_uom
 
-
 # ---- Test writing properties on Tetra grids, per-cell and per-node ---
+
 
 def add_tetra_mesh(model):
     # add a tetra mesh to the model:
     #     the "star" mesh definition is copied from unit_tests/unstructured/test_unstructured.py
-    # 
+    #
     tetra = rug.TetraGrid(model, title = 'star')
     assert tetra.cell_shape == 'tetrahedral'
     crs = Crs(model)
@@ -83,6 +83,7 @@ def add_tetra_mesh(model):
     tetra.check_tetra()
     return tetra
 
+
 def test_properties_on_tetra_grid(tmp_path):
 
     epc = os.path.join(tmp_path, 'tetra_test_prop.epc')
@@ -117,8 +118,6 @@ def test_properties_on_tetra_grid(tmp_path):
 
     model.store_epc()
 
-
-
     model = rq.Model(epc)
     assert model is not None
 
@@ -130,7 +129,7 @@ def test_properties_on_tetra_grid(tmp_path):
     tetra = rug.TetraGrid(model, uuid = tetra_uuid)
     assert tetra is not None
     assert tetra.cell_shape == 'tetrahedral'
-    
+
     # cells = np.array( [ tetra.distinct_node_indices_for_cell(i) for i in range(tetra.cell_count) ]  ) # cell indices are read using this function(?)
     tetra.check_tetra()
 
@@ -144,7 +143,7 @@ def test_properties_on_tetra_grid(tmp_path):
     assert temp_prop.array_ref().shape[0] == tetra.node_count
     assert temp_prop.uom() == 'degC'
     assert temp_prop.indexable_element() == 'nodes'
-    assert_array_almost_equal(temp_prop.array_ref(), temp_per_vertex )
+    assert_array_almost_equal(temp_prop.array_ref(), temp_per_vertex)
 
     poro_uuid = model.uuid(title = 'Porosity')
     assert poro_uuid is not None
@@ -152,6 +151,4 @@ def test_properties_on_tetra_grid(tmp_path):
     assert poro_prop.array_ref().shape[0] == tetra.cell_count
     assert poro_prop.uom() == 'm3/m3'
     assert poro_prop.indexable_element() == 'cells'
-    assert_array_almost_equal(poro_prop.array_ref(), poro_per_cell )
-
-
+    assert_array_almost_equal(poro_prop.array_ref(), poro_per_cell)
