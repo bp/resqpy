@@ -30,7 +30,9 @@ class WellIntervalPropertyCollection(rqp_pc.PropertyCollection):
     def to_pandas(self, include_units = False):
         """Returns a dataframe with a column for each well log included in the collection."""
 
-        cell_indices = [rqp_c.return_cell_indices(i, self.support.cell_indices) for i in self.support.cell_grid_link]
+        cell_indices = [
+            rqp_c.return_cell_indices(i, self.support.cell_indices) for i in self.support.cell_grid_link if i != -1
+        ]
         data = {}
         for log in self.logs():
             col_name = log.name
