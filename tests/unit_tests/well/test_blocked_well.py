@@ -1058,7 +1058,7 @@ def test_add_grid_properties(example_model_and_crs):
                                               'unit test',
                                               'sl data',
                                               discrete = True,
-                                              property_kind = 'example data')
+                                              property_kind = 'example data static')
     grid_pc.write_hdf5_for_imported_list()
     uuids_static = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = slup2.uuid)
 
@@ -1098,4 +1098,4 @@ def test_add_grid_properties(example_model_and_crs):
     assert len(bw_pc.string_lookup_uuid_list()) == 2
 
     assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float
-    assert bw_pc.single_array_ref(property_kind = 'example data').dtype == int
+    assert bw_pc.single_array_ref(property_kind = 'example data static').dtype == int
