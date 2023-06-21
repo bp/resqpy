@@ -1062,7 +1062,7 @@ def test_add_grid_properties(example_model_and_crs):
     grid_pc.write_hdf5_for_imported_list()
     uuids_static = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = slup2.uuid)
 
-    array3 = np.random.rand(size = (5, 3, 3))
+    array3 = np.random.rand(5, 3, 3)
     grid_pc.add_cached_array_to_imported_list(array3,
                                               'unit test',
                                               'continuous array',
@@ -1097,5 +1097,5 @@ def test_add_grid_properties(example_model_and_crs):
     assert len(bw_pc.time_series_uuid_list()) == 1
     assert len(bw_pc.string_lookup_uuid_list()) == 2
 
-    assert bw_pc.single_array_ref(property_kind='example data continuous').dtype == float64
-    assert bw_pc.single_array_ref(property_kind='example data').dtype == int
+    assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float64
+    assert bw_pc.single_array_ref(property_kind = 'example data').dtype == int
