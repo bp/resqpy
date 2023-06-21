@@ -3468,7 +3468,7 @@ class BlockedWell(BaseResqpy):
                     for part in parts:
                         array = gridpc.cached_part_array_ref(part)
                         indices = self.cell_indices_for_grid_uuid(grid.uuid)
-                        bwarray = np.empty(shape = (indices.shape[0],), dtype=array.dtype)
+                        bwarray = np.empty(shape = (indices.shape[0],), dtype = array.dtype)
                         for i, ind in enumerate(indices):
                             bwarray[i] = array[tuple(ind)]
                         bwpc.add_cached_array_to_imported_list(
