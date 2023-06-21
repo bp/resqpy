@@ -1097,5 +1097,5 @@ def test_add_grid_properties(example_model_and_crs):
     assert len(bw_pc.time_series_uuid_list()) == 1
     assert len(bw_pc.string_lookup_uuid_list()) == 2
 
-    assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float64
+    assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float
     assert bw_pc.single_array_ref(property_kind = 'example data').dtype == int
