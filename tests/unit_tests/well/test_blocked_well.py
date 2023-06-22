@@ -1058,9 +1058,18 @@ def test_add_grid_properties(example_model_and_crs):
                                               'unit test',
                                               'sl data',
                                               discrete = True,
-                                              property_kind = 'example data')
+                                              property_kind = 'example data static')
     grid_pc.write_hdf5_for_imported_list()
     uuids_static = grid_pc.create_xml_for_imported_list_and_add_parts_to_model(string_lookup_uuid = slup2.uuid)
+
+    array3 = np.random.rand(5, 3, 3)
+    grid_pc.add_cached_array_to_imported_list(array3,
+                                              'unit test',
+                                              'continuous array',
+                                              discrete = False,
+                                              property_kind = 'example data continuous')
+    grid_pc.write_hdf5_for_imported_list()
+    uuids_static_continuous = grid_pc.create_xml_for_imported_list_and_add_parts_to_model()
 
     well_name = 'VERTICAL'
     bw = rqw.BlockedWell(model, well_name = well_name, trajectory = trajectory)
@@ -1068,7 +1077,7 @@ def test_add_grid_properties(example_model_and_crs):
     bw.create_xml()
     model.store_epc()
 
-    uuids_to_add = uuids_nosl + uuids_sl + uuids_static
+    uuids_to_add = uuids_nosl + uuids_sl + uuids_static + uuids_static_continuous
     orig_counts_dict = model.parts_count_dict()
 
     # ---------- Act ------------
@@ -1081,8 +1090,12 @@ def test_add_grid_properties(example_model_and_crs):
 
     assert new_counts_dict['CategoricalProperty'] - orig_counts_dict['CategoricalProperty'] == 4
     assert new_counts_dict['DiscreteProperty'] - orig_counts_dict['DiscreteProperty'] == 3
+    assert new_counts_dict['ContinuousProperty'] - orig_counts_dict['ContinuousProperty'] == 1
 
     bw = rqw.BlockedWell(reload, uuid = bw.uuid)
     bw_pc = bw.extract_property_collection()
     assert len(bw_pc.time_series_uuid_list()) == 1
     assert len(bw_pc.string_lookup_uuid_list()) == 2
+
+    assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float
+    assert bw_pc.single_array_ref(property_kind = 'example data static').dtype == int
