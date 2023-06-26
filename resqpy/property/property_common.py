@@ -522,7 +522,8 @@ def selective_version_of_collection(collection,
                                     title = None,
                                     title_mode = None,
                                     related_uuid = None,
-                                    const_value = None):
+                                    const_value = None,
+                                    extra = None):
     """Returns a new PropertyCollection with those parts which match all arguments that are not None.
 
     arguments:
@@ -549,6 +550,7 @@ def selective_version_of_collection(collection,
            if not specified and title or citation_title argument is present
        related_uuid (UUID or str, optional): only properties with direct relationship to this uuid are selected
        const_value (float or int, optional): only properties flagged as constant, with given value, are selected
+       extra (dict, optional): only properties where the extra metadata includes all the items of this dict are selected
 
     returns:
        a new PropertyCollection containing those properties which match the filter parameters that are not None
@@ -594,7 +596,8 @@ def selective_version_of_collection(collection,
                                                          string_lookup_uuid = string_lookup_uuid,
                                                          categorical = categorical,
                                                          related_uuid = related_uuid,
-                                                         const_value = const_value)
+                                                         const_value = const_value,
+                                                         extra = extra)
     return view
 
 
