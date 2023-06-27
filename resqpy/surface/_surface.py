@@ -942,7 +942,7 @@ class Surface(rqsb.BaseSurface):
 
         if title is None: 
             title = self.citation_title
-        resampled = rqs.Surface(self.model, 
+        resampled = rqs.Surface(self.model,
                                 title = title,
                                 crs_uuid = self.crs_uuid,
                                 extra_metadata = {'resampled from surface': str(self.uuid)})
