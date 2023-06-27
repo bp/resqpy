@@ -56,7 +56,7 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         if other.model.part(parts_list = [part], related_uuid = related_uuid) is None:
             return
     if extra is not None and len(extra):
-        em = collection.extra_metadata_for_part(part)
+        em = other.extra_metadata_for_part(part)
         if em is None or len(em) < len(extra):
             return
         for key, value in extra.items():

@@ -2131,14 +2131,20 @@ def test_facet_array_ref(example_model_with_properties):
                                              facet_type = 'what',
                                              facet = facet)
     pc.write_hdf5_for_imported_list()
-    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    pc.create_xml_for_imported_list_and_add_parts_to_model(extra_metadata = {'test': 'new sat'})
 
     # Act
+    empty_a = rqp.selective_version_of_collection(pc, extra = {'test': 'old sat'})
+    empty_b = rqp.selective_version_of_collection(pc, extra = {'testing': 'new sat'})
+    satpc_em = rqp.selective_version_of_collection(pc, extra = {'test': 'new sat'})
     satpc = rqp.PropertyCollection()
     satpc.set_support(support = model.grid())
     satpc.inherit_parts_selectively_from_other_collection(pc, property_kind = 'saturation')
 
     # Assert
+    assert empty_a is None or empty_a.number_of_parts() == 0
+    assert empty_b is None or empty_b.number_of_parts() == 0
+    assert satpc_em.number_of_parts() == 3
     assert len(satpc.parts()) == 3  # added 3 parts
     farray = satpc.facets_array_ref()
     assert farray.shape == (3, 3, 5, 5)
