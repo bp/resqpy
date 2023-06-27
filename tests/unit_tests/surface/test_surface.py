@@ -982,18 +982,18 @@ def test_adjust_flange_z(example_model_and_crs):
 def test_resampling(tmp_path):
     # Arrange
     model = rq.new_model(f"{tmp_path}\test.epc")
-    crs = rcrs.Crs(model, title='crs example')
+    crs = rcrs.Crs(model, title = 'crs example')
     crs.create_xml()
     model.store_epc()
 
-    x = np.linspace(1,5,5)
-    y = np.linspace(1,5,5)
-    xs, ys = np.meshgrid(x,y)
-    zs = np.random.randint(low=5, high=10, size=xs.shape)
-    points = np.array([xs, ys, zs], dtype=float).T
+    x = np.linspace(1, 5, 5)
+    y = np.linspace(1, 5, 5)
+    xs, ys = np.meshgrid(x, y)
+    zs = np.random.randint(low = 5, high = 10, size = xs.shape)
+    points = np.array([xs, ys, zs], dtype = float).T
 
-    pointset = resqpy.surface.PointSet(model, title=f'points', crs_uuid=crs.uuid, points_array=points)
-    surf = resqpy.surface.Surface(model, title=f'surface', crs_uuid=crs.uuid, point_set=pointset)
+    pointset = resqpy.surface.PointSet(model, title = 'points', crs_uuid = crs.uuid, points_array = points)
+    surf = resqpy.surface.Surface(model, title = 'surface', crs_uuid = crs.uuid, point_set = pointset)
     
     surf.write_hdf5()
     surf.create_xml()
@@ -1001,8 +1001,8 @@ def test_resampling(tmp_path):
     ot, op = surf.triangles_and_points()
 
     # Act
-    resampled = surf.resampled_surface(title=None)
-    resampled_name = surf.resampled_surface(title='testing')
+    resampled = surf.resampled_surface(title = None)
+    resampled_name = surf.resampled_surface(title = 'testing')
 
     # Assert
     assert resampled is not None
