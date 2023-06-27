@@ -938,13 +938,13 @@ class Surface(rqsb.BaseSurface):
         tris = []
         for i in range(len(rt)):
             tris.extend([[rt[i][0], count1 + i, count3 + i], [rt[i][1], count2 + i, count3 + i],
-                        [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
+                         [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
         
         if title is None: 
             title = self.citation_title
         resampled = rqs.Surface(self.model, 
-                                title = title, 
-                                crs_uuid = self.crs_uuid, 
+                                title = title,
+                                crs_uuid = self.crs_uuid,
                                 extra_metadata = {'resampled from surface': str(self.uuid)})
         resampled.set_from_triangles_and_points(np.array(tris), allpoints)
 
