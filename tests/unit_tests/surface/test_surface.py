@@ -9,6 +9,7 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.organize
 import resqpy.surface
+import resqpy.crs as rcrs
 import resqpy.olio.triangulation as tri
 
 import pytest
@@ -977,3 +978,46 @@ def test_adjust_flange_z(example_model_and_crs):
         assert maths.isclose(p[outer_start + 1, 2], 0.0, abs_tol = 1.0e-6)
         assert maths.isclose(p[outer_start + 2, 2], -ez[i])
         assert maths.isclose(p[outer_start + 3, 2], 0.0, abs_tol = 1.0e-6)
+
+def test_resampling(tmp_path):
+    # Arrange
+    model = rq.new_model(f"{tmp_path}\test.epc")
+    crs = rcrs.Crs(model, title='crs example')
+    crs.create_xml()
+    model.store_epc()
+
+    x = np.linspace(1,5,5)
+    y = np.linspace(1,5,5)
+    xs, ys = np.meshgrid(x,y)
+    zs = np.random.randint(low=5, high=10, size=xs.shape)
+    points = np.array([xs, ys, zs], dtype=float).T
+
+    pointset = resqpy.surface.PointSet(model, title=f'points', crs_uuid=crs.uuid, points_array=points)
+    surf = resqpy.surface.Surface(model, title=f'surface', crs_uuid=crs.uuid, point_set=pointset)
+    
+    surf.write_hdf5()
+    surf.create_xml()
+    model.store_epc()
+    ot, op = surf.triangles_and_points()
+
+    # Act
+    resampled = surf.resampled_surface(title=None)
+    resampled_name = surf.resampled_surface(title='testing')
+
+    # Assert
+    assert resampled is not None
+    assert resampled_name is not None
+    rt, rp = resampled.triangles_and_points()
+
+    assert len(rt) == 4*len(ot)
+    assert np.min(rp[:,0]) == np.min(op[:,0])
+    assert np.max(rp[:,0]) == np.max(op[:,0])
+    assert np.min(rp[:,1]) == np.min(op[:,1])
+    assert np.max(rp[:,1]) == np.max(op[:,1])
+    assert np.min(rp[:,2]) == np.min(op[:,2])
+    assert np.max(rp[:,2]) == np.max(op[:,2])
+    assert resampled.crs_uuid == surf.crs_uuid
+    assert resampled.citation_title == surf.citation_title
+    assert resampled_name.citation_title == 'testing'
+    assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
+    assert resampled_name.extra_metadata == {'resampled from surface': str(surf.uuid)}
