@@ -928,22 +928,23 @@ class Surface(rqsb.BaseSurface):
             resqpy.surface.Surface object, with extra_metadata ('resampled from surface': <uuid>), where uuid is the origin surface uuid
         """
         rt, rp = self.triangles_and_points()
-        edge1 = np.mean(rp[rt[:]][:,::2,:],axis=1)
-        edge2 = np.mean(rp[rt[:]][:,1:,:],axis=1)
-        edge3 = np.mean(rp[rt[:]][:,:2,:],axis=1)
-        allpoints = np.concatenate((rp, edge1, edge2, edge3), axis=0)
+        edge1 = np.mean(rp[rt[:]][:,::2,:], axis = 1)
+        edge2 = np.mean(rp[rt[:]][:,1:,:], axis = 1)
+        edge3 = np.mean(rp[rt[:]][:,:2,:], axis = 1)
+        allpoints = np.concatenate((rp, edge1, edge2, edge3), axis = 0)
         count1 = len(rp)
         count2 = count1 + len(edge1)
         count3 = count2 + len(edge2)
         tris = []
         for i in range(len(rt)):
-            tris.extend([[rt[i][0], count1+i, count3+i],
-                        [rt[i][1], count2+i, count3+i],
-                        [rt[i][2], count1+i, count2+i],
-                        [count1+i, count2+i, count3+i]])
+            tris.extend([[rt[i][0], count1 + i, count3 + i], [rt[i][1], count2 + i, count3 + i],
+                        [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
         
         if title is None: title = self.citation_title
-        resampled = rqs.Surface(self.model, title=title, crs_uuid=self.crs_uuid, extra_metadata={'resampled from surface': str(self.uuid)})
+        resampled = rqs.Surface(self.model, 
+                                title = title, 
+                                crs_uuid = self.crs_uuid, 
+                                extra_metadata = {'resampled from surface': str(self.uuid)})
         resampled.set_from_triangles_and_points(np.array(tris), allpoints)
 
         return resampled
