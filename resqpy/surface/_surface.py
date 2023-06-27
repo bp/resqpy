@@ -939,7 +939,7 @@ class Surface(rqsb.BaseSurface):
         for i in range(len(rt)):
             tris.extend([[rt[i][0], count1 + i, count3 + i], [rt[i][1], count2 + i, count3 + i],
                          [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
-        
+
         if title is None: 
             title = self.citation_title
         resampled = rqs.Surface(self.model, 
