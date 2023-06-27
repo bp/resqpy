@@ -919,8 +919,7 @@ class Surface(rqsb.BaseSurface):
         return ep
 
     def resampled_surface(self, title=None):
-        """Creates a new triangulated set which is a resampled version of the current triangulated set. 
-           Each existing triangle in the tset is divided equally into 4 new triangles.
+        """Creates a new triangulated set which is a resampled version of the current triangulated set. Each existing triangle in the tset is divided equally into 4 new triangles.
            
         arguments:
             title (str): a new title for the output triangulated set, if None the title will have the same title as the input triangulated set
