@@ -994,7 +994,7 @@ def test_resampling(tmp_path):
 
     pointset = resqpy.surface.PointSet(model, title = 'points', crs_uuid = crs.uuid, points_array = points)
     surf = resqpy.surface.Surface(model, title = 'surface', crs_uuid = crs.uuid, point_set = pointset)
-    
+
     surf.write_hdf5()
     surf.create_xml()
     model.store_epc()
@@ -1009,13 +1009,13 @@ def test_resampling(tmp_path):
     assert resampled_name is not None
     rt, rp = resampled.triangles_and_points()
 
-    assert len(rt) == 4*len(ot)
-    assert np.min(rp[:,0]) == np.min(op[:,0])
-    assert np.max(rp[:,0]) == np.max(op[:,0])
-    assert np.min(rp[:,1]) == np.min(op[:,1])
-    assert np.max(rp[:,1]) == np.max(op[:,1])
-    assert np.min(rp[:,2]) == np.min(op[:,2])
-    assert np.max(rp[:,2]) == np.max(op[:,2])
+    assert len(rt) == 4 * len(ot)
+    assert np.min(rp[:, 0]) == np.min(op[:, 0])
+    assert np.max(rp[:, 0]) == np.max(op[:, 0])
+    assert np.min(rp[:, 1]) == np.min(op[:, 1])
+    assert np.max(rp[:, 1]) == np.max(op[:, 1])
+    assert np.min(rp[:, 2]) == np.min(op[:, 2])
+    assert np.max(rp[:, 2]) == np.max(op[:, 2])
     assert resampled.crs_uuid == surf.crs_uuid
     assert resampled.citation_title == surf.citation_title
     assert resampled_name.citation_title == 'testing'
