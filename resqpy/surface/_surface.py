@@ -928,9 +928,9 @@ class Surface(rqsb.BaseSurface):
             resqpy.surface.Surface object, with extra_metadata ('resampled from surface': <uuid>), where uuid is the origin surface uuid
         """
         rt, rp = self.triangles_and_points()
-        edge1 = np.mean(rp[rt[:]][:,::2,:], axis = 1)
-        edge2 = np.mean(rp[rt[:]][:,1:,:], axis = 1)
-        edge3 = np.mean(rp[rt[:]][:,:2,:], axis = 1)
+        edge1 = np.mean(rp[rt[:]][:, ::2, :], axis = 1)
+        edge2 = np.mean(rp[rt[:]][:, 1:, :], axis = 1)
+        edge3 = np.mean(rp[rt[:]][:, :2, :], axis = 1)
         allpoints = np.concatenate((rp, edge1, edge2, edge3), axis = 0)
         count1 = len(rp)
         count2 = count1 + len(edge1)
@@ -940,7 +940,8 @@ class Surface(rqsb.BaseSurface):
             tris.extend([[rt[i][0], count1 + i, count3 + i], [rt[i][1], count2 + i, count3 + i],
                         [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
         
-        if title is None: title = self.citation_title
+        if title is None: 
+            title = self.citation_title
         resampled = rqs.Surface(self.model, 
                                 title = title, 
                                 crs_uuid = self.crs_uuid, 
