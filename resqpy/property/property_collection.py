@@ -447,6 +447,7 @@ class PropertyCollection():
             categorical = None,
             related_uuid = None,
             const_value = None,
+            extra = None,
             ignore_clashes = False):
         """Adds those parts from the other PropertyCollection which match all arguments that are not None.
 
@@ -485,7 +486,7 @@ class PropertyCollection():
             pcap._add_selected_part_from_other_dict(self, part, other, realization, support_uuid, uuid, continuous,
                                                     categorical, count, points, indexable, property_kind, facet_type,
                                                     facet, citation_title, citation_title_match_mode, time_series_uuid,
-                                                    time_index, string_lookup_uuid, related_uuid, const_value,
+                                                    time_index, string_lookup_uuid, related_uuid, const_value, extra,
                                                     ignore_clashes)
 
     def inherit_similar_parts_for_time_series_from_other_collection(self,

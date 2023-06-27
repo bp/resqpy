@@ -18,7 +18,7 @@ import resqpy.property._collection_get_attributes as pcga
 def _add_selected_part_from_other_dict(collection, part, other, realization, support_uuid, uuid, continuous,
                                        categorical, count, points, indexable, property_kind, facet_type, facet,
                                        citation_title, citation_title_match_mode, time_series_uuid, time_index,
-                                       string_lookup_uuid, related_uuid, const_value, ignore_clashes):
+                                       string_lookup_uuid, related_uuid, const_value, extra, ignore_clashes):
     if _check_not_none_and_not_equals(realization, other.realization_for_part, part):
         return
     if _check_not_none_and_not_uuid_match(support_uuid, other.support_uuid_for_part, part):
@@ -55,6 +55,13 @@ def _add_selected_part_from_other_dict(collection, part, other, realization, sup
         assert other.model is not None
         if other.model.part(parts_list = [part], related_uuid = related_uuid) is None:
             return
+    if extra is not None and len(extra):
+        em = other.extra_metadata_for_part(part)
+        if em is None or len(em) < len(extra):
+            return
+        for key, value in extra.items():
+            if em.get(key) != value:
+                return
     if part in collection.dict.keys():
         if ignore_clashes:
             return
