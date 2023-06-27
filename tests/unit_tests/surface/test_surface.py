@@ -979,6 +979,7 @@ def test_adjust_flange_z(example_model_and_crs):
         assert maths.isclose(p[outer_start + 2, 2], -ez[i])
         assert maths.isclose(p[outer_start + 3, 2], 0.0, abs_tol = 1.0e-6)
 
+
 def test_resampling(tmp_path):
     # Arrange
     model = rq.new_model(f"{tmp_path}\test.epc")
