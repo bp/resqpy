@@ -184,8 +184,8 @@ def __process_axis(axis, child_count_list_list, child_weight_list_list, grid, in
             if intervals_info.child_count_per_interval[interval] == intervals_info.parent_count_per_interval[interval]:
                 continue  # one-to-one
             if refining_flag is None:
-                refining_flag = (intervals_info.child_count_per_interval[interval] >
-                                 intervals_info.parent_count_per_interval[interval])
+                refining_flag = (intervals_info.child_count_per_interval[interval]
+                                 > intervals_info.parent_count_per_interval[interval])
             assert refining_flag == (intervals_info.child_count_per_interval[interval] >
                                      intervals_info.parent_count_per_interval[interval]), \
                 'mixture of refining and coarsening in one local grid – allowed by RESQML but not handled by this code'

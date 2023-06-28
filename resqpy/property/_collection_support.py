@@ -47,8 +47,7 @@ def _set_support_uuid_notnone(collection, support, support_uuid, model, modify_p
         if type(collection.support) in [
                 grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
                 rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
-                rug.PyramidGrid, rqw.WellboreMarkerFrame, rqs.Surface, rql.Polyline, rql.PolylineSet,
-                rqs.PointSet
+                rug.PyramidGrid, rqw.WellboreMarkerFrame, rqs.Surface, rql.Polyline, rql.PolylineSet, rqs.PointSet
         ]:
             collection.support_root = collection.support.root
         else:

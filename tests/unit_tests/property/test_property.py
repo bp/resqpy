@@ -1221,9 +1221,11 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'permeability rock',
                              facet_type = 'direction',
                              facet = 'I') is not None
-    assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
-        facet = 'J') is None
+    assert rqp.property_part(model,
+                             obj_type = 'Continuous',
+                             property_kind = 'permeability rock',
+                             facet_type = 'direction',
+                             facet = 'J') is None
     assert rqp.property_part(model,
                              obj_type = 'Continuous',
                              property_kind = 'permeability rock',
@@ -1234,8 +1236,11 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'rock permeability',
                              facet_type = 'direction',
                              facet = 'K') is not None
-    assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'what', facet = 'I') is None
+    assert rqp.property_part(model,
+                             obj_type = 'Continuous',
+                             property_kind = 'permeability rock',
+                             facet_type = 'what',
+                             facet = 'I') is None
 
 
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
@@ -2360,6 +2365,90 @@ def test_point_set_support(example_model_and_crs):
 
 
 def test_polyline_support_closed(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    p = np.array([(13.5, 2.1, 7.4), (18.1, 0.2, 5.5), (10.0, 0.0, 4.1), (11.7, 9.2, 2.9)], dtype = float)
+    pl = rql.Polyline(model, set_crs = crs.uuid, title = 'test polyline', set_coord = p, is_closed = True)
+    pl.write_hdf5()
+    pl.create_xml()
+
+    assert pl.coordinates.shape == (4, 3)
+
+    prop_float = np.array([127.0, -69.3, 249.9, -0.3], dtype = float)
+    prop_int = np.arange(4, dtype = int) + 31
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = pl)
+    pc.add_cached_array_to_imported_list(prop_float,
+                                         source_info = '',
+                                         keyword = 'test float',
+                                         discrete = False,
+                                         property_kind = 'length',
+                                         indexable_element = 'nodes',
+                                         uom = 'cm')
+    pc.add_cached_array_to_imported_list(prop_int,
+                                         source_info = '',
+                                         keyword = 'test int',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         null_value = -1)  # should default to intervals
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    pl_reload = rql.Polyline(model, uuid = pl.uuid)
+    pc_reload = pl_reload.extract_property_collection()
+    assert pc_reload.number_of_parts() == 2
+    pf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'nodes')
+    pi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'intervals')
+    assert pf_reload is not None
+    assert pi_reload is not None
+    assert_array_almost_equal(pf_reload, prop_float)
+    assert np.all(pi_reload == prop_int)
+
+
+def test_polyline_support_not_closed(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    p = np.array([(13.5, 2.1, 7.4), (18.1, 0.2, 5.5), (10.0, 0.0, 4.1), (11.7, 9.2, 2.9)], dtype = float)
+    pl = rql.Polyline(model, set_crs = crs.uuid, title = 'test polyline', set_coord = p, is_closed = False)
+    pl.write_hdf5()
+    pl.create_xml()
+
+    assert pl.coordinates.shape == (4, 3)
+
+    prop_float = np.array([127.0, -69.3, 249.9, -0.3], dtype = float)
+    prop_int = np.arange(3, dtype = int) + 35
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = pl)
+    pc.add_cached_array_to_imported_list(prop_float,
+                                         source_info = '',
+                                         keyword = 'test float',
+                                         discrete = False,
+                                         property_kind = 'length',
+                                         indexable_element = 'nodes',
+                                         uom = 'cm')
+    pc.add_cached_array_to_imported_list(prop_int,
+                                         source_info = '',
+                                         keyword = 'test int',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         null_value = -1)  # should default to intervals
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    pl_reload = rql.Polyline(model, uuid = pl.uuid)
+    pc_reload = pl_reload.extract_property_collection()
+    assert pc_reload.number_of_parts() == 2
+    pf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'nodes')
+    pi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'intervals')
+    assert pf_reload is not None
+    assert pi_reload is not None
+    assert_array_almost_equal(pf_reload, prop_float)
+    assert np.all(pi_reload == prop_int)
+
+
+def test_polyline_set_support_all_closed(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
 

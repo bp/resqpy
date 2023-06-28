@@ -563,8 +563,9 @@ def _get_indexable_element(indexable_element, support_type):
                 'obj_UnstructuredGridRepresentation'
         ]:
             indexable_element = 'cells'
-        elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation',
-                              'obj_PointSetRepresentation']:
+        elif support_type in [
+                'obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation', 'obj_PointSetRepresentation'
+        ]:
             indexable_element = 'nodes'  # note: could be 'intervals' (except for PointSet properties)
         elif support_type in ['obj_GridConnectionSetRepresentation', 'obj_TriangulatedSetRepresentation']:
             indexable_element = 'faces'
