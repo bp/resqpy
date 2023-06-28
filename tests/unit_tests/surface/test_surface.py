@@ -1017,9 +1017,9 @@ def test_resampling(tmp_path):
     assert np.max(rp[:, 1]) == np.max(op[:, 1])
     assert np.min(rp[:, 2]) == np.min(op[:, 2])
     assert np.max(rp[:, 2]) == np.max(op[:, 2])
-    for coords in [np.array([2.5, 2.5]), np.array([3.4, 3.4]), np.array([4.6, 4.6])]:
-        np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords),
-                                             resampled.sample_z_at_xy_points(coords))
+    coords = np.array([[2.5, 2.5], [3.4, 3.4], [4.6, 4.6]])
+    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords),
+                                         resampled.sample_z_at_xy_points(coords))
 
     assert resampled.crs_uuid == surf.crs_uuid
     assert resampled.citation_title == surf.citation_title
