@@ -493,7 +493,7 @@ def _supporting_shape_mesh(support, indexable_element):
 
 def _supporting_shape_surface(support, indexable_element):
     shape_list = None
-    if indexable_element is None or indexable_element == 'faces':
+    if indexable_element is None or indexable_element in ['triangles', 'faces']:
         shape_list = [support.triangle_count()]
     elif indexable_element == 'nodes':
         shape_list = [support.node_count()]
@@ -567,8 +567,10 @@ def _get_indexable_element(indexable_element, support_type):
                 'obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation', 'obj_PointSetRepresentation'
         ]:
             indexable_element = 'nodes'  # note: could be 'intervals' (except for PointSet properties)
-        elif support_type in ['obj_GridConnectionSetRepresentation', 'obj_TriangulatedSetRepresentation']:
+        elif support_type == 'obj_GridConnectionSetRepresentation':
             indexable_element = 'faces'
+        elif support_type == 'obj_TriangulatedSetRepresentation':
+            indexable_element = 'triangles'
         elif support_type in ['obj_PolylineRepresentation', 'obj_PolylineSetRepresentation']:
             indexable_element = 'intervals'  # could also be 'nodes'
         else:

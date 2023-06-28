@@ -2287,6 +2287,13 @@ def test_surface_support(example_model_and_crs):
                                          property_kind = 'length',
                                          indexable_element = 'faces',
                                          uom = 'cm')
+    pc.add_cached_array_to_imported_list(t_prop_float,
+                                         source_info = '',
+                                         keyword = 'test float triangles',
+                                         discrete = False,
+                                         property_kind = 'length',
+                                         indexable_element = 'triangles',
+                                         uom = 'mm')
     pc.add_cached_array_to_imported_list(t_prop_int,
                                          source_info = '',
                                          keyword = 'test int',
@@ -2305,14 +2312,17 @@ def test_surface_support(example_model_and_crs):
 
     surf_reload = rqs.Surface(model, uuid = surf.uuid)
     pc_reload = rqp.PropertyCollection(support = surf_reload)
-    assert pc_reload.number_of_parts() == 3
+    assert pc_reload.number_of_parts() == 4
     tpf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'faces')
-    tpi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'faces')
+    tpf2_reload = pc_reload.single_array_ref(continuous = True, indexable = 'triangles')
+    tpi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'triangles')
     ppf_reload = pc_reload.single_array_ref(indexable = 'nodes')
     assert tpf_reload is not None
+    assert tpf2_reload is not None
     assert tpi_reload is not None
     assert ppf_reload is not None
     assert_array_almost_equal(tpf_reload, t_prop_float)
+    assert_array_almost_equal(tpf2_reload, t_prop_float)
     assert np.all(tpi_reload == t_prop_int)
     assert_array_almost_equal(ppf_reload, p_prop_float)
 
