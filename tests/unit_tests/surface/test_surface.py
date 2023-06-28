@@ -1018,8 +1018,7 @@ def test_resampling(tmp_path):
     assert resampled_name is not None
 
     coords = np.array([[2.5, 2.5], [3.4, 3.4], [4.6, 4.6]])
-    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords),
-                                         resampled.sample_z_at_xy_points(coords))
+    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords), resampled.sample_z_at_xy_points(coords))
     rt, rp = resampled.triangles_and_points()
 
     assert len(rt) == 4 * len(ot)
