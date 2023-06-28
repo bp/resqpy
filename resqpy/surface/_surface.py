@@ -940,6 +940,7 @@ class Surface(rqsb.BaseSurface):
             tris.extend([[rt[i][0], count1 + i, count3 + i], [rt[i][1], count2 + i, count3 + i],
                          [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
 
+        # TODO: implement alternate solution using edge functions in olio triangulation to optimise
         points_unique, inverse = np.unique(allpoints, axis = 0, return_inverse = True)
         tris = np.array(tris)
         tris_unique = np.empty(shape = tris.shape)
