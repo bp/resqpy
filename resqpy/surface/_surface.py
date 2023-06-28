@@ -941,7 +941,8 @@ class Surface(rqsb.BaseSurface):
                          [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
 
         points_unique, inverse = np.unique(allpoints, axis = 0, return_inverse = True)
-        tris_unique = np.empty(shape = np.array(tris).shape)
+        tris = np.array(tris)
+        tris_unique = np.empty(shape = tris.shape)
         tris_unique[:, 0] = inverse[tris[:, 0]]
         tris_unique[:, 1] = inverse[tris[:, 1]]
         tris_unique[:, 2] = inverse[tris[:, 2]]
