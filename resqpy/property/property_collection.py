@@ -163,6 +163,7 @@ class PropertyCollection():
         import resqpy.surface as rqs
         import resqpy.unstructured as rug
         import resqpy.well as rqw
+        import resqpy.lines as rql
 
         support = self.support
 
@@ -184,13 +185,21 @@ class PropertyCollection():
         elif isinstance(support, rqs.Surface):
             shape_list = pcga._supporting_shape_surface(support, indexable_element)
 
-        elif type(support) in [
-                rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid
-        ]:
+        elif type(support) in  \
+            [rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid, rug.PyramidGrid]:
             shape_list, support = pcga._supporting_shape_other(support, indexable_element)
 
         elif isinstance(support, rqw.WellboreMarkerFrame):
             shape_list = pcga._supporting_shape_wellboremarkerframe(support, indexable_element)
+
+        elif isinstance(support, rql.Polyline):
+            shape_list = pcga._supporting_shape_polyline(support, indexable_element)
+
+        elif isinstance(support, rql.PolylineSet):
+            shape_list = pcga._supporting_shape_polylineset(support, indexable_element)
+
+        elif isinstance(support, rqs.PointSet):
+            shape_list = pcga._supporting_shape_pointset(support, indexable_element)
 
         else:
             raise Exception(f'unsupported support class {type(support)} for property')

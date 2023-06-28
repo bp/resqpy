@@ -65,6 +65,7 @@ def _set_support_uuid_notnone_supportnone(collection, support_uuid, model):
     import resqpy.surface as rqs
     import resqpy.unstructured as rug
     import resqpy.well as rqw
+    import resqpy.lines as rql
 
     support_part = model.part_for_uuid(support_uuid)
     assert support_part is not None, 'supporting representation part missing in model'
@@ -90,6 +91,12 @@ def _set_support_uuid_notnone_supportnone(collection, support_uuid, model):
                                                   find_properties = False)
     elif support_type == 'obj_WellboreMarkerFrameRepresentation':
         collection.support = rqw.WellboreMarkerFrame(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_PolylineRepresentation':
+        collection.support = rql.Polyline(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_PolylineSetRepresentation':
+        collection.support = rql.PolylineSet(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_PointSetRepresentation':
+        collection.support = rqs.PointSet(model, uuid = collection.support_uuid)
     else:
         raise TypeError('unsupported property supporting representation class: ' + str(support_type))
 

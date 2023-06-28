@@ -10,6 +10,7 @@ import warnings
 
 import resqpy.olio.intersection as meet
 import resqpy.lines
+import resqpy.property as rqp
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
@@ -74,6 +75,7 @@ class Polyline(rql_c._BasePolyline):
         self.coordinates = None
         self.centre = None
         self.rep_int_root = rep_int_root  # Optional represented interpretation xml root node
+        self.property_collection = None
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
@@ -816,6 +818,27 @@ class Polyline(rql_c._BasePolyline):
             d_xy *= (nf_xy + 1.0) / nf_xy
             a = d_xy[0] * d_xy[1] * float(np.count_nonzero(inside)) / float(inside.size)
         return a
+
+    def extract_property_collection(self, refresh = False):
+        """Returns a property collection for the polyline.
+
+        arguments:
+            refresh (bool, default False): if True, the property collection is refreshed
+                from the current state of the model; if False and the property collection
+                has already been cached for the polyline, then the cached copy is used
+
+        returns:
+            a PropertyCollection holding those properties in the model where this polyline
+            is the supporting representation
+
+        notes:
+            polyline properties may have indexable element of 'nodes' or 'intervals';
+            for interval properties, the number of elements depends on whether the
+            polyline is closed or not
+        """
+        if self.property_collection is None or refresh:
+            self.property_collection = rqp.PropertyCollection(support = self)
+        return self.property_collection
 
     def create_xml(self,
                    ext_uuid = None,
