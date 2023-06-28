@@ -253,8 +253,8 @@ class PointSet(rqsb.BaseSurface):
                                         dtype = 'float')
         except Exception:
             log.exception('hdf5 points failure for point set patch ' + str(patch_index))
-        assert self.temp_points.ndim == 2 and self.temp_points.shape[
-            1] == 3, 'unsupported dimensionality to points array'
+        assert self.temp_points.ndim == 2 and self.temp_points.shape[1] == 3,  \
+            'unsupported dimensionality to points array'
         self.patch_array_list[patch_index] = self.temp_points.copy()
         delattr(self, 'temp_points')
         return self.patch_array_list[patch_index]
@@ -398,7 +398,7 @@ class PointSet(rqsb.BaseSurface):
             p[..., :2] = points_array
             points_array = p
         self.patch_array_list.append(points_array.reshape(-1, 3).copy())
-        self.patch_ref_list.append((None, None, points_array.shape[0]))
+        self.patch_ref_list.append((None, None, points_array.size // 3))
         self.full_array = None
         if self.patch_count is None:
             self.patch_count = 0
