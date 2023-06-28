@@ -2452,24 +2452,33 @@ def test_polyline_set_support_all_closed(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
 
+    pl_list = []
     p = np.array([(13.5, 2.1, 7.4), (18.1, 0.2, 5.5), (10.0, 0.0, 4.1), (11.7, 9.2, 2.9)], dtype = float)
-    pl = rql.Polyline(model, set_crs = crs.uuid, title = 'test polyline', set_coord = p, is_closed = True)
-    pl.write_hdf5()
-    pl.create_xml()
+    for i in range(3):
+        pl = rql.Polyline(model,
+                          set_crs = crs.uuid,
+                          title = f'test polyline {i}',
+                          set_coord = p * float(i + 1),
+                          is_closed = True)
+        pl.write_hdf5()
+        pl.create_xml()
+        pl_list.append(pl)
 
-    assert pl.coordinates.shape == (4, 3)
+    pls = rql.PolylineSet(model, crs_uuid = crs.uuid, polylines = pl_list, title = 'test polyline set')
+    pls.write_hdf5()
+    pls.create_xml()
 
-    prop_float = np.array([127.0, -69.3, 249.9, -0.3], dtype = float)
-    prop_int = np.arange(4, dtype = int) + 31
+    prop_float = np.array([27.0, -59.3, 49.9, -0.3, 15.3, 11.0, 4.8, 32.2, -5.0, 2.9, -3.3, 7.1], dtype = float)
+    prop_int = np.arange(12, dtype = int) + 37
     pc = rqp.PropertyCollection()
-    pc.set_support(support = pl)
+    pc.set_support(support = pls)
     pc.add_cached_array_to_imported_list(prop_float,
                                          source_info = '',
                                          keyword = 'test float',
                                          discrete = False,
                                          property_kind = 'length',
                                          indexable_element = 'nodes',
-                                         uom = 'cm')
+                                         uom = 'km')
     pc.add_cached_array_to_imported_list(prop_int,
                                          source_info = '',
                                          keyword = 'test int',
@@ -2479,8 +2488,59 @@ def test_polyline_set_support_all_closed(example_model_and_crs):
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
-    pl_reload = rql.Polyline(model, uuid = pl.uuid)
-    pc_reload = pl_reload.extract_property_collection()
+    pls_reload = rql.PolylineSet(model, uuid = pls.uuid)
+    pc_reload = pls_reload.extract_property_collection()
+    assert pc_reload.number_of_parts() == 2
+    pf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'nodes')
+    pi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'intervals')
+    assert pf_reload is not None
+    assert pi_reload is not None
+    assert_array_almost_equal(pf_reload, prop_float)
+    assert np.all(pi_reload == prop_int)
+
+
+def test_polyline_set_support_all_not_closed(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    pl_list = []
+    p = np.array([(13.5, 2.1, 7.4), (18.1, 0.2, 5.5), (10.0, 0.0, 4.1), (11.7, 9.2, 2.9)], dtype = float)
+    for i in range(3):
+        pl = rql.Polyline(model,
+                          set_crs = crs.uuid,
+                          title = f'test polyline {i}',
+                          set_coord = p * float(i + 1),
+                          is_closed = False)
+        pl.write_hdf5()
+        pl.create_xml()
+        pl_list.append(pl)
+
+    pls = rql.PolylineSet(model, crs_uuid = crs.uuid, polylines = pl_list, title = 'test polyline set')
+    pls.write_hdf5()
+    pls.create_xml()
+
+    prop_float = np.array([27.0, -59.3, 49.9, -0.3, 15.3, 11.0, 4.8, 32.2, -5.0, 2.9, -3.3, 7.1], dtype = float)
+    prop_int = np.arange(9, dtype = int) + 35
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = pls)
+    pc.add_cached_array_to_imported_list(prop_float,
+                                         source_info = '',
+                                         keyword = 'test float',
+                                         discrete = False,
+                                         property_kind = 'length',
+                                         indexable_element = 'nodes',
+                                         uom = 'km')
+    pc.add_cached_array_to_imported_list(prop_int,
+                                         source_info = '',
+                                         keyword = 'test int',
+                                         discrete = True,
+                                         property_kind = 'discrete',
+                                         null_value = -1)  # should default to intervals
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    pls_reload = rql.PolylineSet(model, uuid = pls.uuid)
+    pc_reload = pls_reload.extract_property_collection()
     assert pc_reload.number_of_parts() == 2
     pf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'nodes')
     pi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'intervals')

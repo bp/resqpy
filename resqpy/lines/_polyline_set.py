@@ -101,7 +101,7 @@ class PolylineSet(rql_c._BasePolyline):
                     self.title = f"{polylines[0].title} + {len(polylines)-1} polylines"
                 else:
                     self.title = polylines[0].title
-
+            self.combine_polylines(polylines)
         elif irap_file is not None:  # Create from an input IRAP file
             if crs_uuid is None:
                 log.warning(f'applying generic model CRS when loading polylines from IRAP file: {irap_file}')
