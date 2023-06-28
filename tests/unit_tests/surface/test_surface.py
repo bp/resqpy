@@ -1004,10 +1004,22 @@ def test_resampling(tmp_path):
     # Act
     resampled = surf.resampled_surface(title = None)
     resampled_name = surf.resampled_surface(title = 'testing')
+    resampled.write_hdf5()
+    resampled.create_xml()
+    resampled_name.write_hdf5()
+    resampled_name.create_xml()
+    model.store_epc()
 
     # Assert
+    reload = rq.Model(model.epc_file)
+    resampled = resqpy.surface.Surface(reload, resampled.uuid)
+    resampled_name = resqpy.surface.Surface(reload, resampled_name.uuid)
     assert resampled is not None
     assert resampled_name is not None
+
+    coords = np.array([[2.5, 2.5], [3.4, 3.4], [4.6, 4.6]])
+    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords),
+                                         resampled.sample_z_at_xy_points(coords))
     rt, rp = resampled.triangles_and_points()
 
     assert len(rt) == 4 * len(ot)
@@ -1017,9 +1029,6 @@ def test_resampling(tmp_path):
     assert np.max(rp[:, 1]) == np.max(op[:, 1])
     assert np.min(rp[:, 2]) == np.min(op[:, 2])
     assert np.max(rp[:, 2]) == np.max(op[:, 2])
-    coords = np.array([[2.5, 2.5], [3.4, 3.4], [4.6, 4.6]])
-    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords),
-                                         resampled.sample_z_at_xy_points(coords))
 
     assert resampled.crs_uuid == surf.crs_uuid
     assert resampled.citation_title == surf.citation_title
