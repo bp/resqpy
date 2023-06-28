@@ -43,8 +43,8 @@ def grid_from_cp(model,
         known_to_be_straight (bool, default False): if True pillars are forced to be straight
 
     notes:
-        this function sets up all the geometry arrays in memory but does not write to hdf5 nor create xml: use Grid methods;
-        geometry_defined_everywhere is deprecated, use treat_as_nan instead
+       this function sets up all the geometry arrays in memory but does not write to hdf5 nor create xml: use Grid methods;
+       geometry_defined_everywhere is deprecated, use treat_as_nan instead
     """
     grid = _GridFromCp(model, cp_array, crs_uuid, active_mask, geometry_defined_everywhere, treat_as_nan, dot_tolerance,
                        morse_tolerance, max_z_void, split_pillars, split_tolerance, ijk_handedness,
