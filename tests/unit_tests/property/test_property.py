@@ -1221,11 +1221,9 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'permeability rock',
                              facet_type = 'direction',
                              facet = 'I') is not None
-    assert rqp.property_part(model,
-                             obj_type = 'Continuous',
-                             property_kind = 'permeability rock',
-                             facet_type = 'direction',
-                             facet = 'J') is None
+    assert rqp.property_part(
+        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
+        facet = 'J') is None
     assert rqp.property_part(model,
                              obj_type = 'Continuous',
                              property_kind = 'permeability rock',
@@ -1236,11 +1234,8 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'rock permeability',
                              facet_type = 'direction',
                              facet = 'K') is not None
-    assert rqp.property_part(model,
-                             obj_type = 'Continuous',
-                             property_kind = 'permeability rock',
-                             facet_type = 'what',
-                             facet = 'I') is None
+    assert rqp.property_part(
+        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'what', facet = 'I') is None
 
 
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
