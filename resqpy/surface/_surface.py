@@ -918,6 +918,46 @@ class Surface(rqsb.BaseSurface):
 
         return ep
 
+    def resampled_surface(self, title = None):
+        """Creates a new triangulated set which is a resampled version of the current triangulated set. Each existing triangle in the tset is divided equally into 4 new triangles.
+           
+        arguments:
+            title (str): a new title for the output triangulated set, if None the title will have the same title as the input triangulated set
+        
+        returns:
+            resqpy.surface.Surface object, with extra_metadata ('resampled from surface': <uuid>), where uuid is the origin surface uuid
+        """
+        rt, rp = self.triangles_and_points()
+        edge1 = np.mean(rp[rt[:]][:, ::2, :], axis = 1)
+        edge2 = np.mean(rp[rt[:]][:, 1:, :], axis = 1)
+        edge3 = np.mean(rp[rt[:]][:, :2, :], axis = 1)
+        allpoints = np.concatenate((rp, edge1, edge2, edge3), axis = 0)
+        count1 = len(rp)
+        count2 = count1 + len(edge1)
+        count3 = count2 + len(edge2)
+        tris = []
+        for i in range(len(rt)):
+            tris.extend([[rt[i][0], count1 + i, count3 + i], [rt[i][1], count2 + i, count3 + i],
+                         [rt[i][2], count1 + i, count2 + i], [count1 + i, count2 + i, count3 + i]])
+
+        # TODO: implement alternate solution using edge functions in olio triangulation to optimise
+        points_unique, inverse = np.unique(allpoints, axis = 0, return_inverse = True)
+        tris = np.array(tris)
+        tris_unique = np.empty(shape = tris.shape)
+        tris_unique[:, 0] = inverse[tris[:, 0]]
+        tris_unique[:, 1] = inverse[tris[:, 1]]
+        tris_unique[:, 2] = inverse[tris[:, 2]]
+
+        if title is None:
+            title = self.citation_title
+        resampled = rqs.Surface(self.model,
+                                title = title,
+                                crs_uuid = self.crs_uuid,
+                                extra_metadata = {'resampled from surface': str(self.uuid)})
+        resampled.set_from_triangles_and_points(tris_unique, points_unique)
+
+        return resampled
+
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
 
