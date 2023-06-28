@@ -9,6 +9,7 @@ import numpy as np
 
 import resqpy.crs as rcrs
 import resqpy.lines
+import resqpy.property as rqp
 import resqpy.olio.simple_lines as rsl
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
@@ -71,6 +72,7 @@ class PolylineSet(rql_c._BasePolyline):
         self.closed_array = None
         self.crs_uuid = crs_uuid
         self.indices = None
+        self.property_collection = None
 
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -99,7 +101,7 @@ class PolylineSet(rql_c._BasePolyline):
                     self.title = f"{polylines[0].title} + {len(polylines)-1} polylines"
                 else:
                     self.title = polylines[0].title
-
+            self.combine_polylines(polylines)
         elif irap_file is not None:  # Create from an input IRAP file
             if crs_uuid is None:
                 log.warning(f'applying generic model CRS when loading polylines from IRAP file: {irap_file}')
@@ -603,3 +605,27 @@ class PolylineSet(rql_c._BasePolyline):
         with open(file_name, 'w') as f:
             for item in lines:
                 f.write(item)
+
+    def extract_property_collection(self, refresh = False):
+        """Returns a property collection for the polyline set.
+
+        arguments:
+            refresh (bool, default False): if True, the property collection is refreshed
+                from the current state of the model; if False and the property collection
+                has already been cached for the polyline set, then the cached copy is used
+
+        returns:
+            a PropertyCollection holding those properties in the model where this polyline set
+            is the supporting representation
+
+        notes:
+            polyline set properties may have indexable element of 'nodes' or 'intervals';
+            for interval properties, the number of elements per polyline depends on whether the
+            polyline is closed or not;
+            it is currently left to calling code build the composite property array from data
+            for individual polylines, or to find the subset of the combined property data that
+            is applicable to an individual polyline
+        """
+        if self.property_collection is None or refresh:
+            self.property_collection = rqp.PropertyCollection(support = self)
+        return self.property_collection

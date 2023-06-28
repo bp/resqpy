@@ -403,6 +403,7 @@ def _normalized_part_array_fix_zero_at(min_value, max_value, n_prop, fix_zero_at
 
 
 def _supporting_shape_grid(support, indexable_element, direction):
+    shape_list = None
     if indexable_element is None or indexable_element == 'cells':
         shape_list = [support.nk, support.nj, support.ni]
     elif indexable_element == 'columns':
@@ -442,6 +443,7 @@ def _supporting_shape_grid_faces(direction, support):
 
 
 def _supporting_shape_grid_nodes(support):
+    shape_list = None
     assert not support.k_gaps, 'indexable element of nodes not currently supported for grids with K gaps'
     if support.has_split_coordinate_lines:
         pillar_count = (support.nj + 1) * (support.ni + 1) + support.split_pillars_count
@@ -452,6 +454,7 @@ def _supporting_shape_grid_nodes(support):
 
 
 def _supporting_shape_wellboreframe(support, indexable_element):
+    shape_list = None
     if indexable_element is None or indexable_element == 'nodes':
         shape_list = [support.node_count]
     elif indexable_element == 'intervals':
@@ -460,6 +463,7 @@ def _supporting_shape_wellboreframe(support, indexable_element):
 
 
 def _supporting_shape_wellboremarkerframe(support, indexable_element):
+    shape_list = None
     if indexable_element is None or indexable_element == 'nodes':
         shape_list = [support.node_count]
     elif indexable_element == 'intervals':
@@ -468,6 +472,7 @@ def _supporting_shape_wellboremarkerframe(support, indexable_element):
 
 
 def _supporting_shape_blockedwell(support, indexable_element):
+    shape_list = None
     if indexable_element is None or indexable_element == 'intervals':
         shape_list = [support.node_count - 1]  # all intervals, including unblocked
     elif indexable_element == 'nodes':
@@ -478,6 +483,7 @@ def _supporting_shape_blockedwell(support, indexable_element):
 
 
 def _supporting_shape_mesh(support, indexable_element):
+    shape_list = None
     if indexable_element is None or indexable_element == 'cells' or indexable_element == 'columns':
         shape_list = [support.nj - 1, support.ni - 1]
     elif indexable_element == 'nodes':
@@ -486,7 +492,8 @@ def _supporting_shape_mesh(support, indexable_element):
 
 
 def _supporting_shape_surface(support, indexable_element):
-    if indexable_element is None or indexable_element == 'faces':
+    shape_list = None
+    if indexable_element is None or indexable_element in ['triangles', 'faces']:
         shape_list = [support.triangle_count()]
     elif indexable_element == 'nodes':
         shape_list = [support.node_count()]
@@ -494,8 +501,38 @@ def _supporting_shape_surface(support, indexable_element):
 
 
 def _supporting_shape_gridconnectionset(support, indexable_element):
+    shape_list = None
     if indexable_element is None or indexable_element == 'faces':
         shape_list = [support.count]
+    return shape_list
+
+
+def _supporting_shape_polyline(support, indexable_element):
+    shape_list = None
+    if indexable_element is None or indexable_element == 'intervals':
+        shape_list = [len(support.coordinates) - (0 if support.isclosed else 1)]
+    elif indexable_element == 'nodes':
+        shape_list = [len(support.coordinates)]
+    return shape_list
+
+
+def _supporting_shape_polylineset(support, indexable_element):
+    shape_list = None
+    if indexable_element is None or indexable_element == 'intervals':
+        if support.boolnotconstant:
+            reduction = len(support.closed_array) - np.count_nonzero(support.closed_array)
+        else:
+            reduction = 0 if support.boolvalue else len(support.closed_array)
+        shape_list = [len(support.coordinates) - reduction]
+    elif indexable_element == 'nodes':
+        shape_list = [len(support.coordinates)]
+    return shape_list
+
+
+def _supporting_shape_pointset(support, indexable_element):
+    shape_list = None
+    if indexable_element is None or indexable_element == 'nodes':
+        shape_list = [len(support.full_array_ref())]
     return shape_list
 
 
@@ -519,16 +556,23 @@ def _realizations_array_ref_get_r_extent(fill_missing, r_list):
 
 
 def _get_indexable_element(indexable_element, support_type):
+    # returns a default indexable element depending on the type of supporting representation
     if indexable_element is None:
         if support_type in [
                 'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
                 'obj_UnstructuredGridRepresentation'
         ]:
             indexable_element = 'cells'
-        elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation']:
-            indexable_element = 'nodes'  # note: could be 'intervals'
-        elif support_type in ['obj_GridConnectionSetRepresentation', 'obj_TriangulatedSetRepresentation']:
+        elif support_type in [
+                'obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation', 'obj_PointSetRepresentation'
+        ]:
+            indexable_element = 'nodes'  # note: could be 'intervals' (except for PointSet properties)
+        elif support_type == 'obj_GridConnectionSetRepresentation':
             indexable_element = 'faces'
+        elif support_type == 'obj_TriangulatedSetRepresentation':
+            indexable_element = 'triangles'
+        elif support_type in ['obj_PolylineRepresentation', 'obj_PolylineSetRepresentation']:
+            indexable_element = 'intervals'  # could also be 'nodes'
         else:
             raise Exception('indexable element unknown for unsupported supporting representation object')
     return indexable_element

@@ -14,6 +14,7 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
+import resqpy.property as rqp
 import resqpy.surface
 import resqpy.surface._base_surface as rqsb
 from resqpy.olio.xml_namespaces import curly_namespace as ns
@@ -78,6 +79,7 @@ class PointSet(rqsb.BaseSurface):
         self.patch_array_list = []  # ordered list of numpy float arrays (or None before loading), each of shape (N, 3)
         self.full_array = None  # composite points (all patches)
         self.represented_interpretation_root = None
+        self.property_collection = None
         super().__init__(model = parent_model,
                          uuid = uuid,
                          title = title,
@@ -401,6 +403,25 @@ class PointSet(rqsb.BaseSurface):
         if self.patch_count is None:
             self.patch_count = 0
         self.patch_count += 1
+
+    def extract_property_collection(self, refresh = False):
+        """Returns a property collection for the point set.
+
+        arguments:
+            refresh (bool, default False): if True, the property collection is refreshed
+                from the current state of the model; if False and the property collection
+                has already been cached for the point set, then the cached copy is used
+
+        returns:
+            a PropertyCollection holding those properties in the model where this point set
+            is the supporting representation
+
+        note:
+            point set properties have indexable element of 'nodes'
+        """
+        if self.property_collection is None or refresh:
+            self.property_collection = rqp.PropertyCollection(support = self)
+        return self.property_collection
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the point set patches after caching arrays.

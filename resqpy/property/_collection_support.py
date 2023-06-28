@@ -34,6 +34,7 @@ def _set_support_uuid_notnone(collection, support, support_uuid, model, modify_p
     import resqpy.surface as rqs
     import resqpy.unstructured as rug
     import resqpy.well as rqw
+    import resqpy.lines as rql
 
     assert model is not None, 'model not established when setting support for property collection'
     if collection.support_uuid is not None and not bu.matching_uuids(support_uuid, collection.support_uuid):
@@ -46,7 +47,7 @@ def _set_support_uuid_notnone(collection, support, support_uuid, model, modify_p
         if type(collection.support) in [
                 grr.Grid, grr.RegularGrid, rqw.WellboreFrame, rqw.BlockedWell, rqs.Mesh, rqf.GridConnectionSet,
                 rug.UnstructuredGrid, rug.HexaGrid, rug.TetraGrid, rug.PrismGrid, rug.VerticalPrismGrid,
-                rug.PyramidGrid, rqw.WellboreMarkerFrame, rqs.Surface
+                rug.PyramidGrid, rqw.WellboreMarkerFrame, rqs.Surface, rql.Polyline, rql.PolylineSet, rqs.PointSet
         ]:
             collection.support_root = collection.support.root
         else:
@@ -65,6 +66,7 @@ def _set_support_uuid_notnone_supportnone(collection, support_uuid, model):
     import resqpy.surface as rqs
     import resqpy.unstructured as rug
     import resqpy.well as rqw
+    import resqpy.lines as rql
 
     support_part = model.part_for_uuid(support_uuid)
     assert support_part is not None, 'supporting representation part missing in model'
@@ -90,6 +92,12 @@ def _set_support_uuid_notnone_supportnone(collection, support_uuid, model):
                                                   find_properties = False)
     elif support_type == 'obj_WellboreMarkerFrameRepresentation':
         collection.support = rqw.WellboreMarkerFrame(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_PolylineRepresentation':
+        collection.support = rql.Polyline(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_PolylineSetRepresentation':
+        collection.support = rql.PolylineSet(model, uuid = collection.support_uuid)
+    elif support_type == 'obj_PointSetRepresentation':
+        collection.support = rqs.PointSet(model, uuid = collection.support_uuid)
     else:
         raise TypeError('unsupported property supporting representation class: ' + str(support_type))
 
