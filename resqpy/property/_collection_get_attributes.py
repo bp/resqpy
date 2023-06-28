@@ -507,7 +507,7 @@ def _supporting_shape_gridconnectionset(support, indexable_element):
     return shape_list
 
 
-def supporting_shape_polyline(support, indexable_element):
+def _supporting_shape_polyline(support, indexable_element):
     shape_list = None
     if indexable_element is None or indexable_element == 'intervals':
         shape_list = [len(support.coordinates) - (0 if support.isclosed else 1)]
@@ -516,7 +516,7 @@ def supporting_shape_polyline(support, indexable_element):
     return shape_list
 
 
-def supporting_shape_polylineset(support, indexable_element):
+def _supporting_shape_polylineset(support, indexable_element):
     shape_list = None
     if indexable_element is None or indexable_element == 'intervals':
         if support.boolnotconstant:
@@ -529,7 +529,7 @@ def supporting_shape_polylineset(support, indexable_element):
     return shape_list
 
 
-def supporting_shape_pointset(support, indexable_element):
+def _supporting_shape_pointset(support, indexable_element):
     shape_list = None
     if indexable_element is None or indexable_element == 'nodes':
         shape_list = [len(support.full_array_ref())]
@@ -556,16 +556,20 @@ def _realizations_array_ref_get_r_extent(fill_missing, r_list):
 
 
 def _get_indexable_element(indexable_element, support_type):
+    # returns a default indexable element depending on the type of supporting representation
     if indexable_element is None:
         if support_type in [
                 'obj_IjkGridRepresentation', 'obj_BlockedWellboreRepresentation', 'obj_Grid2dRepresentation',
                 'obj_UnstructuredGridRepresentation'
         ]:
             indexable_element = 'cells'
-        elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation']:
-            indexable_element = 'nodes'  # note: could be 'intervals'
+        elif support_type in ['obj_WellboreFrameRepresentation', 'obj_WellboreMarkerFrameRepresentation',
+                              'obj_PointSetRepresentation']:
+            indexable_element = 'nodes'  # note: could be 'intervals' (except for PointSet properties)
         elif support_type in ['obj_GridConnectionSetRepresentation', 'obj_TriangulatedSetRepresentation']:
             indexable_element = 'faces'
+        elif support_type in ['obj_PolylineRepresentation', 'obj_PolylineSetRepresentation']:
+            indexable_element = 'intervals'  # could also be 'nodes'
         else:
             raise Exception('indexable element unknown for unsupported supporting representation object')
     return indexable_element
