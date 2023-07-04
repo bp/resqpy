@@ -1100,6 +1100,31 @@ def test_create_xml_minmax_none(example_model_with_properties):
     assert rqet.find_tag_text(p_node, 'MaximumValue') == '2.0'
 
 
+def test_create_xml_all_nan_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    p_node = pc.create_xml(ext_uuid = ext_uuid,
+                           property_array = array,
+                           title = 'all nan',
+                           property_kind = 'continuous',
+                           support_uuid = support_uuid,
+                           p_uuid = bu.new_uuid(),
+                           uom = 'Euc',
+                           add_min_max = True,
+                           min_value = None,
+                           max_value = None,
+                           indexable_element = 'cells',
+                           count = 1)
+
+    assert rqet.find_tag(p_node, 'MinimumValue') is None
+    assert rqet.find_tag(p_node, 'MaximumValue') is None
+
+
 def test_create_xml_minmax_none_discrete(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
