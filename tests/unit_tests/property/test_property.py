@@ -1125,6 +1125,30 @@ def test_create_xml_all_nan_minmax_none(example_model_with_properties):
     assert rqet.find_tag(p_node, 'MaximumValue') is None
 
 
+def test_normalise_all_nan_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = 'testing',
+                                         keyword = 'all nan',
+                                         discrete = False,
+                                         property_kind = 'porosity')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    part = pc.singleton(title = 'all nan')
+    assert part is not None
+    normed, vmin, vmax = pc.normalized_part_array(part, masked = False, use_logarithm = False)
+    assert vmin is None
+    assert vmax is None
+    assert normed is None
+
+
 def test_create_xml_minmax_none_discrete(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
