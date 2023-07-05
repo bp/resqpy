@@ -1,6 +1,5 @@
 import math as maths
 import os
-
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
@@ -11,6 +10,7 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
+import resqpy.property._collection_get_attributes as pcga
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
 import resqpy.surface as rqs
@@ -1058,6 +1058,28 @@ def test_norm_array_ref_log_mask(example_model_with_properties):
     assert np.all(np.isclose(np.ma.array(array7, mask = np.isnan(array7)), normed))
 
 
+def test_normalized_part_array_use_logarithm_all_nan():
+    a = np.full((4, 5, 6), np.NaN, dtype = float)
+    b, min_value, max_value = pcga._normalized_part_array_use_logarithm(0.0, a, False)
+    assert np.all(np.isnan(b))
+    assert np.isnan(min_value) and np.isnan(max_value)
+
+
+def test_normalized_part_array_use_logarithm_default_min():
+    a = np.zeros((4, 5, 6), dtype = float)
+    b, min_value, max_value = pcga._normalized_part_array_use_logarithm(0.0, a, False)
+    assert_array_almost_equal(b, -4.0)
+    assert maths.isclose(min_value, -4.0)
+    assert maths.isclose(max_value, -4.0)
+
+
+def test_normalized_part_array_use_logarithm_all_masked():
+    a = np.ma.masked_array(data = [(4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], mask = True, fill_value = np.NaN, dtype = float)
+    _, min_value, max_value = pcga._normalized_part_array_use_logarithm(4.0, a, True)
+    assert np.isnan(min_value)
+    assert np.isnan(max_value)
+
+
 def test_normalized_part_array_discrete(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
@@ -1098,6 +1120,81 @@ def test_create_xml_minmax_none(example_model_with_properties):
 
     assert rqet.find_tag_text(p_node, 'MinimumValue') == '1.0'
     assert rqet.find_tag_text(p_node, 'MaximumValue') == '2.0'
+
+
+def test_create_xml_all_nan_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    p_node = pc.create_xml(ext_uuid = ext_uuid,
+                           property_array = array,
+                           title = 'all nan',
+                           property_kind = 'continuous',
+                           support_uuid = support_uuid,
+                           p_uuid = bu.new_uuid(),
+                           uom = 'Euc',
+                           add_min_max = True,
+                           min_value = None,
+                           max_value = None,
+                           indexable_element = 'cells',
+                           count = 1)
+
+    assert rqet.find_tag(p_node, 'MinimumValue') is None
+    assert rqet.find_tag(p_node, 'MaximumValue') is None
+
+
+def test_normalise_all_nan_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = 'testing',
+                                         keyword = 'all nan',
+                                         discrete = False,
+                                         property_kind = 'porosity')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    part = pc.singleton(title = 'all nan')
+    assert part is not None
+    p_array = pc.cached_part_array_ref(part)
+    got_min, got_max = pcga._normalized_part_array_get_minmax(pc, False, part, p_array, False)
+    assert got_min is None and got_max is None
+    normed, vmin, vmax = pc.normalized_part_array(part, masked = False, use_logarithm = False)
+    assert vmin is None
+    assert vmax is None
+    assert normed is None
+
+
+def test_normalise_all_masked_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.ma.masked_array(data = np.ones((3, 5, 5), dtype = float), mask = True, fill_value = -1.0)
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = 'testing',
+                                         keyword = 'all masked',
+                                         discrete = False,
+                                         property_kind = 'pore volume')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    part = pc.singleton(title = 'all masked')
+    assert part is not None
+    p_array = pc.cached_part_array_ref(part)
+    min_v, max_v = pcga._normalized_part_array_get_minmax(pc, False, part, array, True)
+    assert min_v is None and max_v is None
 
 
 def test_create_xml_minmax_none_discrete(example_model_with_properties):

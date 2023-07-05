@@ -31,12 +31,12 @@ def _min_max_of_cached_array(collection, cached_name, cached_array, null_value, 
             if max_value is ma.masked:
                 max_value = None
     else:
-        min_value = np.nanmin(cached_array)
-        max_value = np.nanmax(cached_array)
-        if np.isnan(min_value):
+        if np.all(np.isnan(cached_array)):
             min_value = None
-        if np.isnan(max_value):
             max_value = None
+        else:
+            min_value = np.nanmin(cached_array)
+            max_value = np.nanmax(cached_array)
     return min_value, max_value
 
 
@@ -368,16 +368,20 @@ def _normalized_part_array_nan_if_masked(min_value, max_value, masked):
 
 
 def _normalized_part_array_use_logarithm(min_value, n_prop, masked):
-    if min_value <= 0.0:
-        n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
-    n_prop = np.log10(n_prop)
-    min_value = np.nanmin(n_prop)
-    max_value = np.nanmax(n_prop)
-    if masked:
-        if min_value is ma.masked:
-            min_value = np.nan
-        if max_value is ma.masked:
-            max_value = np.nan
+    if np.all(np.isnan(n_prop)):
+        min_value = np.nan
+        max_value = np.nan
+    else:
+        if min_value <= 0.0:
+            n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
+        n_prop = np.log10(n_prop)
+        min_value = np.nanmin(n_prop)
+        max_value = np.nanmax(n_prop)
+        if masked:
+            if min_value is ma.masked:
+                min_value = np.nan
+            if max_value is ma.masked:
+                max_value = np.nan
     return n_prop, min_value, max_value
 
 
@@ -630,12 +634,16 @@ def _normalized_part_array_get_minmax(collection, trust_min_max, part, p_array, 
         min_value = collection.minimum_value_for_part(part)
         max_value = collection.maximum_value_for_part(part)
     if min_value is None or max_value is None:
-        min_value = np.nanmin(p_array)
-        if masked and min_value is ma.masked:
+        if np.all(np.isnan(p_array)):
             min_value = None
-        max_value = np.nanmax(p_array)
-        if masked and max_value is ma.masked:
             max_value = None
+        else:
+            min_value = np.nanmin(p_array)
+            if masked and min_value is ma.masked:
+                min_value = None
+            max_value = np.nanmax(p_array)
+            if masked and max_value is ma.masked:
+                max_value = None
         collection.override_min_max(part, min_value, max_value)  # NB: this does not modify xml
     return min_value, max_value
 
