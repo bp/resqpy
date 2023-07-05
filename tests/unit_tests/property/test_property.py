@@ -1,6 +1,5 @@
 import math as maths
 import os
-
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
@@ -1066,6 +1065,21 @@ def test_normalized_part_array_use_logarithm_all_nan():
     assert np.isnan(min_value) and np.isnan(max_value)
 
 
+def test_normalized_part_array_use_logarithm_default_min():
+    a = np.zeros((4, 5, 6), dtype = float)
+    b, min_value, max_value = pcga._normalized_part_array_use_logarithm(0.0, a, False)
+    assert_array_almost_equal(b, -4.0)
+    assert maths.isclose(min_value, -4.0)
+    assert maths.isclose(max_value, -4.0)
+
+
+def test_normalized_part_array_use_logarithm_all_masked():
+    a = np.ma.masked_array(data = [(4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], mask = True, fill_value = np.NaN, dtype = float)
+    _, min_value, max_value = pcga._normalized_part_array_use_logarithm(4.0, a, True)
+    assert np.isnan(min_value)
+    assert np.isnan(max_value)
+
+
 def test_normalized_part_array_discrete(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
@@ -1158,6 +1172,29 @@ def test_normalise_all_nan_minmax_none(example_model_with_properties):
     assert vmin is None
     assert vmax is None
     assert normed is None
+
+
+def test_normalise_all_masked_minmax_none(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    pc = model.grid().property_collection
+    array = np.ma.masked_array(data = np.ones((3, 5, 5), dtype = float), mask = True, fill_value = -1.0)
+    support_uuid = model.grid().uuid
+    ext_uuid = model.h5_uuid()
+
+    pc.add_cached_array_to_imported_list(cached_array = array,
+                                         source_info = 'testing',
+                                         keyword = 'all masked',
+                                         discrete = False,
+                                         property_kind = 'pore volume')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    part = pc.singleton(title = 'all masked')
+    assert part is not None
+    p_array = pc.cached_part_array_ref(part)
+    min_v, max_v = pcga._normalized_part_array_get_minmax(pc, False, part, array, True)
+    assert min_v is None and max_v is None
 
 
 def test_create_xml_minmax_none_discrete(example_model_with_properties):
