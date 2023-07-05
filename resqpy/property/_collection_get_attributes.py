@@ -368,20 +368,20 @@ def _normalized_part_array_nan_if_masked(min_value, max_value, masked):
 
 
 def _normalized_part_array_use_logarithm(min_value, n_prop, masked):
-    if min_value <= 0.0:
-        n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
-    n_prop = np.log10(n_prop)
     if np.all(np.isnan(n_prop)):
         min_value = np.nan
         max_value = np.nan
     else:
+        if min_value <= 0.0:
+            n_prop[:] = np.where(n_prop < 0.0001, 0.0001, n_prop)
+        n_prop = np.log10(n_prop)
         min_value = np.nanmin(n_prop)
         max_value = np.nanmax(n_prop)
-    if masked:
-        if min_value is ma.masked:
-            min_value = np.nan
-        if max_value is ma.masked:
-            max_value = np.nan
+        if masked:
+            if min_value is ma.masked:
+                min_value = np.nan
+            if max_value is ma.masked:
+                max_value = np.nan
     return n_prop, min_value, max_value
 
 

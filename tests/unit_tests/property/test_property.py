@@ -11,6 +11,7 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
+import resqpy.property._collection_get_attributes as pcga
 import resqpy.time_series as rqts
 import resqpy.weights_and_measures as bwam
 import resqpy.surface as rqs
@@ -1058,6 +1059,13 @@ def test_norm_array_ref_log_mask(example_model_with_properties):
     assert np.all(np.isclose(np.ma.array(array7, mask = np.isnan(array7)), normed))
 
 
+def test_normalized_part_array_use_logarithm_all_nan():
+    a = np.full((4, 5, 6), np.NaN, dtype = float)
+    b, min_value, max_value = pcga._normalized_part_array_use_logarithm(0.0, a, False)
+    assert np.all(np.isnan(b))
+    assert np.isnan(min_value) and np.isnan(max_value)
+
+
 def test_normalized_part_array_discrete(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
@@ -1143,6 +1151,9 @@ def test_normalise_all_nan_minmax_none(example_model_with_properties):
 
     part = pc.singleton(title = 'all nan')
     assert part is not None
+    p_array = pc.cached_part_array_ref(part)
+    got_min, got_max = pcga._normalized_part_array_get_minmax(pc, False, part, p_array, False)
+    assert got_min is None and got_max is None
     normed, vmin, vmax = pc.normalized_part_array(part, masked = False, use_logarithm = False)
     assert vmin is None
     assert vmax is None
