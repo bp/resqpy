@@ -439,10 +439,18 @@ def _supporting_shape_grid(support, indexable_element, direction):
 
 
 def _supporting_shape_grid_faces(direction, support):
-    assert direction is not None and direction.upper() in 'IJK'
-    axis = 'KJI'.index(direction.upper())
-    shape_list = [support.nk, support.nj, support.ni]
-    shape_list[axis] += 1  # note: properties for grid faces include outer faces
+    if direction is None:  # a composite 1D array (the RESQML standard)
+        count = 0
+        for axis in range(3):
+            batch = np.array(support.extent_kji, dtype = int)
+            batch[axis] += 1
+            count += np.product(batch)
+        shape_list = [count]
+    else:
+        assert direction.upper() in 'IJK'
+        axis = 'KJI'.index(direction.upper())
+        shape_list = [support.nk, support.nj, support.ni]
+        shape_list[axis] += 1  # note: properties for grid faces include outer faces
     return shape_list
 
 

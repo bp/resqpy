@@ -2149,7 +2149,8 @@ class Grid(BaseResqpy):
                                                    fill_value = 1.0,
                                                    active_only = True,
                                                    apply_baffles = False,
-                                                   baffle_triplet = None):
+                                                   baffle_triplet = None,
+                                                   composite_property = False):
         """Add triplet of transmissibility multiplier properties by combining gcs properties.
 
         arguments:
@@ -2171,9 +2172,13 @@ class Grid(BaseResqpy):
             baffle_triplet (triplet of numpy bool arrays, optional): if present, boolean masks over the grid
                 internal faces; where True, a value of zero will be enforced for the multipliers regardless
                 of the grid connection set properties
+            composite_property (bool, default False): if True, the transmissibility data is stored in a single
+                property with no direction facet (in accordance with the RESQML standard); if False, a separate
+                property is generated for each of the three directions
 
         returns:
-            list of 3 uuids, one for each of the newly created transmissibility multiplier properties
+            list of 3 uuids, one for each of the newly created transmissibility multiplier properties; or
+            a list with just one uuid, if composite_property is True
 
         notes:
             each grid connection set must refer to this grid only;
@@ -2181,7 +2186,8 @@ class Grid(BaseResqpy):
             suitable for faulted grids;
             the baffle_triplet arrays, if provided, must be for internal faces only, so have extents of
             (nk - 1, nj, ni), (nk, nj - 1, ni), (nk, nj, ni -1); note that this is a different protocol
-            than the indexable element of faces, which includes external faces
+            than the indexable element of faces, which includes external faces;
+            set composite_property True for compatibility with shape information indicated in RESQML documentation
         """
 
         if not gcs_uuid_list:
@@ -2224,18 +2230,31 @@ class Grid(BaseResqpy):
             trm_j[:, 1:-1] = np.where(baffle_triplet[1], 0.0, trm_j[:, 1:-1])
             trm_i[:, :, 1:-1] = np.where(baffle_triplet[2], 0.0, trm_i[:, :, 1:-1])
 
-        for axis, trm in enumerate((trm_k, trm_j, trm_i)):
-            axis_ch = 'KJI'[axis]
-            pc.add_cached_array_to_imported_list(trm,
+        if composite_property:
+            tr_composite = np.concatenate((trm_k.flat, trm_j.flat, trm_i.flat))
+            pc.add_cached_array_to_imported_list(tr_composite,
                                                  'combined from gcs tr mults',
-                                                 'TMULT' + axis_ch,
+                                                 'TMULT',
                                                  discrete = False,
                                                  uom = 'Euc',
                                                  property_kind = 'transmissibility multiplier',
-                                                 facet_type = 'direction',
-                                                 facet = axis_ch,
+                                                 facet_type = None,
+                                                 facet = None,
                                                  realization = realization,
                                                  indexable_element = 'faces')
+        else:
+            for axis, trm in enumerate((trm_k, trm_j, trm_i)):
+                axis_ch = 'KJI'[axis]
+                pc.add_cached_array_to_imported_list(trm,
+                                                     'combined from gcs tr mults',
+                                                     'TMULT' + axis_ch,
+                                                     discrete = False,
+                                                     uom = 'Euc',
+                                                     property_kind = 'transmissibility multiplier',
+                                                     facet_type = 'direction',
+                                                     facet = axis_ch,
+                                                     realization = realization,
+                                                     indexable_element = 'faces')
 
         pc.write_hdf5_for_imported_list()
         return pc.create_xml_for_imported_list_and_add_parts_to_model()

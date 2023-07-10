@@ -39,6 +39,28 @@ def test_property(tmp_path):
                                  property_kind = 'net to gross ratio',
                                  indexable_element = 'cells',
                                  uom = 'm3/m3')
+    a6 = np.random.random(grid.extent_kji) * 300.0
+    p6 = rqp.Property.from_array(model,
+                                 a6,
+                                 source_info = 'random',
+                                 keyword = 'PERMXY',
+                                 facet_type = 'direction',
+                                 facet = 'IJ',
+                                 support_uuid = grid.uuid,
+                                 property_kind = 'permeability rock',
+                                 indexable_element = 'cells',
+                                 uom = 'mD')
+    a7 = np.random.random(grid.extent_kji) * 100.0
+    p7 = rqp.Property.from_array(model,
+                                 a7,
+                                 source_info = 'random',
+                                 keyword = 'PERMZ',
+                                 facet_type = 'direction',
+                                 facet = 'K',
+                                 support_uuid = grid.uuid,
+                                 property_kind = 'permeability rock',
+                                 indexable_element = 'cells',
+                                 uom = 'mD')
     a3 = np.random.random((grid.nk + 1, grid.nj + 1, grid.ni + 1))
     p3 = rqp.Property.from_array(model,
                                  a3,
@@ -59,6 +81,56 @@ def test_property(tmp_path):
                                  property_kind = 'length',
                                  indexable_element = 'nodes per cell',
                                  uom = 'm3')
+    a5k = np.random.random((grid.nk + 1, grid.nj, grid.ni))
+    a5j = np.random.random((grid.nk, grid.nj + 1, grid.ni))
+    a5i = np.random.random((grid.nk, grid.nj, grid.ni + 1))
+    a5 = np.concatenate((a5k.flat, a5j.flat, a5i.flat))
+    p5k = rqp.Property.from_array(model,
+                                  a5k,
+                                  source_info = 'random',
+                                  keyword = 'k face tr mult',
+                                  support_uuid = grid.uuid,
+                                  property_kind = 'transmissibility multiplier',
+                                  indexable_element = 'faces',
+                                  facet_type = 'direction',
+                                  facet = 'K',
+                                  uom = 'Euc')
+    grid.property_collection = None
+    tr_from_composite = grid.transmissibility(use_tr_properties = True)
+    assert len(tr_from_composite) == 3
+    assert tr_from_composite[0].shape == (grid.nk + 1, grid.nj, grid.ni)
+    assert tr_from_composite[1].shape == (grid.nk, grid.nj + 1, grid.ni)
+    assert tr_from_composite[2].shape == (grid.nk, grid.nj, grid.ni + 1)
+    p5j = rqp.Property.from_array(model,
+                                  a5j,
+                                  source_info = 'random',
+                                  keyword = 'j face tr mult',
+                                  support_uuid = grid.uuid,
+                                  property_kind = 'transmissibility multiplier',
+                                  indexable_element = 'faces',
+                                  facet_type = 'direction',
+                                  facet = 'J',
+                                  uom = 'Euc')
+    p5i = rqp.Property.from_array(model,
+                                  a5i,
+                                  source_info = 'random',
+                                  keyword = 'i face tr mult',
+                                  support_uuid = grid.uuid,
+                                  property_kind = 'transmissibility multiplier',
+                                  indexable_element = 'faces',
+                                  facet_type = 'direction',
+                                  facet = 'I',
+                                  uom = 'Euc')
+    p5 = rqp.Property.from_array(model,
+                                 a5,
+                                 source_info = 'random',
+                                 keyword = 'composite tr mult',
+                                 support_uuid = grid.uuid,
+                                 property_kind = 'transmissibility multiplier',
+                                 indexable_element = 'faces',
+                                 facet_type = None,
+                                 facet = None,
+                                 uom = 'Euc')
     pk = rqp.PropertyKind(model, title = 'facies', parent_property_kind = 'discrete')
     pk.create_xml()
     facies_dict = {0: 'background'}
@@ -144,8 +216,8 @@ def test_property(tmp_path):
     assert p3p.array_ref().shape == (grid.nk + 1, grid.nj + 1, grid.ni + 1)
     jiggle_per_cell_uuid = model.uuid(parts_list = jiggle_parts, title = 'per cell', title_mode = 'ends')
     assert jiggle_per_cell_uuid is not None
-    # four properties created here, plus 3 regular grid cell lengths properties
-    assert grid.property_collection.number_of_parts() == 7
+    # 10 properties created here, plus 3 regular grid cell lengths properties
+    assert grid.property_collection.number_of_parts() == 13
     collection = rqp.selective_version_of_collection(grid.property_collection,
                                                      property_kind = 'length',
                                                      uuid = jiggle_per_cell_uuid)
@@ -154,6 +226,22 @@ def test_property(tmp_path):
     p4p = rqp.Property.from_singleton_collection(collection)
     assert p4p is not None
     assert p4p.array_ref().shape == (grid.nk, grid.nj, grid.ni, 2, 2, 2)
+    collection = rqp.selective_version_of_collection(grid.property_collection,
+                                                     property_kind = 'transmissibility multiplier')
+    assert collection is not None
+    assert collection.number_of_parts() == 4
+    p5ka = collection.single_array_ref(facet_type = 'direction', facet = 'K')
+    assert p5ka is not None
+    assert_array_almost_equal(p5ka, a5k)
+    p5ja = collection.single_array_ref(facet_type = 'direction', facet = 'J')
+    assert p5ja is not None
+    assert_array_almost_equal(p5ja, a5j)
+    p5ia = collection.single_array_ref(facet_type = 'direction', facet = 'I')
+    assert p5ia is not None
+    assert_array_almost_equal(p5ia, a5i)
+    p5a = collection.single_array_ref(facet_type = 'none')
+    assert p5a is not None
+    assert_array_almost_equal(p5a, a5)
 
 
 def test_create_Property_from_singleton_collection(tmp_model):

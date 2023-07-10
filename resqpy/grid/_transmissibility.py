@@ -29,13 +29,13 @@ def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realiza
           applies to pre-computed transmissibility properties or permeability and net to gross ratio
           properties when computing
        modifier_mode (string, optional): if None, no transmissibility modifiers are applied; other
-          options are: 'faces multiplier', for which directional transmissibility properties with indexable
-          element of 'faces' will be used; 'faces per cell multiplier', in which case a transmissibility
-          property with 'faces per cell' as the indexable element will be used to modify the half cell
-          transmissibilities prior to combination; or 'absolute' in which case directional properties
-          of local property kind 'fault transmissibility' (or 'mat transmissibility') and indexable
-          element of 'faces' will be used as a third transmissibility term along with the two half
-          cell transmissibilities at each face; see also the notes below
+          options are: 'faces multiplier', for which transmissibility properties with indexable
+          element of 'faces' will be used (directional or composite); 'faces per cell multiplier',
+          in which case a transmissibility property with 'faces per cell' as the indexable element
+          will be used to modify the half cell transmissibilities prior to combination;
+          or 'absolute' in which case directional properties of local property kind 'fault transmissibility'
+          (or 'mat transmissibility') and indexable element of 'faces' will be used as a third transmissibility
+          term along with the two half cell transmissibilities at each face; see also the notes below
 
     returns:
        3 numpy float arrays of shape (nk + 1, nj, ni), (nk, nj + 1, ni), (nk, nj, ni + 1) being the
@@ -52,10 +52,10 @@ def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realiza
        outer facing values will always be zero (included to be in accordance with RESQML faces properties);
        array caching in the grid object will only be used if realization is None; if a modifier mode of
        'faces multiplier' or 'faces per cell multiplier' is specified, properties will be searched for with
-       local property kind 'transmissibility multiplier' and the appropriate indexable element (and direction
-       facet in the case of 'faces multiplier'); the modifier mode of 'absolute' can be used to model the
-       effect of faults and thin shales, tar mats etc. in a way which is independent of cell size;
-       for 'aboslute' directional properties with indexable element of 'faces' and local property kind
+       local property kind 'transmissibility multiplier' and the appropriate indexable element (and optionally
+       the direction facet in the case of 'faces multiplier'); the modifier mode of 'absolute' can be used to
+       model the effect of faults and thin shales, tar mats etc. in a way which is independent of cell size;
+       for 'aboslute' properties with indexable element of 'faces' (optionally directional) and local property kind
        'fault transmissibility' (or 'mat transmissibility') will be used; such absolute faces transmissibilities
        should have a value of np.inf or np.nan where no modification is required; note that this method is only
        dealing with logically neighbouring cells and will not compute values for faces with a split pillar,
@@ -78,6 +78,12 @@ def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realiza
 
         pc = grid.extract_property_collection()
 
+        composite_tr = pc.single_array_ref(property_kind = 'transmissibility',
+                                           realization = realization,
+                                           continuous = True,
+                                           indexable = 'faces',
+                                           facet_type = 'none',
+                                           facet = 'none')
         if k_tr is None:
             k_tr = pc.single_array_ref(property_kind = 'transmissibility',
                                        realization = realization,
@@ -86,6 +92,8 @@ def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realiza
                                        indexable = 'faces',
                                        facet_type = 'direction',
                                        facet = 'K')
+            if k_tr is None and composite_tr is not None:
+                k_tr = composite_tr[:(grid.nk + 1) * grid.nj * grid.ni].reshape((grid.nk + 1, grid.nj, grid.ni))
             if k_tr is not None:
                 assert k_tr.shape == (grid.nk + 1, grid.nj, grid.ni)
                 if realization is None:
@@ -99,6 +107,10 @@ def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realiza
                                        indexable = 'faces',
                                        facet_type = 'direction',
                                        facet = 'J')
+            if j_tr is None and composite_tr is not None:
+                offset = (grid.nk + 1) * grid.nj * grid.ni
+                j_tr = composite_tr[offset:offset + grid.nk * (grid.nj + 1) * grid.ni].reshape(
+                    (grid.nk, grid.nj + 1, grid.ni))
             if j_tr is not None:
                 assert j_tr.shape == (grid.nk, grid.nj + 1, grid.ni)
                 if realization is None:
@@ -112,6 +124,9 @@ def transmissibility(grid, tolerance = 1.0e-6, use_tr_properties = True, realiza
                                        indexable = 'faces',
                                        facet_type = 'direction',
                                        facet = 'I')
+            if i_tr is None and composite_tr is not None:
+                offset = (grid.nk + 1) * grid.nj * grid.ni + grid.nk * (grid.nj + 1) * grid.ni
+                i_tr = composite_tr[offset:].reshape((grid.nk, grid.nj, grid.ni + 1))
             if i_tr is not None:
                 assert i_tr.shape == (grid.nk, grid.nj, grid.ni + 1)
                 if realization is None:
@@ -180,6 +195,16 @@ def __set_i_transmissibility(grid, half_t, i_tr, modifier_mode, pc, realization,
                                       count = 1,
                                       indexable = 'faces')
         if tr_mult is None:
+            tr_composite = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                               realization = realization,
+                                               facet_type = 'none',
+                                               facet = 'none',
+                                               continuous = True,
+                                               indexable = 'faces')
+            if tr_composite is not None:
+                offset = (grid.nk + 1) * grid.nj * grid.ni + grid.nk * (grid.nj + 1) * grid.ni
+                tr_mult = tr_composite[offset:].reshape((grid.nk, grid.nj, grid.ni + 1))
+        if tr_mult is None:
             log.warning('no I direction faces transmissibility multiplier found when calculating transmissibilities')
         else:
             assert tr_mult.shape == (grid.nk, grid.nj, grid.ni + 1)
@@ -221,6 +246,17 @@ def __set_j_transmissibility(grid, half_t, j_tr, modifier_mode, pc, realization,
                                       continuous = True,
                                       count = 1,
                                       indexable = 'faces')
+        if tr_mult is None:
+            tr_composite = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                               realization = realization,
+                                               facet_type = 'none',
+                                               facet = 'none',
+                                               continuous = True,
+                                               indexable = 'faces')
+            if tr_composite is not None:
+                offset = (grid.nk + 1) * grid.nj * grid.ni
+                tr_mult = tr_composite[offset:offset + grid.nk * (grid.nj + 1) * grid.ni].reshape(
+                    (grid.nk, grid.nj + 1, grid.ni))
         if tr_mult is None:
             log.warning('no J direction faces transmissibility multiplier found when calculating transmissibilities')
         else:
@@ -265,6 +301,16 @@ def __set_k_transmissibility(grid, half_t, k_tr, modifier_mode, pc, realization,
                                       continuous = True,
                                       count = 1,
                                       indexable = 'faces')
+        if tr_mult is None:
+            tr_composite = pc.single_array_ref(property_kind = 'transmissibility multiplier',
+                                               realization = realization,
+                                               facet_type = 'none',
+                                               facet = 'none',
+                                               continuous = True,
+                                               indexable = 'faces')
+            if tr_composite is not None:
+                size = (grid.nk + 1) * grid.nj * grid.ni
+                tr_mult = tr_composite[:size].reshape((grid.nk + 1, grid.nj, grid.ni))
         if tr_mult is not None:
             assert tr_mult.shape == (grid.nk + 1, grid.nj, grid.ni)
             internal_zero_mask = np.logical_or(internal_zero_mask, np.isnan(tr_mult[1:-1, :, :]))

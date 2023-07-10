@@ -177,6 +177,32 @@ def test_fault_connection_set(tmp_path):
             assert_array_almost_equal(c_trm_i, 1.0)
             assert np.count_nonzero(c_trm_j < 0.9) == 2 if lazy else 4
             assert not np.any(np.isnan(c_trm_j))
+            g_trm_k_uuid,  g_trm_j_uuid,  g_trm_i_uuid =  \
+                g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = [g2_fcs.uuid],
+                                                              merge_mode = merge_mode,
+                                                              sided = sided,
+                                                              fill_value = 1.0,
+                                                              composite_property = False)
+            assert g_trm_k_uuid is not None and g_trm_j_uuid is not None and g_trm_i_uuid is not None
+            g_trm_k = rqp.Property(model, uuid = g_trm_k_uuid).array_ref()
+            g_trm_j = rqp.Property(model, uuid = g_trm_j_uuid).array_ref()
+            g_trm_i = rqp.Property(model, uuid = g_trm_i_uuid).array_ref()
+            assert g_trm_k is not None and g_trm_j is not None and g_trm_i is not None
+            assert np.all(g_trm_k == c_trm_k)
+            assert np.all(g_trm_j == c_trm_j)
+            assert np.all(g_trm_i == c_trm_i)
+            g_trm_list = g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = [g2_fcs.uuid],
+                                                                       merge_mode = merge_mode,
+                                                                       sided = sided,
+                                                                       fill_value = 1.0,
+                                                                       composite_property = True)
+            assert len(g_trm_list) == 1
+            g_trm = rqp.Property(model, uuid = g_trm_list[0]).array_ref()
+            assert g_trm.ndim == 1
+            assert g_trm.size == g_trm_k.size + g_trm_j.size + g_trm_i.size
+            assert np.all(g_trm[:g_trm_k.size] == g_trm_k.flat)
+            assert np.all(g_trm[g_trm_k.size:g_trm_k.size + g_trm_j.size] == g_trm_j.flat)
+            assert np.all(g_trm[g_trm_k.size + g_trm_j.size:] == g_trm_i.flat)
 
     # I face split with full juxtaposition of kji0 (1, *, 0) with (0, *, 1)
     # pattern 4, 4 (or 3, 3) diagram 1
