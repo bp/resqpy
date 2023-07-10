@@ -39,6 +39,28 @@ def test_property(tmp_path):
                                  property_kind = 'net to gross ratio',
                                  indexable_element = 'cells',
                                  uom = 'm3/m3')
+    a6 = np.random.random(grid.extent_kji) * 300.0
+    p6 = rqp.Property.from_array(model,
+                                 a6,
+                                 source_info = 'random',
+                                 keyword = 'PERMXY',
+                                 facet_type = 'direction',
+                                 facet = 'IJ',
+                                 support_uuid = grid.uuid,
+                                 property_kind = 'permeability rock',
+                                 indexable_element = 'cells',
+                                 uom = 'mD')
+    a7 = np.random.random(grid.extent_kji) * 100.0
+    p7 = rqp.Property.from_array(model,
+                                 a7,
+                                 source_info = 'random',
+                                 keyword = 'PERMZ',
+                                 facet_type = 'direction',
+                                 facet = 'K',
+                                 support_uuid = grid.uuid,
+                                 property_kind = 'permeability rock',
+                                 indexable_element = 'cells',
+                                 uom = 'mD')
     a3 = np.random.random((grid.nk + 1, grid.nj + 1, grid.ni + 1))
     p3 = rqp.Property.from_array(model,
                                  a3,
@@ -73,6 +95,12 @@ def test_property(tmp_path):
                                   facet_type = 'direction',
                                   facet = 'K',
                                   uom = 'Euc')
+    grid.property_collection = None
+    tr_from_composite = grid.transmissibility(use_tr_properties = True)
+    assert len(tr_from_composite) == 3
+    assert tr_from_composite[0].shape == (grid.nk + 1, grid.nj, grid.ni)
+    assert tr_from_composite[1].shape == (grid.nk, grid.nj + 1, grid.ni)
+    assert tr_from_composite[2].shape == (grid.nk, grid.nj, grid.ni + 1)
     p5j = rqp.Property.from_array(model,
                                   a5j,
                                   source_info = 'random',
@@ -188,8 +216,8 @@ def test_property(tmp_path):
     assert p3p.array_ref().shape == (grid.nk + 1, grid.nj + 1, grid.ni + 1)
     jiggle_per_cell_uuid = model.uuid(parts_list = jiggle_parts, title = 'per cell', title_mode = 'ends')
     assert jiggle_per_cell_uuid is not None
-    # eight properties created here, plus 3 regular grid cell lengths properties
-    assert grid.property_collection.number_of_parts() == 11
+    # 10 properties created here, plus 3 regular grid cell lengths properties
+    assert grid.property_collection.number_of_parts() == 13
     collection = rqp.selective_version_of_collection(grid.property_collection,
                                                      property_kind = 'length',
                                                      uuid = jiggle_per_cell_uuid)
