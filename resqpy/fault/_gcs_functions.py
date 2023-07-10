@@ -387,7 +387,9 @@ def combined_tr_mult_from_gcs_mults(model,
 
     notes:
         each gcs, which is the supporting representation for each input tr mult property, must be for a single
-        grid and that grid must be the same for all the gcs'es
+        grid and that grid must be the same for all the gcs'es;
+        the three arrays returned by this function can be flattened and concatenated to create a composite
+        array compatible with RESQML documentation for grid properties with indexable elmement of 'faces'
     """
 
     assert merge_mode in ['minimum', 'multiply', 'maximum', 'exception']
