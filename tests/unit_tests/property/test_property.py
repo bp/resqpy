@@ -85,6 +85,22 @@ def test_property(tmp_path):
     a5j = np.random.random((grid.nk, grid.nj + 1, grid.ni))
     a5i = np.random.random((grid.nk, grid.nj, grid.ni + 1))
     a5 = np.concatenate((a5k.flat, a5j.flat, a5i.flat))
+    p5 = rqp.Property.from_array(model,
+                                 a5,
+                                 source_info = 'random',
+                                 keyword = 'composite tr mult',
+                                 support_uuid = grid.uuid,
+                                 property_kind = 'transmissibility multiplier',
+                                 indexable_element = 'faces',
+                                 facet_type = None,
+                                 facet = None,
+                                 uom = 'Euc')
+    grid.property_collection = None
+    tr_from_composite = grid.transmissibility(use_tr_properties = True)
+    assert len(tr_from_composite) == 3
+    assert tr_from_composite[0].shape == (grid.nk + 1, grid.nj, grid.ni)
+    assert tr_from_composite[1].shape == (grid.nk, grid.nj + 1, grid.ni)
+    assert tr_from_composite[2].shape == (grid.nk, grid.nj, grid.ni + 1)
     p5k = rqp.Property.from_array(model,
                                   a5k,
                                   source_info = 'random',
@@ -95,12 +111,6 @@ def test_property(tmp_path):
                                   facet_type = 'direction',
                                   facet = 'K',
                                   uom = 'Euc')
-    grid.property_collection = None
-    tr_from_composite = grid.transmissibility(use_tr_properties = True)
-    assert len(tr_from_composite) == 3
-    assert tr_from_composite[0].shape == (grid.nk + 1, grid.nj, grid.ni)
-    assert tr_from_composite[1].shape == (grid.nk, grid.nj + 1, grid.ni)
-    assert tr_from_composite[2].shape == (grid.nk, grid.nj, grid.ni + 1)
     p5j = rqp.Property.from_array(model,
                                   a5j,
                                   source_info = 'random',
@@ -121,16 +131,14 @@ def test_property(tmp_path):
                                   facet_type = 'direction',
                                   facet = 'I',
                                   uom = 'Euc')
-    p5 = rqp.Property.from_array(model,
-                                 a5,
-                                 source_info = 'random',
-                                 keyword = 'composite tr mult',
-                                 support_uuid = grid.uuid,
-                                 property_kind = 'transmissibility multiplier',
-                                 indexable_element = 'faces',
-                                 facet_type = None,
-                                 facet = None,
-                                 uom = 'Euc')
+    tr_from_directional = grid.transmissibility(use_tr_properties = True)
+    assert len(tr_from_directional) == 3
+    assert tr_from_directional[0].shape == (grid.nk + 1, grid.nj, grid.ni)
+    assert tr_from_directional[1].shape == (grid.nk, grid.nj + 1, grid.ni)
+    assert tr_from_directional[2].shape == (grid.nk, grid.nj, grid.ni + 1)
+    assert_array_almost_equal(tr_from_directional[0], tr_from_composite[0])
+    assert_array_almost_equal(tr_from_directional[1], tr_from_composite[1])
+    assert_array_almost_equal(tr_from_directional[2], tr_from_composite[2])
     pk = rqp.PropertyKind(model, title = 'facies', parent_property_kind = 'discrete')
     pk.create_xml()
     facies_dict = {0: 'background'}
