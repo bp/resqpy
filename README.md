@@ -41,8 +41,6 @@ for, although the RESQML standard does allow for such grids.
 It is envisaged that the code base will be expanded to include other classes of
 object and more fully cover the options permitted by the RESQML standard.
 
-Modification functionality at the moment focuses on changes to grid geometry.
-
 ## Installation
 
 Resqpy can be installed with pip:
