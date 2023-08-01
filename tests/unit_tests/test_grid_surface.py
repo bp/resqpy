@@ -26,6 +26,35 @@ def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surfac
     np.testing.assert_array_equal(fip_normal, fip_optimised)
 
 
+def test_find_faces_to_represent_surface_regular_optimised_constant_agitation(small_grid_and_surface):
+    # Arrange
+    grid = small_grid_and_surface[0]
+    surface = small_grid_and_surface[1]
+    name = "test"
+    assert grid.is_aligned
+
+    # Act
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid,
+                                                              surface,
+                                                              name,
+                                                              agitate = True,
+                                                              random_agitation = False)
+    cip_normal = gcs_normal.cell_index_pairs
+    fip_normal = gcs_normal.face_index_pairs
+
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                                           surface,
+                                                                           name,
+                                                                           agitate = True,
+                                                                           random_agitation = False)
+    cip_optimised = gcs_optimised.cell_index_pairs
+    fip_optimised = gcs_optimised.face_index_pairs
+
+    # Assert
+    np.testing.assert_array_equal(cip_normal, cip_optimised)
+    np.testing.assert_array_equal(fip_normal, fip_optimised)
+
+
 def test_find_faces_to_represent_surface_regular_optimised_random_agitation(small_grid_and_surface):
     # Arrange
     grid = small_grid_and_surface[0]
@@ -34,11 +63,19 @@ def test_find_faces_to_represent_surface_regular_optimised_random_agitation(smal
     assert grid.is_aligned
 
     # Act
-    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name, random_agitation = True)
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid,
+                                                              surface,
+                                                              name,
+                                                              agitate = True,
+                                                              random_agitation = True)
     cip_normal = gcs_normal.cell_index_pairs
     fip_normal = gcs_normal.face_index_pairs
 
-    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name, random_agitation = True)
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                                           surface,
+                                                                           name,
+                                                                           agitate = True,
+                                                                           random_agitation = True)
     cip_optimised = gcs_optimised.cell_index_pairs
     fip_optimised = gcs_optimised.face_index_pairs
 
