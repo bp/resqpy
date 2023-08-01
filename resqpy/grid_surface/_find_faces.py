@@ -182,6 +182,7 @@ def find_faces_to_represent_surface_regular(
     title = None,
     centres = None,
     agitate = False,
+    random_agitation = False,
     feature_type = "fault",
     progress_fn = None,
     consistent_side = False,
@@ -196,9 +197,11 @@ def find_faces_to_represent_surface_regular(
         title (str, optional): the citation title to use for the grid connection set; defaults to name
         centres (numpy float array of shape (nk, nj, ni, 3), optional): precomputed cell centre points in
            local grid space, to avoid possible crs issues; required if grid's crs includes an origin (offset)?
-        agitate (bool, default False): if True, the points of the surface are perturbed by a small random
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small
            offset, which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
+        random_agitation (bool, default False): if True, the agitation is by a small random distance; if False,
+           a constant positive shift of 5.0e-6 is applied to x, y & z values; ignored if agitate is False
         feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
         progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
            the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
@@ -261,7 +264,10 @@ def find_faces_to_represent_surface_regular(
     t, p = surface.triangles_and_points()
     assert t is not None and p is not None, f"surface {surface.title} is empty"
     if agitate:
-        p += 1.0e-5 * (np.random.random(p.shape) - 0.5)
+        if random_agitation:
+            p += 1.0e-5 * (np.random.random(p.shape) - 0.5)
+        else:
+            p += 5.0e-6
     log.debug(f"surface: {surface.title}; p0: {p[0]}; crs uuid: {surface.crs_uuid}")
     log.debug(f"surface min xyz: {np.min(p, axis = 0)}")
     log.debug(f"surface max xyz: {np.max(p, axis = 0)}")
@@ -495,6 +501,7 @@ def find_faces_to_represent_surface_regular_optimised(
     name,
     title = None,
     agitate = False,
+    random_agitation = False,
     feature_type = "fault",
     is_curtain = False,
     progress_fn = None,
@@ -509,9 +516,11 @@ def find_faces_to_represent_surface_regular_optimised(
         surface (Surface): the surface to be intersected with the grid
         name (str): the feature name to use in the grid connection set
         title (str, optional): the citation title to use for the grid connection set; defaults to name
-        agitate (bool, default False): if True, the points of the surface are perturbed by a small random
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small
            offset, which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
+        random_agitation (bool, default False): if True, the agitation is by a small random distance; if False,
+           a constant positive shift of 5.0e-6 is applied to x, y & z values; ignored if agitate is False
         feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
         is_curtain (bool, default False): if True, only the top layer of the grid is processed and the bisector
            property, if requested, is generated with indexable element columns
@@ -591,7 +600,10 @@ def find_faces_to_represent_surface_regular_optimised(
     triangles, points = surface.triangles_and_points()
     assert (triangles is not None and points is not None), f"surface {surface.title} is empty"
     if agitate:
-        points += 1.0e-5 * (np.random.random(points.shape) - 0.5)
+        if random_agitation:
+            points += 1.0e-5 * (np.random.random(points.shape) - 0.5)
+        else:
+            points += 5.0e-6
     # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
     # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
     # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')

@@ -29,6 +29,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         name: str,
         title: Optional[str] = None,
         agitate: bool = False,
+        random_agitation: bool = False,
         feature_type: str = 'fault',
         trimmed: bool = False,
         is_curtain = False,
@@ -55,9 +56,11 @@ def find_faces_to_represent_surface_regular_wrapper(
         surface_uuid (UUID or str): UUID (universally unique identifier) of the surface (or point set) object.
         name (str): the feature name to use in the grid connection set.
         title (str): the citation title to use for the grid connection set; defaults to name
-        agitate (bool): if True, the points of the surface are perturbed by a small random
-           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+        agitate (bool): if True, the points of the surface are perturbed by a small offset,
+           which can help if the surface has been built from a regular mesh with a periodic resonance
            with the grid
+        random_agitation (bool, default False): if True, the agitation is by a small random distance; if False,
+           a constant positive shift of 5.0e-6 is applied to x, y & z values; ignored if agitate is False
         feature_type (str, default 'fault'): one of 'fault', 'horizon', or 'geobody boundary'
         trimmed (bool, default True): if True the surface has already been trimmed
         is_curtain (bool, default False): if True, only the top layer is intersected with the surface and bisector
@@ -221,6 +224,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                      name,
                                                                      title,
                                                                      agitate,
+                                                                     random_agitation,
                                                                      feature_type,
                                                                      is_curtain,
                                                                      progress_fn,
