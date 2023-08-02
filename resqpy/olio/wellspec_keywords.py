@@ -454,7 +454,6 @@ def get_well_data(
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
     line = kf.strip_trailing_comment(file.readline()).upper()
-
     columns_present = line.split()
     if selecting:
         column_map = np.full((len(column_list),), -1, dtype = int)
