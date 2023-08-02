@@ -469,7 +469,7 @@ def get_well_data(
     while True:
         kf.skip_comments(file)
         if (kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(file, "WELLMOD") or
-            kf.specific_keyword_next(file, "INCLUDE") or kf.specific_keyword_next(file, "TIME")):
+                kf.specific_keyword_next(file, "TIME") or kf.specific_keyword_next(file, "INCLUDE")):
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
