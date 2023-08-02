@@ -454,6 +454,7 @@ def get_well_data(
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
     line = kf.strip_trailing_comment(file.readline()).upper()
+
     columns_present = line.split()
     if selecting:
         column_map = np.full((len(column_list),), -1, dtype = int)
@@ -469,7 +470,7 @@ def get_well_data(
     while True:
         kf.skip_comments(file)
         if (kf.specific_keyword_next(file, "WELLSPEC") or kf.specific_keyword_next(file, "WELLMOD") or
-                kf.specific_keyword_next(file, "TIME")):
+            kf.specific_keyword_next(file, "INCLUDE") or kf.specific_keyword_next(file, "TIME")):
             break
         line = kf.strip_trailing_comment(file.readline())
         words = line.split()
