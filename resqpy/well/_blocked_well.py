@@ -3485,7 +3485,7 @@ class BlockedWell(BaseResqpy):
                             facet = gridpc.facet_for_part(part),
                             realization = gridpc.realization_for_part(part),
                             indexable_element = 'cells')
-                    bwpc.write_hdf5_for_imported_list()
+                    bwpc.write_hdf5_for_imported_list(use_int32 = False)
                     bwpc.create_xml_for_imported_list_and_add_parts_to_model(time_series_uuid = time_uuid,
                                                                              string_lookup_uuid = sl_uuid)
         else:
