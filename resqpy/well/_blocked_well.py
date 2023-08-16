@@ -1365,11 +1365,11 @@ class BlockedWell(BaseResqpy):
            length_mode (string, default 'MD'): 'MD' or 'straight' indicating which length to use; 'md' takes measured depth
               difference between exit and entry; 'straight' uses a naive straight line length between entry and exit;
               this will affect values for LENGTH, KH, DEPTH, X & Y
-           length_uom (string, optional): if present, either 'm' or 'ft': the length units to use for the LENGTH, KH, MD, DEPTH,
+           length_uom (string, optional): if present, either 'm' or 'ft': the length units to use for the LENGTH, KH, MD, DEPTH, RADW,
               X & Y columns if they are present in extra_columns_list; also used to interpret min_length and min_kh; if None, the
-              length units of the trajectory attribute are used LENGTH, KH & MD and those of the grid are used for DEPTH, X & Y;
-              RADW value, if present, is assumed to be in the correct units and is not changed; also used implicitly to determine
-              conversion constant used in calculation of wellbore constant (WBC)
+              length units of the trajectory attribute are used LENGTH, KH & MD and those of the grid are used for RADW, DEPTH, X & Y;
+              also used implicitly to determine conversion constant used in calculation of wellbore constant (WBC); if radw is
+              provided as an argument, it is assumed to be already in this length uom
            use_face_centres (boolean, default False): if True, the centre points of the entry and exit faces will determine the
               vector used as the basis of ANGLA and ANGLV calculations; if False, the trajectory locations for the entry and exit
               measured depths will be used
@@ -1617,7 +1617,10 @@ class BlockedWell(BaseResqpy):
                                                                                              ci = ci,
                                                                                              length = length,
                                                                                              radw = radw,
-                                                                                             skin = skin)
+                                                                                             skin = skin,
+                                                                                             length_uom = length_uom,
+                                                                                             grid = grid,
+                                                                                             traj_crs = traj_crs)
             if skin_i is None:
                 skin_i = 0.0
             if radw_i is None:
@@ -2382,38 +2385,50 @@ class BlockedWell(BaseResqpy):
         return kh
 
     @staticmethod
-    def __get_pc_arrays_for_interval(pc, pc_timeless, pc_titles, ci, length, radw, skin):
+    def __get_pc_arrays_for_interval(pc, pc_timeless, pc_titles, ci, length, radw, skin, length_uom, grid, traj_crs):
         """Get the property collection arrays for the interval."""
 
-        def get_item(v, title, pc_titles, pc, pc_timeless, ci):
+        def get_item(v, title, pc_titles, pc, pc_timeless, ci, uom):
 
             def pk_for_title(title):
                 d = {'RADW': 'wellbore radius', 'RADB': 'block equivalent radius', 'SKIN': 'skin'}
                 return d.get(title)
 
+            pc_uom = None
             if title in pc_titles:
-                v = pc.single_array_ref(citation_title = title)[ci]
+                p = pc.singleton(citation_title = title)
+                v = pc.cached_part_array_ref(p)[ci]
+                pc_uom = pc.uom_for_part(p)
             elif pc_timeless is not None:
-                a = pc_timeless.single_array_ref(citation_title = title)
-                if a is None:
+                p = pc_timeless.singleton(citation_title = title)
+                if p is None:
                     pk = pk_for_title(title)
                     if pk is not None:
-                        a = pc_timeless.single_array_ref(property_kind = pk)
-                if a is not None:
-                    v = a[ci]
+                        p = pc_timeless.singleton(property_kind = pk)
+                if p is not None:
+                    v = pc_timeless.cached_part_array_ref(p)[ci]
+                    pc_uom = pc.uom_for_part(p)
+            if pc_uom is not None and uom is not None and pc_uom != uom:
+                v = wam.convert_lengths(v, pc_uom, uom)
             return v
 
-        length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci)
-        radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci)
+        if length_uom is None:
+            l_uom = traj_crs.z_units
+            r_uom = grid.crs.xy_units
+        else:
+            l_uom = length_uom
+            r_uom = length_uom
+        length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci, l_uom)
+        radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci, r_uom)
         assert radw is None or radw > 0.0  # todo: allow zero for inactive intervals?
-        skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci)
+        skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci, None)
         if skin is None:
-            skin = get_item(None, 'skin', pc_titles, pc, pc_timeless, ci)
-        radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci)
+            skin = get_item(None, 'skin', pc_titles, pc, pc_timeless, ci, None)
+        radb = get_item(None, 'RADB', pc_titles, pc, pc_timeless, ci, r_uom)
         if radb is None:
-            radb = get_item(None, 'block equivalent radius', pc_titles, pc, pc_timeless, ci)
-        wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci)
-        wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci)
+            radb = get_item(None, 'block equivalent radius', pc_titles, pc, pc_timeless, ci, r_uom)
+        wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci, None)
+        wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci, None)
 
         return length, radw, skin, radb, wi, wbc
 
