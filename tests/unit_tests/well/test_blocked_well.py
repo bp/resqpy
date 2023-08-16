@@ -87,6 +87,13 @@ def test_wellspec_properties(example_model_and_crs):
                        perforation_list = [(125, 175)])
     for col in ['SKIN', 'RADW']:
         assert_array_almost_equal(np.array(source_df[col]), np.array(df3[col]))
+    length_df3 = np.array(df3['LENGTH'])
+    df4 = bw.dataframe(extra_columns_list = ['ANGLV', 'ANGLA', 'LENGTH', 'SKIN', 'RADW', 'PPERF'],
+                       use_properties = ['LENGTH', 'RADW'],
+                       perforation_list = [(125, 175)],
+                       length_uom = 'ft')
+    assert_array_almost_equal(3.2808 * np.array(source_df['RADW']), np.array(df4['RADW']), decimal = 3)
+    assert_array_almost_equal(3.2808 * length_df3, np.array(df4['LENGTH']), decimal = 2)
 
 
 @pytest.mark.parametrize('check_grid_name,name_for_check,col_list', [(True, 'BATTLESHIP', ['IW', 'JW', 'L', 'GRID']),
