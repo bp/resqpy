@@ -594,10 +594,10 @@ class BlockedWell(BaseResqpy):
                 j,i = int(data['JW']), int(data['IW'])
                 for k in range(nk):
                     if dbot == 'BOT':
-                        data['L'] = k
+                        data['L'] = k + 1
                         df_expanded.append(data.copy())
-                    elif (corp[k,j,i,0,:,:,2].min() > dtop) and (corp[k,j,i,1,:,:,2].max() < dbot):
-                        data['L'] = k
+                    elif (corp[k,j,i,0,:,:,2].min() >= dtop) and (corp[k,j,i,1,:,:,2].max() <= dbot):
+                        data['L'] = k + 1
                         df_expanded.append(data.copy())
             else:
                 df_expanded.append(data.copy())
