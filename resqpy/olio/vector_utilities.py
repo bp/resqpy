@@ -746,12 +746,18 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
         the polygon is assumed closed, the closing point should not be repeated
     """
     polygon_points = np.full((len(points), 3), -1, dtype = np.int32)
+    x = points[:, 0]
+    y = points[:, 1]
+    p = np.empty(len(points), dtype = np.bool_)
+    j = np.empty(len(points), dtype = np.int32)
+    i = np.empty(len(points), dtype = np.int32)
     for point_num in numba.prange(len(points)):
-        x, y = points[point_num]
-        p = point_in_polygon(x, y, polygon)
-        if p is True:
-            j, i = divmod(point_num, points_xlen)
-            polygon_points[point_num] = [polygon_num, j, i]
+        p[point_num] = point_in_polygon(x[point_num], y[point_num], polygon)
+        if p[point_num] is True:
+            j[point_num], i[point_num] = divmod(point_num, points_xlen)
+            polygon_points[point_num, 0] = polygon_num
+            polygon_points[point_num, 1] = j[point_num]
+            polygon_points[point_num, 2] = i[point_num]
 
     return polygon_points[polygon_points[:, 0] != -1]
 
