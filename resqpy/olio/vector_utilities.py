@@ -728,8 +728,11 @@ def point_in_triangle(x, y, triangle):  # pragma: no cover
     return inside
 
 
-@njit(parallel = True)  # pragma: no cover
-def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int, polygon_num: int = 0) -> np.ndarray:
+@njit(parallel = True)
+def points_in_polygon(points: np.ndarray,
+                      polygon: np.ndarray,
+                      points_xlen: int,
+                      polygon_num: int = 0) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within a polygon in 2D.
 
     arguments:
@@ -746,18 +749,27 @@ def points_in_polygon(points: np.ndarray, polygon: np.ndarray, points_xlen: int,
         the polygon is assumed closed, the closing point should not be repeated
     """
     polygon_points = np.full((len(points), 3), -1, dtype = np.int32)
+    x = points[:, 0]
+    y = points[:, 1]
+    p = np.empty(len(points), dtype = np.bool_)
+    j = np.empty(len(points), dtype = np.int32)
+    i = np.empty(len(points), dtype = np.int32)
     for point_num in numba.prange(len(points)):
-        x, y = points[point_num]
-        p = point_in_polygon(x, y, polygon)
-        if p is True:
-            j, i = divmod(point_num, points_xlen)
-            polygon_points[point_num] = [polygon_num, j, i]
+        p[point_num] = point_in_polygon(x[point_num], y[point_num], polygon)
+        if p[point_num] is True:
+            j[point_num], i[point_num] = divmod(point_num, points_xlen)
+            polygon_points[point_num, 0] = polygon_num
+            polygon_points[point_num, 1] = j[point_num]
+            polygon_points[point_num, 2] = i[point_num]
 
     return polygon_points[polygon_points[:, 0] != -1]
 
 
-@njit  # pragma: no cover
-def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: int, triangle_num: int = 0) -> np.ndarray:
+@njit
+def points_in_triangle(points: np.ndarray,
+                       triangle: np.ndarray,
+                       points_xlen: int,
+                       triangle_num: int = 0) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within a triangle in 2D.
 
     arguments:
@@ -780,11 +792,11 @@ def points_in_triangle(points: np.ndarray, triangle: np.ndarray, points_xlen: in
     return triangle_points[triangle_points[:, 0] != -1]
 
 
-@njit  # pragma: no cover
+@njit
 def mesh_points_in_triangle(triangle: np.ndarray,
                             points_xlen: int,
                             points_ylen: int,
-                            triangle_num: int = 0) -> np.ndarray:
+                            triangle_num: int = 0) -> np.ndarray:  # pragma: no cover
     """Calculates which implicit mesh points are within a triangle in 2D for normalised triangle.
 
     arguments:
@@ -812,8 +824,8 @@ def mesh_points_in_triangle(triangle: np.ndarray,
     return triangle_points
 
 
-@njit  # pragma: no cover
-def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:
+@njit
+def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: int) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within which polygons in 2D.
 
     arguments:
@@ -834,7 +846,8 @@ def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: in
 
 
 @njit
-def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_xlen: int) -> np.ndarray:
+def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray,
+                             points_xlen: int) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within which triangles in 2D.
 
     arguments:
@@ -854,8 +867,8 @@ def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray, points_x
     return triangles_points
 
 
-@njit  # pragma: no cover
-def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+@njit
+def meshgrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
     """Returns coordinate matrices from coordinate vectors x and y.
 
     arguments:
@@ -922,8 +935,8 @@ def points_in_triangles_aligned(nx: int, ny: int, dx: float, dy: float, triangle
     return triangles_points
 
 
-@njit  # pragma: no cover
-def triangle_box(triangle: np.ndarray) -> Tuple[float, float, float, float]:
+@njit
+def triangle_box(triangle: np.ndarray) -> Tuple[float, float, float, float]:  # pragma: no cover
     """Finds the minimum and maximum x and y values of a single traingle.
 
     arguments:
@@ -943,7 +956,7 @@ def triangle_box(triangle: np.ndarray) -> Tuple[float, float, float, float]:
 
 
 @njit
-def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> Optional[float]:
+def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> Optional[float]:  # pragma: no cover
     """Finds the y value of a straight line between two points at a given x.
     
     If the x value given is not within the x values of the points, returns None.
@@ -968,8 +981,9 @@ def vertical_intercept(x: float, x_values: np.ndarray, y_values: np.ndarray) -> 
     return y
 
 
-@njit  # pragma: no cover
-def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float, triangles: np.ndarray) -> np.ndarray:
+@njit
+def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float,
+                                          triangles: np.ndarray) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
     arguments:
