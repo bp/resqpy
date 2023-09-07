@@ -444,7 +444,7 @@ def _supporting_shape_grid_faces(direction, support):
         for axis in range(3):
             batch = np.array(support.extent_kji, dtype = int)
             batch[axis] += 1
-            count += np.product(batch)
+            count += np.prod(batch)
         shape_list = [count]
     else:
         assert direction.upper() in 'IJK'
