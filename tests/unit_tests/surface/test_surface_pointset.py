@@ -96,3 +96,27 @@ def test_concat_polyset_points(closed, coords1, coords2, expected):
     result = resqpy.surface._pointset.concat_polyset_points(closed, coords1, coords2)
     # Assert
     assert_array_almost_equal(result, expected)
+
+
+def test_from_array_of_points(example_model_and_crs):
+    model, crs = example_model_and_crs
+    a = np.array([(4.5, 3.2, 1.7), (8.8, 3.6, 9.0), (1.5, 7.7, 5.4)], dtype = float)
+    ps = resqpy.surface.PointSet(model, points_array = a, crs_uuid = crs.uuid, title = 'test points')
+    assert ps is not None
+    assert ps.patch_count == 1
+    assert ps.full_array_ref().shape == (3, 3)
+    ps.write_hdf5()
+    ps.create_xml()
+    ps2 = resqpy.surface.PointSet(model, uuid = ps.uuid)
+    assert ps2 is not None
+    assert ps2.patch_count == 1
+    assert np.all(ps2.full_array_ref() == ps.full_array_ref())
+
+
+def test_trim_to_xyz_box(example_model_and_crs):
+    model, crs = example_model_and_crs
+    a = np.array([(4.5, 3.2, 1.7), (8.8, 3.6, 9.0), (1.5, 7.7, 5.4)], dtype = float)
+    ps = resqpy.surface.PointSet(model, points_array = a, crs_uuid = crs.uuid, title = 'test points')
+    ps.trim_to_xyz_box(np.array([(0.0, 1.0, 0.0), (7.5, 8.0, 10.0)], dtype = float))
+    assert ps.patch_count == 1
+    assert_array_almost_equal(ps.full_array_ref(), np.array([(4.5, 3.2, 1.7), (1.5, 7.7, 5.4)], dtype = float))
