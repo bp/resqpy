@@ -578,7 +578,7 @@ class RegularGrid(grr_g.Grid):
 
         required_uom = self.get_volume_uom(required_uom)
         conversion_factor = self.get_volume_conversion_factor(required_uom)
-        vol = np.product(vec.naive_lengths(self.block_dxyz_dkji))
+        vol = np.prod(vec.naive_lengths(self.block_dxyz_dkji))
         if conversion_factor is not None:
             vol *= conversion_factor
         if cell_kji0 is not None:

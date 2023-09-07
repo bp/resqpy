@@ -91,7 +91,7 @@ def _create_xml_patch_node(collection, p_node, points, const_value, indexable_el
     if const_value is not None and not expand_const_arrays:
         s_shape = collection.supporting_shape(indexable_element = indexable_element, direction = direction)
         assert s_shape is not None
-        const_count = np.product(np.array(s_shape, dtype = int))
+        const_count = np.prod(np.array(s_shape, dtype = int))
     else:
         const_value = None
     _ = collection.model.create_patch(p_uuid,

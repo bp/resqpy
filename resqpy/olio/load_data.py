@@ -167,7 +167,7 @@ def load_array_from_file(file_name,
         cell_count = -1  # np.fromfile interprets this as 'read everything'
         log.debug('Loading unknown number of array data elements from file ' + file_name)
     else:
-        cell_count = np.product(extent)
+        cell_count = np.prod(extent)
         log.debug('Loading %1d array data elements from file %s', cell_count, file_name)
 
     ascii_file_name = file_name
@@ -282,7 +282,7 @@ def load_array_from_ascii_file(file_name,
         cell_count = -1  # np.fromfile interprets this as 'read everything'
         log.debug('Loading unknown number of array data elements from ascii file ' + file_name)
     else:
-        cell_count = np.product(extent)
+        cell_count = np.prod(extent)
         log.debug('Loading %1d array data elements from ascii file %s', cell_count, file_name)
 
     if data_type in ['real', 'float', float]:
