@@ -170,7 +170,8 @@ class Grid(BaseResqpy):
             self._load_regular_grid_from_xml()
         else:
             geom_type = rqet.node_type(rqet.find_tag(self.geometry_root, 'Points'))
-            assert geom_type == 'Point3dHdf5Array'
+            assert geom_type in ['Point3dHdf5Array',
+                                 'Point3dParametricArray'], f'unsupported grid geometry points type: {geom_type}'
             self.extract_has_split_coordinate_lines()
             self.pillar_geometry_is_defined()  # note: if there is no geometry at all, resqpy sets this True
             self.cell_geometry_is_defined()  # note: if there is no geometry at all, resqpy sets this True
@@ -402,7 +403,6 @@ class Grid(BaseResqpy):
         # todo: recheck the description of split pillar arrays given in the doc string
         cell_geometry_is_defined(self, cache_array = True)
         pillar_geometry_is_defined(self, cache_array = True)
-        self.point(cache_array = True)
         if self.has_split_coordinate_lines:
             split_root = None
             if not hasattr(self, 'split_pillar_indices_cached'):
@@ -436,6 +436,7 @@ class Grid(BaseResqpy):
                                             object = self,
                                             array_attribute = 'cols_for_split_pillars_cl',
                                             dtype = 'int')
+        self.point(cache_array = True)
 
     def column_is_inactive(self, col_ji0):
         """Returns True if all the cells in the specified column are inactive.
@@ -460,20 +461,45 @@ class Grid(BaseResqpy):
                                write_active = None,
                                stratigraphy = True,
                                expand_const_arrays = False,
-                               use_int32 = None):
-        """Create or append to an hdf5 file.
-        
-        Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
+                               use_int32 = None,
+                               use_parametric_lines = False):
+        """Writes hdf5 datasets for the grid geometry (and parent grid mapping) and optionally properties, from cached arrays.
+
+        arguments:
+            file (str, optional): if present, the hdf5 to write to; if None (the usual case), the file is identified automatically
+            mode (str, default 'a'): 'a' or 'w' for append or (re)create
+            geometry (bool, default True): if True, the array data representing the grid geometry is included; otherwise not
+            imported_properties (PropertyCollection, optional): if present, the array data for the properties in the collection
+                are also written to hdf5
+            write_active (bool, optional): if True, bool array data for an active property is written, by inverting the grid's
+                inactive array attribute; if None, the array is written if an active property does not already exist
+            stratigraphy (bool, default True): if True and stratigraphic information is set for the grid (mapping of grid layers
+                to stratigraphic units), then the array data for the stratigraphy is also written to hdf5
+            expand_const_arrays (bool, default False): if True, any constant properties amongst the imported properties are
+                expanded to full arrays and written to hdf5; if False, constant properties are not written to hdf5 as the data
+                is fully handled in xml metadata
+            use_int32 (bool, optional): if True, integer arrays are written using 32 bit elements; if False, 64 bits are used;
+                if None, a default will be used which will probably be 32 bit
+            use_parametric_lines (bool, default False): if True and geometry is being written, the cached points are converted
+                to 2 point (straight) parametric line form before being written to hdf5; this setting needs to match that used
+                when creating the xml; this argument must match that used when calling the create_xml() method
         """
         # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
         # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
         # xml is not created here for property objects
 
         _write_hdf5_from_caches(self, file, mode, geometry, imported_properties, write_active, stratigraphy,
-                                expand_const_arrays, use_int32)
+                                expand_const_arrays, use_int32, use_parametric_lines)
 
-    def write_hdf5(self, expand_const_arrays = False):
-        """Writes grid geometry arrays to hdf5 (thin wrapper around write_hdf5_from_caches().
+    def write_hdf5(self, expand_const_arrays = False, use_parametric_lines = False):
+        """Writes grid geometry arrays to hdf5; a thin wrapper around write_hdf5_from_caches().
+
+        arguments:
+
+            expand_const_arrays (bool, default False): if True, any constant properties being written will be expanded to full arrays
+            use_parametric_lines (bool, default False): if True, the grid geomatry points will be stored using a 2 point (straight)
+                parametric line form rather than the more commonly used full coordinate form; this argument must match that used
+                when calling the create_xml() method
 
         :meta common:
         """
@@ -483,7 +509,8 @@ class Grid(BaseResqpy):
                                     imported_properties = None,
                                     write_active = True,
                                     stratigraphy = True,
-                                    expand_const_arrays = expand_const_arrays)
+                                    expand_const_arrays = expand_const_arrays,
+                                    use_parametric_lines = use_parametric_lines)
 
     def off_handed(self):
         """Returns False if IJK and xyz have same handedness, True if they differ."""
@@ -593,7 +620,8 @@ class Grid(BaseResqpy):
                    write_active = True,
                    write_geometry = True,
                    use_lattice = False,
-                   extra_metadata = {}):
+                   extra_metadata = {},
+                   use_parametric_lines = False):
         """Creates an IJK grid node from a grid object and optionally adds to parts forest.
 
         arguments:
@@ -615,6 +643,8 @@ class Grid(BaseResqpy):
            use_lattice (boolean, default False): if True and write_geometry is True, a lattice representation is
               used for the geometry (only for RegularGrid objects)
            extra_metadata (dict): any key value pairs in this dictionary are added as extra metadata xml nodes
+           use_parametric_lines (bool, default False): if True and geometry is being written, then the xml is created
+              for 2 point (straight) parametric lines; this argument must match that used when writing the hdf5 data
 
         returns:
            the newly created ijk grid xml node
@@ -640,7 +670,7 @@ class Grid(BaseResqpy):
         ijk = super().create_xml(add_as_part = False, originator = originator, extra_metadata = extra_metadata)
 
         return _create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry,
-                                use_lattice)
+                                use_lattice, use_parametric_lines)
 
     def x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
         """Deprecated: please use `unsplit_x_section_points` instead."""

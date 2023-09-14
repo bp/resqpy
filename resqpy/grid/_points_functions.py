@@ -169,24 +169,100 @@ def point_raw(grid, index = None, points_root = None, cache_array = True):
     if p_root is None:
         log.debug('point_raw() returning None as geometry not present')
         return None  # geometry not present
-    assert rqet.node_type(p_root) == 'Point3dHdf5Array'
-    h5_key_pair = grid.model.h5_uuid_and_path_for_node(p_root, tag = 'Coordinates')
-    if h5_key_pair is None:
-        return None
-    if grid.has_split_coordinate_lines:
-        required_shape = None
+    points_type = rqet.node_type(p_root)
+    if points_type == 'Point3dHdf5Array':
+        h5_key_pair = grid.model.h5_uuid_and_path_for_node(p_root, tag = 'Coordinates')
+        if h5_key_pair is None:
+            return None
+        if grid.has_split_coordinate_lines:
+            required_shape = None
+        else:
+            required_shape = (grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3)
+        try:
+            value = grid.model.h5_array_element(h5_key_pair,
+                                                index = index,
+                                                cache_array = cache_array,
+                                                object = grid,
+                                                array_attribute = 'points_cached',
+                                                required_shape = required_shape)
+        except Exception:
+            log.error(f'hdf5 points failure for index: {index}')
+            raise
+    elif points_type == 'Point3dParametricArray':
+        # Point3dParametricArray handling for 2 point segmented line (straight line) only
+        pp_count = (grid.nj + 1) * (grid.ni + 1)  # primary pillar count
+        pl_node = rqet.find_tag(p_root, 'ParametricLines')
+        assert pl_node is not None
+        # check that line kind index is constant 1
+        lki_node = rqet.find_tag(pl_node, 'LineKindIndices')
+        assert lki_node is not None
+        assert rqet.node_type(lki_node) == 'IntegerConstantArray', 'only constant line kind indices supported'
+        assert rqet.find_tag_int(lki_node, 'Value') == 1, 'only line kind index of 1 supported'
+        assert rqet.find_tag_int(
+            lki_node, 'Count') == pp_count, 'line kind indices count does not match number of primary pillars'
+        # check that knot count is 2
+        assert rqet.find_tag_int(pl_node, 'KnotCount') == 2, 'only straight parametric lines supported (knot count 2)'
+        # get control points and control point parameters, and check shape against primary pillar count
+        cpp_node = rqet.find_tag(pl_node, 'ControlPointParameters')
+        assert cpp_node is not None
+        h5_key_pair = grid.model.h5_uuid_and_path_for_node(cpp_node, tag = 'Values')
+        assert h5_key_pair is not None
+        grid.model.h5_array_element(h5_key_pair,
+                                    index = None,
+                                    cache_array = True,
+                                    object = grid,
+                                    array_attribute = 'temp_cpp',
+                                    required_shape = (2, pp_count))
+        assert hasattr(grid, 'temp_cpp') and grid.temp_cpp is not None and grid.temp_cpp.shape == (2, pp_count)
+        cp_node = rqet.find_tag(pl_node, 'ControlPoints')
+        assert cp_node is not None
+        h5_key_pair = grid.model.h5_uuid_and_path_for_node(cp_node, tag = 'Coordinates')
+        assert h5_key_pair is not None
+        grid.model.h5_array_element(h5_key_pair,
+                                    index = None,
+                                    cache_array = True,
+                                    object = grid,
+                                    array_attribute = 'temp_cp',
+                                    required_shape = (2, pp_count, 3))
+        assert hasattr(grid, 'temp_cp') and grid.temp_cp is not None and grid.temp_cp.shape == (2, pp_count, 3)
+        pillar_count = pp_count
+        if grid.has_split_coordinate_lines:
+            assert hasattr(grid, 'split_pillar_indices_cached') and grid.split_pillar_indices_cached is not None
+            pillar_count += grid.split_pillar_indices_cached.size
+        cpp = np.empty((2, pillar_count), dtype = float)
+        cpp[:, :pp_count] = grid.temp_cpp
+        cp = np.empty((2, pillar_count, 3), dtype = float)
+        cp[:, :pp_count] = grid.temp_cp
+        # if has split, extend control points and cpp to cover split pillars, filling in by indirection using split PillarIndices
+        if grid.has_split_coordinate_lines:
+            cpp[:, pp_count:] = cpp[:, grid.split_pillar_indices_cached]
+            cp[:, pp_count:, :] = cp[:, grid.split_pillar_indices_cached, :]
+        # get parameters array create emtpy points_cached based on shape of parameters
+        parameters_node = rqet.find_tag(p_root, 'Parameters')
+        assert parameters_node is not None
+        h5_key_pair = grid.model.h5_uuid_and_path_for_node(parameters_node, tag = 'Values')
+        assert h5_key_pair is not None
+        grid.model.h5_array_element(h5_key_pair,
+                                    index = None,
+                                    cache_array = True,
+                                    object = grid,
+                                    array_attribute = 'temp_parameters',
+                                    required_shape = (grid.nk_plus_k_gaps + 1, pillar_count))
+        assert hasattr(grid, 'temp_parameters') and grid.temp_parameters is not None
+        # create interpolation fractions from parameters (and control points parameters, with pillar indirection)
+        cpp_range = cpp[1] - cpp[0]
+        assert np.all(cpp_range != 0.0), 'some parametric lines are horizontal or not defined'
+        f = (grid.temp_parameters - np.expand_dims(cpp[0], axis = 0)) / np.expand_dims(cpp_range, axis = 0)
+        # populate points cached by interpolating between control points using interpolation fractions
+        grid.points_cached = np.empty((grid.nk_plus_k_gaps + 1, pillar_count, 3), dtype = float)
+        grid.points_cached[:] = np.expand_dims(cp[0], axis = 0) * (1.0 - f) + np.expand_dims(cp[1], axis = 0) * f
+        if not grid.has_split_coordinate_lines:
+            grid.points_cached = grid.points_cached.reshape((grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3))
+        delattr(grid, 'temp_cpp')
+        delattr(grid, 'temp_cp')
+        delattr(grid, 'temp_parameters')
     else:
-        required_shape = (grid.nk_plus_k_gaps + 1, grid.nj + 1, grid.ni + 1, 3)
-    try:
-        value = grid.model.h5_array_element(h5_key_pair,
-                                            index = index,
-                                            cache_array = cache_array,
-                                            object = grid,
-                                            array_attribute = 'points_cached',
-                                            required_shape = required_shape)
-    except Exception:
-        log.error('hdf5 points failure for index: ' + str(index))
-        raise
+        raise NotImplementedError(f'grid gepmetry loading for points type: {points_type}')
     if index is None:
         return grid.points_cached
     return value
@@ -219,7 +295,7 @@ def point(grid, cell_kji0 = None, corner_index = np.zeros(3, dtype = 'int'), poi
         if not grr_dg.cell_geometry_is_defined(grid, cell_kji0 = cell_kji0, cache_array = cache_array):
             return None
     p_root = grid.resolve_geometry_child('Points', child_node = points_root)
-    #      if p_root is None: return None  # geometry not present
+    # if p_root is None: return None  # geometry not present
     index = np.zeros(3, dtype = int)
     index[:] = cell_kji0
     index[0] = grid.k_raw_index_array[index[0]]  # adjust for k gaps

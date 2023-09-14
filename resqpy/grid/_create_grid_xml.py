@@ -20,7 +20,8 @@ def _create_grid_xml(grid,
                      add_relationships = True,
                      write_active = True,
                      write_geometry = True,
-                     use_lattice = False):
+                     use_lattice = False,
+                     use_parametric_lines = False):
     """Function that returns an xml representation containing grid information"""
 
     if grid.grid_representation and not write_geometry:
@@ -195,7 +196,7 @@ def _create_grid_xml(grid,
         # todo: handle omit and cell overlap functionality as part of parent window refining or coarsening
 
     if write_geometry:
-        __add_geometry_xml(ext_uuid, grid, ijk, use_lattice)
+        __add_geometry_xml(ext_uuid, grid, ijk, use_lattice, use_parametric_lines)
 
     if add_as_part:
         __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry)
@@ -246,7 +247,7 @@ def __add_as_part(add_relationships, ext_uuid, grid, ijk, write_geometry):
                                                       'sourceObject')
 
 
-def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
+def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice, use_parametric_lines):
     geom = rqet.SubElement(ijk, ns['resqml2'] + 'Geometry')
     geom.set(ns['xsi'] + 'type', ns['resqml2'] + 'IjkGridGeometry')
     geom.text = '\n'
@@ -263,12 +264,12 @@ def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
     handed.text = str(grid.grid_is_right_handed).lower()
     p_shape = rqet.SubElement(geom, ns['resqml2'] + 'PillarShape')
     p_shape.set(ns['xsi'] + 'type', ns['resqml2'] + 'PillarShape')
-    p_shape.text = grid.pillar_shape
+    p_shape.text = 'straight' if use_parametric_lines else grid.pillar_shape
 
     if use_lattice:
         grid._add_geom_points_xml(geom, ext_uuid)  # usually calls _add_pillar_points_xml(), below
     else:
-        _add_pillar_points_xml(grid, geom, ext_uuid)
+        _add_pillar_points_xml(grid, geom, ext_uuid, use_parametric_lines)
 
     if grid.time_index is not None:
 
@@ -289,14 +290,17 @@ def __add_geometry_xml(ext_uuid, grid, ijk, use_lattice):
                                    root = ti_node)
 
 
-def _add_pillar_points_xml(grid, geom, ext_uuid):
-    points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
-    points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
-    points_node.text = '\n'
-    coords = rqet.SubElement(points_node, ns['resqml2'] + 'Coordinates')
-    coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
-    coords.text = '\n'
-    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root = coords)
+def _add_pillar_points_xml(grid, geom, ext_uuid, use_parametric_lines):
+    if use_parametric_lines:
+        _add_pillar_points_parametric_lines_xml(geom, grid, ext_uuid)
+    else:
+        points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
+        points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
+        points_node.text = '\n'
+        coords = rqet.SubElement(points_node, ns['resqml2'] + 'Coordinates')
+        coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+        coords.text = '\n'
+        grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'Points', root = coords)
 
     if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(cache_array = True):
 
@@ -391,6 +395,53 @@ def _add_pillar_points_xml(grid, geom, ext_uuid):
                                            grid.uuid,
                                            'ColumnsPerSplitCoordinateLine/cumulativeLength',
                                            root = cl_values)
+
+
+def _add_pillar_points_parametric_lines_xml(geom, grid, ext_uuid):
+    # use parametric lines form for grid geometry, only supporting line type 1, knot count 2
+    points_node = rqet.SubElement(geom, ns['resqml2'] + 'Points')
+    points_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dParametricArray')
+    points_node.text = '\n'
+    # parameters section DoubleHdf5Array
+    parameters = rqet.SubElement(points_node, ns['resqml2'] + 'Parameters')
+    parameters.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
+    parameters.text = '\n'
+    parameters_values = rqet.SubElement(parameters, ns['resqml2'] + 'Values')
+    parameters_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+    parameters_values.text = '\n'
+    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'parameters', root = parameters_values)
+    # parametric lines section
+    parametric_lines = rqet.SubElement(points_node, ns['resqml2'] + 'ParametricLines')
+    cpp = rqet.SubElement(parametric_lines, ns['resqml2'] + 'ControlPointParameters')
+    cpp.set(ns['xsi'] + 'type', ns['resqml2'] + 'DoubleHdf5Array')
+    cpp.text = '\n'
+    cpp_values = rqet.SubElement(cpp, ns['resqml2'] + 'Values')
+    cpp_values.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+    cpp_values.text = '\n'
+    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'controlPointParameters', root = cpp_values)
+    cp = rqet.SubElement(parametric_lines, ns['resqml2'] + 'ControlPoints')
+    cp.set(ns['xsi'] + 'type', ns['resqml2'] + 'Point3dHdf5Array')
+    cp.text = '\n'
+    cp_coords = rqet.SubElement(cp, ns['resqml2'] + 'Coordinates')
+    cp_coords.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
+    cp_coords.text = '\n'
+    grid.model.create_hdf5_dataset_ref(ext_uuid, grid.uuid, 'controlPoints', root = cp_coords)
+    knot_count = rqet.SubElement(parametric_lines, ns['resqml2'] + 'KnotCount')
+    knot_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    knot_count.text = '2'
+    line_kind_indices = rqet.SubElement(parametric_lines, ns['resqml2'] + 'LineKindIndices')
+    line_kind_indices.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerConstantArray')
+    line_kind_indices.text = '\n'
+    lki_value = rqet.SubElement(line_kind_indices, ns['resqml2'] + 'Value')
+    knot_count.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+    knot_count.text = '1'
+    lki_count = rqet.SubElement(line_kind_indices, ns['resqml2'] + 'Count')
+    knot_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    assert grid.points_cached is not None and grid.points_cached.ndim in [3, 4]
+    pillar_count = grid.points_cached.shape[1]
+    if grid.points_cached.ndim == 4:
+        pillar_count *= grid.points_cached.shape[2]
+    knot_count.text = str(pillar_count)
 
 
 def _add_constant_pillar_geometry_is_defined(geom, extent_kji):

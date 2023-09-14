@@ -26,7 +26,7 @@ def grid_flavour(grid_root):
                 p_type = rqet.node_type(p_node)
                 if p_type == 'Point3dLatticeArray':
                     flavour = 'IjkBlockGrid'
-                elif p_type == 'Point3dHdf5Array':
+                elif p_type in ['Point3dHdf5Array', 'Point3dParametricArray']:
                     flavour = 'IjkGrid'
                 else:
                     raise ValueError(f'grid geometry points type not supported: {p_type}')
