@@ -495,7 +495,6 @@ class Grid(BaseResqpy):
         """Writes grid geometry arrays to hdf5; a thin wrapper around write_hdf5_from_caches().
 
         arguments:
-
             expand_const_arrays (bool, default False): if True, any constant properties being written will be expanded to full arrays
             use_parametric_lines (bool, default False): if True, the grid geomatry points will be stored using a 2 point (straight)
                 parametric line form rather than the more commonly used full coordinate form; this argument must match that used
