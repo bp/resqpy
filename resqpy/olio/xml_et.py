@@ -568,7 +568,7 @@ def node_text(node, unknown_if_none = False):
 def node_bool(node):
     """Returns stripped node text as bool, or None."""
 
-    if node is None:
+    if node is None or node.text is None:
         return None
     return bool_from_text(node.text)
 
@@ -576,7 +576,7 @@ def node_bool(node):
 def node_int(node):
     """Returns stripped node text as int, or None."""
 
-    if node is None:
+    if node is None or node.text is None:
         return None
     text = node.text.strip()
     if text.lower() == 'none':
@@ -589,7 +589,7 @@ def node_int(node):
 def node_float(node):
     """Returns stripped node text as float, or None."""
 
-    if node is None:
+    if node is None or node.text is None:
         return None
     text = node.text.strip()
     if text.lower() == 'none':

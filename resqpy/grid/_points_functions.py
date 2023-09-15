@@ -252,7 +252,7 @@ def point_raw(grid, index = None, points_root = None, cache_array = True):
         # create interpolation fractions from parameters (and control points parameters, with pillar indirection)
         cpp_range = cpp[1] - cpp[0]
         assert np.all(cpp_range != 0.0), 'some parametric lines are horizontal or not defined'
-        f = (grid.temp_parameters - np.expand_dims(cpp[0], axis = 0)) / np.expand_dims(cpp_range, axis = 0)
+        f = np.expand_dims((grid.temp_parameters - np.expand_dims(cpp[0], axis = 0)) / np.expand_dims(cpp_range, axis = 0), axis = -1)
         # populate points cached by interpolating between control points using interpolation fractions
         grid.points_cached = np.empty((grid.nk_plus_k_gaps + 1, pillar_count, 3), dtype = float)
         grid.points_cached[:] = np.expand_dims(cp[0], axis = 0) * (1.0 - f) + np.expand_dims(cp[1], axis = 0) * f

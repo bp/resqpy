@@ -121,7 +121,6 @@ def __write_geometry(grid, h5_reg, use_parametric_lines):
         #   KnotCount is a scalar metadata item and must be set to 2 in create xml
         #   LineKindIndex can be set as a constant array in create xml, with a value of 1 (segmented piecewise linear)
         #   split coordinate line arrays and is defined arrays etc. to be written as normal
-        raise NotImplementedError('writing hdf5 data in parametric line form for grid geometry')
     else:
         h5_reg.register_dataset(grid.uuid, 'Points', grid.points_cached)
     if grid.has_split_coordinate_lines:

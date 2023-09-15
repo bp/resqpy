@@ -433,15 +433,11 @@ def _add_pillar_points_parametric_lines_xml(geom, grid, ext_uuid):
     line_kind_indices.set(ns['xsi'] + 'type', ns['resqml2'] + 'IntegerConstantArray')
     line_kind_indices.text = '\n'
     lki_value = rqet.SubElement(line_kind_indices, ns['resqml2'] + 'Value')
-    knot_count.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
-    knot_count.text = '1'
+    lki_value.set(ns['xsi'] + 'type', ns['xsd'] + 'integer')
+    lki_value.text = '1'
     lki_count = rqet.SubElement(line_kind_indices, ns['resqml2'] + 'Count')
-    knot_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
-    assert grid.points_cached is not None and grid.points_cached.ndim in [3, 4]
-    pillar_count = grid.points_cached.shape[1]
-    if grid.points_cached.ndim == 4:
-        pillar_count *= grid.points_cached.shape[2]
-    knot_count.text = str(pillar_count)
+    lki_count.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
+    lki_count.text = str((grid.nj + 1) * (grid.ni + 1))  # primary pillar count
 
 
 def _add_constant_pillar_geometry_is_defined(geom, extent_kji):
