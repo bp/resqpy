@@ -21,14 +21,13 @@ def _write_hdf5_from_caches(grid,
                             write_active = None,
                             stratigraphy = True,
                             expand_const_arrays = False,
-                            use_int32 = None):
-    """Create or append to an hdf5 file.
-
-    Writes datasets for the grid geometry (and parent grid mapping) and properties from cached arrays.
-    """
+                            use_int32 = None,
+                            use_parametric_lines = False):
+    """Writes hdf5 arrays for the grid geometry (and parent grid mapping) and (optionally) properties from cached arrays."""
     # NB: when writing a new geometry, all arrays must be set up and exist as the appropriate attributes prior to calling this function
     # if saving properties, active cell array should be added to imported_properties based on logical negation of inactive attribute
     # xml is not created here for property objects
+    # the use_parametric_lines argument must match the value used in the create_xml() call
 
     if write_active is None:
         existing_active = rqp.property_parts(grid.model,
@@ -48,7 +47,7 @@ def _write_hdf5_from_caches(grid,
         h5_reg.register_dataset(grid.uuid, 'unitIndices', grid.stratigraphic_units, dtype = 'uint32')
 
     if geometry:
-        __write_geometry(grid, h5_reg)
+        __write_geometry(grid, h5_reg, use_parametric_lines)
 
     if write_active and grid.inactive is not None:
         if imported_properties is None:
@@ -83,7 +82,7 @@ def _write_hdf5_from_caches(grid,
     h5_reg.write(file, mode = mode, use_int32 = use_int32)
 
 
-def __write_geometry(grid, h5_reg):
+def __write_geometry(grid, h5_reg, use_parametric_lines):
     if always_write_pillar_geometry_is_defined_array or not grid.geometry_defined_for_all_pillars(cache_array = True):
         if not hasattr(grid, 'array_pillar_geometry_is_defined') or grid.array_pillar_geometry_is_defined is None:
             grid.array_pillar_geometry_is_defined = np.full((grid.nj + 1, grid.ni + 1), True, dtype = bool)
@@ -99,7 +98,31 @@ def __write_geometry(grid, h5_reg):
                                 grid.array_cell_geometry_is_defined,
                                 dtype = 'uint8')
     # todo: PillarGeometryIsDefined ?
-    h5_reg.register_dataset(grid.uuid, 'Points', grid.points_cached)
+    assert grid.points_cached is not None and 3 <= grid.points_cached.ndim <= 4 and grid.points_cached.shape[-1] == 3
+    if use_parametric_lines:
+        # convert points_cached into 2 point parametric line form and write arrays
+        primary_pillar_count = (grid.nj + 1) * (grid.ni + 1)
+        p = grid.points_cached.reshape((grid.points_cached.shape[0], -1, 3))
+        assert p.shape[1] >= primary_pillar_count
+        # parameters – could be interpolation fractions for each point on the parametric line?
+        # here we use z values directly for interpolation (will not handle horizontal pillars)
+        # todo: check for and handle NaNs?
+        parameters = p[:, :, 2]
+        h5_reg.register_dataset(grid.uuid, 'parameters', parameters, copy = True)
+        # Parametric lines section arrays:
+        # controlPoints – xyz data for 2 end points for each pillar
+        cp = np.empty((2, primary_pillar_count, 3), dtype = float)
+        cp[0] = p[0, :primary_pillar_count]
+        cp[1] = p[-1, :primary_pillar_count]
+        h5_reg.register_dataset(grid.uuid, 'controlPoints', cp, copy = True)
+        # controlPointParameters – use top and base z values
+        h5_reg.register_dataset(grid.uuid, 'controlPointParameters', cp[:, :, 2], copy = True)
+        # notes:
+        #   KnotCount is a scalar metadata item and must be set to 2 in create xml
+        #   LineKindIndex can be set as a constant array in create xml, with a value of 1 (segmented piecewise linear)
+        #   split coordinate line arrays and is defined arrays etc. to be written as normal
+    else:
+        h5_reg.register_dataset(grid.uuid, 'Points', grid.points_cached)
     if grid.has_split_coordinate_lines:
         h5_reg.register_dataset(grid.uuid, 'PillarIndices', grid.split_pillar_indices_cached, dtype = 'uint32')
         h5_reg.register_dataset(grid.uuid,
