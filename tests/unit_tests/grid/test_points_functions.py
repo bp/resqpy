@@ -572,3 +572,17 @@ def test_find_cell_for_x_sect_xz(faulted_grid):
                                         azimuth = 0.0)
     k, j = pf.find_cell_for_x_sect_xz(x_sect, 250.0, 3030.0)
     assert k == 1 and j == 2
+
+
+def test_point_areally(basic_regular_grid):
+    dots = basic_regular_grid.point_areally()
+    assert dots is not None
+    assert dots.shape == (2, 2, 2)
+    assert not np.any(dots)
+
+
+def test_point_areally_faulted(faulted_grid):
+    dots = faulted_grid.point_areally()
+    assert dots is not None
+    assert dots.shape == (3, 5, 8)
+    assert not np.any(dots)
