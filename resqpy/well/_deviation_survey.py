@@ -69,9 +69,9 @@ class DeviationSurvey(BaseResqpy):
         arguments:
            parent_model (model.Model): the model which the new survey belongs to
            uuid (uuid.UUID): If given, loads from disk. Else, creates new.
-           title (str): Citation title
-           represented_interp (wellbore interpretation): if present, is noted as the wellbore
-              interpretation object which this deviation survey relates to
+           title (str): Citation title – often the well name
+           represented_interp (WellboreInterpretation, optional): if present, is noted as
+              the wellbore interpretation object which this deviation survey relates to
            md_datum (MdDatum): the datum that the depths for this survey are measured from
            md_uom (string, default 'm'): a resqml length unit of measure applicable to the
               measured depths; should be 'm' or 'ft'
@@ -132,7 +132,9 @@ class DeviationSurvey(BaseResqpy):
                         y_col = 'Y',
                         z_col = 'Z',
                         md_uom = 'm',
-                        angle_uom = 'dega'):
+                        angle_uom = 'dega',
+                        title = None,
+                        represented_interp = None):
         """Load MD, aximuth & inclination data from a pandas data frame.
 
         arguments:
@@ -150,6 +152,9 @@ class DeviationSurvey(BaseResqpy):
               measured depths; should be 'm' or 'ft'
            angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
               the azimuth and inclination data
+           title (string): the citation title for the deviation survey – often the well name
+           represented_interp (WellboreInterpretation, optional): if present, is noted as
+              the wellbore interpretation object which this deviation survey relates to
 
         returns:
            DeviationSurvey
@@ -175,7 +180,9 @@ class DeviationSurvey(BaseResqpy):
                    measured_depths = data_frame[md_col].values,
                    azimuths = data_frame[azimuth_col].values,
                    inclinations = data_frame[inclination_col].values,
-                   is_final = True)  # assume this is a finalised deviation survey
+                   is_final = True,
+                   title = title,
+                   represented_interp = represented_interp)  # assume this is a finalised deviation survey
 
     @classmethod
     def from_ascii_file(cls,
@@ -191,10 +198,12 @@ class DeviationSurvey(BaseResqpy):
                         z_col = 'Z',
                         md_uom = 'm',
                         angle_uom = 'dega',
-                        md_datum = None):
+                        md_datum = None,
+                        title = None,
+                        represented_interp = None):
         """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
-        Arguments:
+        qrguments:
            parent_model (model.Model): the parent resqml model
            deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
            comment_character (string): the character to be treated as introducing comments
@@ -212,11 +221,14 @@ class DeviationSurvey(BaseResqpy):
            angle_uom (string, default 'dega'): a resqml angle unit of measure applicable to both
               the azimuth and inclination data
            md_datum (MdDatum object): the datum that the depths for this survey are measured from
+           title (string): the citation title for the deviation survey – often the well name
+           represented_interp (WellboreInterpretation, optional): if present, is noted as
+              the wellbore interpretation object which this deviation survey relates to
 
-        Returns:
+        returns:
            DeviationSurvey
 
-        Note:
+        note:
            The X, Y & Z columns are only used to set the first station location (from the first row)
         """
 
@@ -240,7 +252,9 @@ class DeviationSurvey(BaseResqpy):
                                    z_col = z_col,
                                    md_uom = md_uom,
                                    angle_uom = angle_uom,
-                                   md_datum = md_datum)
+                                   md_datum = md_datum,
+                                   title = title,
+                                   represented_interp = represented_interp)
 
     def _load_from_xml(self):
         """Load attributes from xml and associated hdf5 data.
