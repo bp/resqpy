@@ -218,9 +218,7 @@ class Trajectory(BaseResqpy):
     def __choose_init_method(self, data_frame, cell_kji0_list, wellspec_file, deviation_survey_file):
         """Choose an init method based on data source."""
 
-        if self.deviation_survey is not None:
-            return 'deviation_survey'
-        elif data_frame is not None:
+        if data_frame is not None:
             return 'data_frame'
         elif cell_kji0_list is not None:
             return 'cell_kji0_list'
@@ -228,6 +226,8 @@ class Trajectory(BaseResqpy):
             return 'wellspec_file'
         elif deviation_survey_file:
             return 'ascii_trajectory_file'
+        elif self.deviation_survey is not None:
+            return 'deviation_survey'
         else:
             return None
 
