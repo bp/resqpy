@@ -933,7 +933,7 @@ class Trajectory(BaseResqpy):
         """
 
         if self.deviation_survey is not None:
-            ds_root = self.deviation_survey.root_node
+            ds_root = self.deviation_survey.root
             self.model.create_ref_node('DeviationSurvey',
                                        rqet.find_tag(rqet.find_tag(ds_root, 'Citation'), 'Title').text,
                                        bu.uuid_from_string(ds_root.attrib['uuid']),
@@ -971,7 +971,7 @@ class Trajectory(BaseResqpy):
                                                           'sourceObject')
                 if self.deviation_survey is not None:
                     self.model.create_reciprocal_relationship(wbt_node, 'destinationObject',
-                                                              self.deviation_survey.root_node, 'sourceObject')
+                                                              self.deviation_survey.root, 'sourceObject')
                 if interp_root is not None:
                     self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', interp_root,
                                                               'sourceObject')
