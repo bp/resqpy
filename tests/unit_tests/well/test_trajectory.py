@@ -192,6 +192,29 @@ def test_load_from_ascii_file(example_model_and_crs):
     trajectory_data_file_path = os.path.join(model.epc_directory, 'trajectory_data.csv')
     source_dataframe.to_csv(trajectory_data_file_path)
 
+    # Create a deviation survey
+    data = dict(
+        title = 'Majestic Umlaut ö',
+        originator = 'Thor, god of sparkles',
+        md_uom = 'ft',
+        angle_uom = 'rad',
+        is_final = True,
+    )
+    array_data = dict(
+        measured_depths = np.array([1, 2, 3], dtype = float) + 1000.0,
+        azimuths = np.array([4, 5, 6], dtype = float),
+        inclinations = np.array([1, 2, 3], dtype = float),
+        first_station = np.array([0, -1, 999], dtype = float),
+    )
+    survey = resqpy.well.DeviationSurvey(
+        parent_model = model,
+        md_datum = datum,
+        **data,
+        **array_data,
+    )
+    survey.write_hdf5()
+    survey.create_xml()
+
     for well_name in well_names:
         if well_name is None:
             # --------- Act ----------
@@ -213,9 +236,12 @@ def test_load_from_ascii_file(example_model_and_crs):
                                                            well_name = well_name,
                                                            length_uom = 'm',
                                                            md_datum = datum,
-                                                           set_tangent_vectors = True)
+                                                           set_tangent_vectors = True,
+                                                           deviation_survey = survey)
             # -------- Assert ---------
             assert trajectory_from_ascii is not None
+            trajectory_from_ascii.write_hdf5()
+            trajectory_from_ascii.create_xml()
             np.testing.assert_almost_equal(trajectory_from_ascii.tangent_vectors[0],
                                            trajectory_from_ascii.tangent_vectors[1])
             vec.isclose(trajectory_from_ascii.tangent_vectors[:, 2], np.array([1, 1]), 0.01)
