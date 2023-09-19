@@ -970,8 +970,8 @@ class Trajectory(BaseResqpy):
                 self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.md_datum.root,
                                                           'sourceObject')
                 if self.deviation_survey is not None:
-                    self.model.create_reciprocal_relationship(wbt_node, 'destinationObject',
-                                                              self.deviation_survey.root, 'sourceObject')
+                    self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', self.deviation_survey.root,
+                                                              'sourceObject')
                 if interp_root is not None:
                     self.model.create_reciprocal_relationship(wbt_node, 'destinationObject', interp_root,
                                                               'sourceObject')
