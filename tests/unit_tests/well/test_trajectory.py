@@ -212,6 +212,8 @@ def test_load_from_ascii_file(example_model_and_crs):
         **data,
         **array_data,
     )
+    survey.write_hdf5()
+    survey.create_xml()
 
     for well_name in well_names:
         if well_name is None:
@@ -238,6 +240,8 @@ def test_load_from_ascii_file(example_model_and_crs):
                                                            deviation_survey = survey)
             # -------- Assert ---------
             assert trajectory_from_ascii is not None
+            trajectory_from_ascii.write_hdf5()
+            trajectory_from_ascii.create_xml()
             np.testing.assert_almost_equal(trajectory_from_ascii.tangent_vectors[0],
                                            trajectory_from_ascii.tangent_vectors[1])
             vec.isclose(trajectory_from_ascii.tangent_vectors[:, 2], np.array([1, 1]), 0.01)
