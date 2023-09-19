@@ -221,8 +221,7 @@ def test_load_from_ascii_file(example_model_and_crs):
                 trajectory_from_ascii = resqpy.well.Trajectory(parent_model = model,
                                                                ascii_trajectory_file = trajectory_data_file_path,
                                                                length_uom = 'm',
-                                                               md_datum = datum,
-                                                               deviation_survey = survey)
+                                                               md_datum = datum)
 
             # -------- Assert ---------
             assert "attempt to set trajectory for unidentified well from ascii file holding data for multiple wells" in str(
@@ -235,7 +234,8 @@ def test_load_from_ascii_file(example_model_and_crs):
                                                            well_name = well_name,
                                                            length_uom = 'm',
                                                            md_datum = datum,
-                                                           set_tangent_vectors = True)
+                                                           set_tangent_vectors = True,
+                                                           deviation_survey = survey)
             # -------- Assert ---------
             assert trajectory_from_ascii is not None
             np.testing.assert_almost_equal(trajectory_from_ascii.tangent_vectors[0],
