@@ -199,7 +199,7 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                extra_metadata, expand_const_arrays):
     (p_uuid, p_file_name, p_keyword, p_cached_name, p_discrete, p_uom, p_time_index, p_null_value, p_min_value,
      p_max_value, property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
-     const_value, points, p_time_series_uuid) = attributes
+     const_value, points, p_time_series_uuid, p_string_lookup_uuid) = attributes
 
     log.debug('processing imported property ' + str(p_keyword))
     assert not points or not p_discrete
@@ -207,6 +207,8 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
         local_property_kind_uuid = property_kind_uuid
     if not p_discrete:
         string_lookup_uuid = None
+    elif p_string_lookup_uuid is not None:
+        string_lookup_uuid = p_string_lookup_uuid
 
     property_kind = _process_imported_property_get_property_kind(collection, property_kind, local_property_kind_uuid,
                                                                  p_keyword, p_discrete, string_lookup_uuid, points)

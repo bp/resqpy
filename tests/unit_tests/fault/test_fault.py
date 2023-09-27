@@ -483,3 +483,121 @@ def make_epc_with_abutting_grids(tmp_path):
     model.store_epc()
 
     return epc
+
+
+def test_gcs_from_gcs_uuid_list(tmp_path):
+    epc = os.path.join(tmp_path, 'gcs_from_gcs_uuid_list.epc')
+    another_epc = os.path.join(tmp_path, 'gcs_another.epc')
+
+    model = rq.new_model(epc)
+
+    # create a grid
+    g = grr.RegularGrid(model, extent_kji = (5, 3, 3), dxyz = (10.0, 10.0, 1.0))
+    g.write_hdf5()
+    g.create_xml(title = 'boring grid')
+
+    # define a pair of grid connection sets, together L shaped (in plan view)
+    j_faces = np.zeros((g.nk, g.nj - 1, g.ni), dtype = bool)
+    j_faces[:, 0, 1:] = True
+    i_faces = np.zeros((g.nk, g.nj, g.ni - 1), dtype = bool)
+    i_faces[:, 1:, 0] = True
+    gcs_j = rqf.GridConnectionSet(model,
+                                  grid = g,
+                                  j_faces = j_faces,
+                                  i_faces = np.zeros((g.nk, g.nj, g.ni - 1), dtype = bool),
+                                  feature_name = 'L fault j faces',
+                                  create_organizing_objects_where_needed = True,
+                                  create_transmissibility_multiplier_property = False)
+    gcs_j.write_hdf5()
+    gcs_j.create_xml()
+    gcs_i = rqf.GridConnectionSet(model,
+                                  grid = g,
+                                  j_faces = np.zeros((g.nk, g.nj - 1, g.ni), dtype = bool),
+                                  i_faces = i_faces,
+                                  feature_name = 'L fault i faces',
+                                  create_organizing_objects_where_needed = True,
+                                  create_transmissibility_multiplier_property = False)
+    gcs_i.write_hdf5()
+    gcs_i.create_xml()
+    # check that connection sets have the right number of cell face pairs
+    assert gcs_j.count == g.nk * (g.nj - 1)
+    assert gcs_i.count == g.nk * (g.ni - 1)
+    assert gcs_j.cell_index_pairs is not None
+    assert len(gcs_j.cell_index_pairs) == gcs_j.count
+    assert gcs_j.face_index_pairs is not None
+    assert len(gcs_j.face_index_pairs) == gcs_j.count
+
+    # create a merged grid connection set (without properties, same model) and check
+    gcs = rqf.GridConnectionSet.from_gcs_uuid_list(model, model, [gcs_j.uuid, gcs_i.uuid], 'combo gcs')
+    assert gcs is not None
+    assert gcs.title == 'combo gcs'
+    assert gcs.count == g.nk * ((g.nj - 1) + (g.ni - 1))
+
+    # create a merged grid connection set (without properties, different model) and check
+    combo_model = rq.new_model(another_epc)
+    gcs = rqf.GridConnectionSet.from_gcs_uuid_list(combo_model, model, [gcs_j.uuid, gcs_i.uuid], 'combo gcs')
+    assert gcs.count == g.nk * ((g.nj - 1) + (g.ni - 1))
+    assert len(gcs.feature_list) == 2
+    assert len(combo_model.parts(obj_type = 'FaultInterpretation')) == 2
+
+    # add transmissibility multiplier properties to source grid connection sets
+    trm_j_uuid = create_gcs_transmissibility_multiplier(gcs_j)
+    trm_i_uuid = create_gcs_transmissibility_multiplier(gcs_i)
+
+    # create a merged grid connection set (with trm property, same model) and check
+    gcs = rqf.GridConnectionSet.from_gcs_uuid_list(model,
+                                                   model, [gcs_j.uuid, gcs_i.uuid],
+                                                   'gcs with trm prop',
+                                                   gcs_property_uuid_list_of_lists = [[trm_j_uuid, trm_i_uuid]])
+    assert gcs.count == g.nk * ((g.nj - 1) + (g.ni - 1))
+    gcs = rqf.GridConnectionSet(model, uuid = gcs.uuid)
+    assert gcs is not None
+    assert gcs.title == 'gcs with trm prop'
+    pc = gcs.extract_property_collection()
+    assert pc.number_of_parts() == 1
+    trm_part = pc.singleton()
+    assert pc.citation_title_for_part(trm_part) == 'TMULT'
+    assert pc.property_kind_for_part(trm_part) == 'transmissibility multiplier'
+    assert pc.indexable_for_part(trm_part) == 'faces'
+    trm_array = pc.cached_part_array_ref(trm_part)
+    assert trm_array.shape == (gcs.count,)
+
+    # create a merged grid connection set (with trm property, different model) and check
+    gcs = rqf.GridConnectionSet.from_gcs_uuid_list(combo_model,
+                                                   model, [gcs_j.uuid, gcs_i.uuid],
+                                                   'combo gcs with trm prop',
+                                                   gcs_property_uuid_list_of_lists = [[trm_j_uuid, trm_i_uuid]])
+    assert gcs.count == g.nk * ((g.nj - 1) + (g.ni - 1))
+    gcs = rqf.GridConnectionSet(combo_model, uuid = gcs.uuid)
+    assert gcs is not None
+    assert gcs.title == 'combo gcs with trm prop'
+    pc = gcs.extract_property_collection()
+    assert pc.number_of_parts() == 1
+    trm_part = pc.singleton()
+    assert pc.citation_title_for_part(trm_part) == 'TMULT'
+    assert pc.property_kind_for_part(trm_part) == 'transmissibility multiplier'
+    assert pc.indexable_for_part(trm_part) == 'faces'
+    trm_array = pc.cached_part_array_ref(trm_part)
+    assert trm_array.shape == (gcs.count,)
+
+
+def create_gcs_transmissibility_multiplier(gcs):
+    #  create a transmissibility multiplier property
+    tm = np.arange(gcs.count).astype(float)
+    if gcs.property_collection is None:
+        gcs.property_collection = rqp.PropertyCollection()
+        gcs.property_collection.set_support(support = gcs)
+    pc = gcs.property_collection
+    pc.add_cached_array_to_imported_list(
+        tm,
+        'unit test',
+        'TMULT',
+        uom = 'Euc',  # actually a ratio of transmissibilities
+        property_kind = 'transmissibility multiplier',
+        local_property_kind_uuid = None,
+        realization = None,
+        indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list()
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    return uuids[0]
