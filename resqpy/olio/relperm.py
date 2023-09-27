@@ -104,13 +104,13 @@ class RelPerm(DataFrame):
             sat_col = [x for x in df.columns if x[0] == 'S'][0]
             relp_corr_col = [x for x in df.columns if x == 'Kr' + sat_col[-1]][0]
             relp_opp_col = [x for x in df.columns if (x[0:2] == 'Kr') & (x[-1] != sat_col[-1])][0]
-            if not (df[sat_col].is_monotonic and df[relp_corr_col].is_monotonic and df[
-                relp_opp_col].is_monotonic_decreasing) and not \
-                    (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and
-                     df[relp_opp_col].is_monotonic):
+            if (not (df[sat_col].is_monotonic_increasing and df[relp_corr_col].is_monotonic_increasing and
+                     df[relp_opp_col].is_monotonic_decreasing) and
+                    not (df[sat_col].is_monotonic_decreasing and df[relp_corr_col].is_monotonic_decreasing and
+                         df[relp_opp_col].is_monotonic_increasing)):
                 raise ValueError(f'{sat_col, relp_corr_col, relp_opp_col} combo is not monotonic')
             if 'Pc' in df.columns:
-                if not df['Pc'].dropna().is_monotonic and not df['Pc'].dropna().is_monotonic_decreasing:
+                if not df['Pc'].dropna().is_monotonic_increasing and not df['Pc'].dropna().is_monotonic_decreasing:
                     raise ValueError('Pc values are not monotonic')
             for col in ['Sw', 'Sg', 'So', 'Krw', 'Krg', 'Kro']:
                 if col in df.columns:

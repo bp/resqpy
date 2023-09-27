@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 import numpy as np
 import numpy.ma as ma
 
-import resqpy.property
+import resqpy.property as rqp
 import resqpy.property._collection_create_xml as pcxml
 import resqpy.property._collection_get_attributes as pcga
 import resqpy.property._collection_support as pcs
@@ -88,7 +88,7 @@ class PropertyCollection():
         # above is list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
         #                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                   indexable_element, count, local_property_kind_uuid, const_value, points,
-        #                   time_series_uuid)
+        #                   time_series_uuid, string_lookup_uuid)
         self.guess_warning = False
         if support is not None:
             self.model = support.model
@@ -346,7 +346,7 @@ class PropertyCollection():
               which has INACTIVE or ACTIVE as the keyword is excluded from the inheritance
 
         note:
-           the imported list is a list of cached imported arrays with basic info for each array;
+           the imported list is a list of cached imported arrays with basic metadata for each array;
            it is used as a staging post before fully incorporating the imported arrays as parts
            of the support's parent model and writing the arrays to the hdf5 file
         """
@@ -431,7 +431,8 @@ class PropertyCollection():
                                                    count = info[5],
                                                    const_value = info[20],
                                                    points = info[21],
-                                                   time_series_uuid = info[11])
+                                                   time_series_uuid = info[11],
+                                                   string_lookup_uuid = info[16])
 
     def inherit_parts_selectively_from_other_collection(
             self,
@@ -2212,7 +2213,8 @@ class PropertyCollection():
                                           count = 1,
                                           const_value = None,
                                           points = False,
-                                          time_series_uuid = None):
+                                          time_series_uuid = None,
+                                          string_lookup_uuid = None):
         """Caches array and adds to the list of imported properties (but not to the collection dict).
 
         arguments:
@@ -2241,17 +2243,22 @@ class PropertyCollection():
            points (bool, default False): if True, this is a points property with an extra dimension of extent 3
            time_series_uuid (UUID, optional): should be provided if time_index is not None, though can alternatively
               be provided when writing hdf5 and creating xml for the imported list
+           string_lookup_uuid (UUID, optional): should be provided for categorical properties, though can alternatively
+              be specified when creating xml
 
         returns:
            uuid of nascent property object
 
         note:
            the process of importing property arrays follows these steps:
-           1. read (or generate) array of data into a numpy array in memory (cache)
-           2. add to the imported list using this function (which also takes takes note of some metadata)
-           3. write imported list arrays to hdf5 file
-           4. create resqml xml nodes for imported list arrays and add as parts to model
-           5. include newly added parts in collection
+           0. create any time series, string lookup and local property kinds that will be needed;
+           1. read (or generate) array of data into a numpy array in memory (cache);
+           2. add to the imported list using this method, or add_similar_to_imported_list();
+           when a batch of arrays have been added to the imported list:
+           3. write imported list arrays to hdf5 file using write_hdf5_for_imported_list();
+           4. create xml for the new properties using create_xml_for_imported_list_and_add_parts_to_model();
+           step 4 also adds the new properties to the collection and to the model, and clears the imported list;
+           after step 4, the whole sequence may be repeated for further new properties;
 
         :meta common:
         """
@@ -2276,8 +2283,115 @@ class PropertyCollection():
         self.imported_list.append(
             (uuid, source_info, keyword, cached_name, discrete, uom, time_index, null_value, min_value, max_value,
              property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
-             const_value, points, time_series_uuid))
+             const_value, points, time_series_uuid, string_lookup_uuid))
         return uuid
+
+    def add_similar_to_imported_list(self,
+                                     similar_uuid,
+                                     cached_array,
+                                     source_info = None,
+                                     keyword = None,
+                                     discrete = None,
+                                     uom = None,
+                                     time_index = None,
+                                     null_value = None,
+                                     property_kind = None,
+                                     local_property_kind_uuid = None,
+                                     facet_type = None,
+                                     facet = None,
+                                     realization = None,
+                                     indexable_element = None,
+                                     count = None,
+                                     const_value = None,
+                                     points = None,
+                                     time_series_uuid = None,
+                                     string_lookup_uuid = None,
+                                     similar_model = None):
+        """Caches array and adds to the list of imported properties using default metadata from a similar property.
+
+        arguments:
+           similar_uuid (UUID): the uuid of a similar property from which any unspecified arguments will be fetched
+           cached_array: a numpy array to be added to the imported list for this collection (prior to being added
+              as a part); for a constant array set cached_array to None (and use const_value); the array is never
+              inherited from the similar property
+           source_info (string, optional): typically the name of a file from which the array has been read but can
+              be any information regarding the source of the data
+           keyword (string, optional): this will be used as the citation title when a part is generated for the array
+           discrete (boolean, optional): True for discrete and categorical properties, False for continuous data
+           uom (string, optional): the resqml units of measure for the data
+           time_index (integer, optional): the time index to be used when creating a part for the array
+           null_value (int or float, optional): the null value in the case of a discrete property
+           property_kind (string, optional): resqml property kind; may be a local property kind
+           local_property_kind_uuid (uuid.UUID or string, optional): uuid of local property kind
+           facet_type (string, optional): resqml facet type
+           facet (string, optional): resqml facet value
+           realization (int, optional): realization number
+           indexable_element (string, optional): the indexable element in the supporting representation
+           count (int, optional): the number of values per indexable element; if greater than one then this
+              must be the fastest cycling axis in the cached array, ie last index
+           const_value (int, float or bool, optional): the value with which a constant array is filled;
+              required if cached_array is None, must be None otherwise; this value is never inherited from similar
+           points (bool, optional): if True, this is a points property with an extra dimension of extent 3
+           time_series_uuid (UUID, optional): should be provided if time_index is not None, though can alternatively
+              be provided when writing hdf5 and creating xml for the imported list
+           string_lookup_uuid (UUID, optional): should be provided for categorical properties, though can alternatively
+              be specified when creating xml
+           similar_model (Model, optional): the model where the similar property resides, if not the same as this
+              property collection
+
+        returns:
+           uuid of nascent property object
+
+        notes:
+           this is a convenience method that avoids having to specify all the metadata when adding a property
+           that is similar to an existing one; passing a string value of 'none' forces the argument to None;
+           note that the cached_array and const_value arguments are never inherited from the similar property;
+           the only extra metadata item that may be inherited is 'source';
+           the process of importing property arrays follows these steps:
+           0. create any time series, string lookup and local property kinds that will be needed;
+           1. read (or generate) array of data into a numpy array in memory (cache);
+           2. add to the imported list using this method, or add_cached_array_to_imported_list();
+           steps 1 & 2 may be repeated; when a batch of arrays have been added to the imported list:
+           3. write imported list arrays to hdf5 file using write_hdf5_for_imported_list();
+           4. create xml for the new properties using create_xml_for_imported_list_and_add_parts_to_model();
+           step 4 also adds the new properties to the collection and to the model, and clears the imported list;
+           after step 4, the whole sequence may be repeated for further new properties;
+
+        :meta common:
+        """
+
+        def get_arg(supplied, similarly):
+            if supplied is None:
+                return similarly
+            if isinstance(supplied, str) and supplied == 'none':
+                return None
+            return supplied
+
+        assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
+        assert self.model is not None and similar_uuid is not None
+        similar = rqp.Property(self.model if similar_model is None else similar_model, uuid = similar_uuid)
+        assert similar is not None
+        args = {}
+        args['keyword'] = get_arg(keyword, similar.title)
+        args['discrete'] = get_arg(uom, not similar.is_continuous())
+        args['uom'] = get_arg(uom, similar.uom())
+        args['time_index'] = get_arg(time_index, similar.time_index())
+        args['null_value'] = get_arg(null_value, similar.null_value())
+        args['property_kind'] = get_arg(property_kind, similar.property_kind())
+        args['local_property_kind_uuid'] = get_arg(local_property_kind_uuid, similar.local_property_kind_uuid())
+        args['facet_type'] = get_arg(facet_type, similar.facet_type())
+        args['facet'] = get_arg(facet, similar.facet())
+        args['realization'] = get_arg(realization, similar.realization())
+        args['indexable_element'] = get_arg(indexable_element, similar.indexable_element())
+        args['count'] = get_arg(count, similar.count())
+        args['const_value'] = const_value  # NB. not inherited
+        args['points'] = get_arg(points, similar.is_points())
+        args['time_series_uuid'] = get_arg(time_series_uuid, similar.time_series_uuid())
+        args['string_lookup_uuid'] = get_arg(time_series_uuid, similar.string_lookup_uuid())
+        em = similar.extra_metadata if hasattr(similar, 'extra_metadata') else {}
+        args['source_info'] = get_arg(source_info, em.get('source'))
+
+        return self.add_cached_array_to_imported_list(cached_array, **args)
 
     def remove_cached_imported_arrays(self):
         """Removes any cached arrays that are mentioned in imported list."""
@@ -2400,19 +2514,22 @@ class PropertyCollection():
               timestep numbers can be used as a time index; in the case of a reduced series, the selected_time_indices_list
               argument must be passed and the properties timestep numbers are found in the list with the position yielding
               the time index for the reduced list; time_series_uuid should be present if there are any recurrent properties
-              in the imported list
+              in the imported list, unless it has been specified when adding the array to the imported list
            selected_time_indices_list (list of int, optional): if time_series_uuid is for a reduced time series then this
               argument must be present and its length must match the number of timestamps in the reduced series; the values
               in the list are indices in the full time series
            string_lookup_uuid (optional): if present, the uuid of the string table lookup which any non-continuous
-              properties relate to (ie. they are all taken to be categorical)
+              properties relate to (ie. they are all taken to be categorical); this info can altarnatively be supplied
+              on an individual property basis when adding the array to the imported list
            property_kind_uuid (optional): if present, the uuid of the bespoke (local) property kind for all the
-              property arrays in the imported list (except those with an individual local property kind uuid)
+              property arrays in the imported list (except those with an individual local property kind uuid);
+              this info can altarnatively be supplied on an individual property basis when adding the array to the
+              imported list, or left as None if the following argument is True
            find_local_property_kinds (boolean, default True): if True, local property kind uuids need not be provided as
               long as the property kinds are set to match the titles of the appropriate local property kind objects
            expand_const_arrays (boolean, default False): if True, the hdf5 write must also have been called with the
               same argument and the xml will treat the constant arrays as normal arrays
-           extra_metadata (optional): if present, a dictionary of extra metadata to be added for the part
+           extra_metadata (optional): if present, a dictionary of extra metadata to be added to each of the properties
 
         returns:
            list of uuid.UUID, being the uuids of the newly added property parts
@@ -2421,9 +2538,6 @@ class PropertyCollection():
            the imported list should have been built up, and associated hdf5 arrays written, before calling this method;
            the imported list is cleared as a deliberate side-effect of this method (so a new set of imports can be
            started hereafter);
-           discrete and categorical properties cannot be mixed in the same import list - process as separate lists;
-           all categorical properties in the import list must refer to the same string table lookup;
-           when importing categorical properties, establish the xml for the string table lookup before calling this method;
            if importing properties of a bespoke (local) property kind, ensure the property kind objects exist as parts in
            the model before calling this method
 

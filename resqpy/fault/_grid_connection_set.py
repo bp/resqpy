@@ -197,6 +197,114 @@ class GridConnectionSet(BaseResqpy):
             if find_properties:
                 self.extract_property_collection()
 
+    @classmethod
+    def from_gcs_uuid_list(cls,
+                           parent_model,
+                           source_model,
+                           gcs_uuid_list,
+                           title,
+                           gcs_property_uuid_list_of_lists = None):
+        """Create a GridConnectionSet by merging some existing grid connections sets.
+
+        arguments:
+            parent_model (Model): the model to host the new, merged GridConnectionSet
+            source_model (Model): the model containing the existing grid connection sets (and properties)
+            gcs_uuid_list (list of UUID): a list or tuple of the existing GridConnectionSet uuids to be merged
+            title (str): the citation title for the new grid connection set
+            gcs_property_uuid_list_of_lists (set of lists of UUID, optional): a list or set or tuple where each
+                entry is a list or tuple of uuids of similar properties with one property per gcs in gcs_uuid_list;
+                see notes
+
+        returns:
+            the new GridConnectionSet being a merged copy of those specified in the list of uuids; the hdf5 data is
+            written by the method, and the xml created and part(s) added
+
+        notes:
+            source_model may be the same as parent_model;
+            each source grid connection set must be for a single grid and that must be common to them all;
+            if the target model is different from the source model, the grid must have been copied to the target
+            model before calling this function, and must have the same uuid as in the source model;
+            if properties are being processed, each group of properties to be merged into a single property must be
+            presented in the same order as the gcs'es and must have the corresponding gcs as the supporting
+            representation; the indexable element must be faces and within a group of properties, the property kind,
+            uom, time index, points attributes must match, as must the time series and string lookup uuids;
+            property count attribute can only be 1 and time series must be None;
+            each merged property citation title is inherited from that for the first gcs in the ordered list
+        """
+
+        gcs_count = len(gcs_uuid_list)
+        assert gcs_count > 1, 'more than one grid connection set uuid must be specified when merging'
+        assert title, 'no new title given when merging grid connection sets'
+        if gcs_property_uuid_list_of_lists is not None:
+            for prop_uuid_list in gcs_property_uuid_list_of_lists:
+                assert len(prop_uuid_list) == gcs_count, 'incorrect number of entries in a property uuid list'
+        gcs = cls(source_model, uuid = gcs_uuid_list[0])
+        assert gcs is not None and gcs.number_of_grids() == 1
+        gcs.cache_arrays()
+        grid_uuid = gcs.grid_list[0].uuid
+        if source_model is not parent_model:
+            parent_model.copy_uuid_from_other_model(source_model, grid_uuid)
+            _copy_organisation_objects(parent_model, source_model, gcs)
+        # hijack the first grid connection set in the list
+        gcs.model = parent_model
+        gcs.uuid = bu.new_uuid()  # not strictly necessary as append will cause a new uuid as well
+        gcs.title = title
+        # append data from the remaining grid connection sets
+        for another_uuid in gcs_uuid_list[1:]:
+            another_gcs = GridConnectionSet(source_model, uuid = another_uuid)
+            assert another_gcs is not None and another_gcs.number_of_grids() == 1
+            assert bu.matching_uuids(another_gcs.grid_list[0].uuid,
+                                     grid_uuid), 'source grid connection sets are for different grids'
+            _copy_organisation_objects(parent_model, source_model, another_gcs)
+            gcs.append(another_gcs)
+        # write the hdf5 data for the composite gcs and create the xml
+        gcs.write_hdf5()
+        gcs.create_xml()
+        if gcs_property_uuid_list_of_lists is not None:
+            pc = rqp.PropertyCollection()
+            pc.set_support(support_uuid = gcs.uuid, model = parent_model)
+            for property_uuid_list in gcs_property_uuid_list_of_lists:
+                prop_zero = rqp.Property(source_model, uuid = property_uuid_list[0])
+                assert prop_zero is not None
+                assert prop_zero.indexable_element() == 'faces'
+                assert prop_zero.count() == 1, 'gcs property merging only supports property count attribute of 1'
+                title = prop_zero.title
+                continuous = prop_zero.is_continuous()
+                pk = prop_zero.property_kind()
+                lookup_uuid = prop_zero.string_lookup_uuid()
+                points = prop_zero.is_points()
+                ts_uuid = prop_zero.time_series_uuid()
+                sl_uuid = prop_zero.string_lookup_uuid()
+                shape = (gcs.count, 3) if points else (gcs.count,)
+                dtype = float if continuous else int
+                gcs_a = np.zeros(shape, dtype = dtype)
+                a = prop_zero.array_ref()
+                assert a is not None and a.ndim == len(shape) and a.size <= gcs_a.size
+                gcs_a[:len(a)] = a
+                cumm_len = len(a)
+                for prop_uuid in property_uuid_list[1:]:
+                    prop = rqp.Property(source_model, uuid = prop_uuid)
+                    assert prop is not None and prop_zero.indexable_element() == 'faces'
+                    assert prop.is_continuous() is continuous
+                    assert not continuous or (prop.uom() == prop_zero.uom())
+                    assert prop.property_kind() == pk
+                    assert prop.is_points() is points
+                    assert ts_uuid is None and prop.time_series_uuid() is None or bu.matching_uuids(
+                        ts_uuid, prop.time_series_uuid())
+                    assert sl_uuid is None and prop.string_lookup_uuid() is None or bu.matching_uuids(
+                        sl_uuid, prop.string_lookup_uuid())
+                    a = prop.array_ref()
+                    assert cumm_len + len(a) <= gcs.count
+                    gcs_a[cumm_len:cumm_len + len(a)] = a
+                    cumm_len += len(a)
+                assert cumm_len == gcs.count, 'size of merging grid connection set properties does not add up'
+                pc.add_similar_to_imported_list(similar_uuid = prop_zero.uuid,
+                                                cached_array = gcs_a,
+                                                similar_model = source_model)
+            pc.write_hdf5_for_imported_list()
+            pc.create_xml_for_imported_list_and_add_parts_to_model(support_uuid = gcs.uuid)
+        return gcs
+
     def _load_from_xml(self):
         root = self.root
         assert root is not None
@@ -520,29 +628,49 @@ class GridConnectionSet(BaseResqpy):
             self.property_collection.create_xml_for_imported_list_and_add_parts_to_model()
 
     def append(self, other):
-        """Adds the features in other grid connection set to this one."""
+        """Adds the features in other grid connection set to this one.
 
-        # todo: check that grid is common to both connection sets
+        arguments:
+            other (GridConnectionSet): the other grid connection set which will have its contents appended to this
+                grid connection set
+
+        notes:
+            the other grid connection set must relate to the same grid as this (and both must be for a single grid);
+            this method assigns a new uuid to the grid connection set and should only be used when constructing the gcs;
+            no attempt is made to combine properties for the grid connection sets and no check is made for properties;
+            the other gcs may belong to a different model than this gcs, however both must have a parent model set;
+            use the higher level class method from_gcs_uuid_list() instead if property merging is required
+        """
+        other.cache_arrays()
         assert len(self.grid_list) == 1 and len(other.grid_list) == 1, 'attempt to merge multi-grid connection sets'
         assert bu.matching_uuids(self.grid_list[0].uuid, other.grid_list[0].uuid),  \
               'attempt to merge grid connection sets from different grids'
+        _copy_organisation_objects(self.model, other.model, other)
         if self.count is None or self.count == 0:
-            self.feature_list = other.feature_list.copy()
+            self.feature_list = None if other.feature_list is None else other.feature_list.copy()
             self.count = other.count
-            self.feature_indices = other.feature_indices.copy()
+            self.feature_indices = None if other.feature_indices is None else other.feature_indices.copy()
             self.cell_index_pairs = other.cell_index_pairs.copy()
             self.face_index_pairs = other.face_index_pairs.copy()
         else:
-            feature_offset = len(self.feature_list)
-            self.feature_list += other.feature_list
-            combined_feature_indices = np.concatenate((self.feature_indices, other.feature_indices))
-            combined_feature_indices[self.count:] += feature_offset
+            if self.feature_list is None or other.feature_list is None:
+                feature_offset = 0
+                self.feature_list = None
+                self.feature_indices = None
+            else:
+                feature_offset = len(self.feature_list)
+                self.feature_list += other.feature_list
+            if self.feature_indices is None or other.feature_indices is None:
+                combined_feature_indices = None
+            else:
+                combined_feature_indices = np.concatenate((self.feature_indices, other.feature_indices))
+                combined_feature_indices[self.count:] += feature_offset
             combined_cell_index_pairs = np.concatenate((self.cell_index_pairs, other.cell_index_pairs))
             combined_face_index_pairs = np.concatenate((self.face_index_pairs, other.face_index_pairs))
             self.count += other.count
             self.cell_index_pairs = combined_cell_index_pairs
             self.face_index_pairs = combined_face_index_pairs
-            self.feature_indices = combined_feature_indices
+            self.feature_indices = combined_feature_indices  # would be better to consolidate duplicate features perhaps
         self.uuid = bu.new_uuid()
 
     def single_feature(self, feature_index = None, feature_name = None):
@@ -2023,3 +2151,12 @@ class GridConnectionSet(BaseResqpy):
         #     log.debug(f'no suspicious opposing faces detected in gcs: {self.title}')
 
         return (ak, aj, ai)
+
+
+def _copy_organisation_objects(target_model, source_model, gcs):
+    """Copy interpretations (and features) referred to in grid connection set feature list from one model to another."""
+    if target_model is source_model or gcs.feature_list is None:
+        return
+    for _, uuid, _ in gcs.feature_list:
+        target_model.copy_uuid_from_other_model(source_model,
+                                                uuid)  # will copy related features as well as interpretations
