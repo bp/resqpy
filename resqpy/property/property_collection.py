@@ -2306,7 +2306,8 @@ class PropertyCollection():
                                      points = None,
                                      time_series_uuid = None,
                                      string_lookup_uuid = None,
-                                     similar_model = None):
+                                     similar_model = None,
+                                     title = None):
         """Caches array and adds to the list of imported properties using default metadata from a similar property.
 
         arguments:
@@ -2338,6 +2339,7 @@ class PropertyCollection():
               be specified when creating xml
            similar_model (Model, optional): the model where the similar property resides, if not the same as this
               property collection
+           title (str, optional): synonym for keyword argument
 
         returns:
            uuid of nascent property object
@@ -2372,7 +2374,8 @@ class PropertyCollection():
         similar = rqp.Property(self.model if similar_model is None else similar_model, uuid = similar_uuid)
         assert similar is not None
         args = {}
-        args['keyword'] = get_arg(keyword, similar.title)
+        args['keyword'] = get_arg(keyword, get_arg(title, similar.title))
+        assert args['keyword'] is not None
         args['discrete'] = get_arg(uom, not similar.is_continuous())
         args['uom'] = get_arg(uom, similar.uom())
         args['time_index'] = get_arg(time_index, similar.time_index())

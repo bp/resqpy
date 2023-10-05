@@ -1898,10 +1898,10 @@ def test_facet_type_list(example_model_with_properties):
     pc = model.grid().property_collection
 
     # Act
-    element = pc.facet_type_list()
+    element = set(pc.facet_type_list())
 
     # Assert
-    assert element == ['direction']
+    assert element == set(['direction', 'what'])
 
 
 def test_facet_list(example_model_with_properties):
@@ -1910,10 +1910,10 @@ def test_facet_list(example_model_with_properties):
     pc = model.grid().property_collection
 
     # Act
-    element = pc.facet_list()
+    element = set(pc.facet_list())
 
     # Assert
-    assert element == ['I', 'K']
+    assert element == set(['I', 'K', 'water'])
 
 
 def test_time_series_uuid_list(example_model_with_prop_ts_rels):
@@ -1923,10 +1923,10 @@ def test_time_series_uuid_list(example_model_with_prop_ts_rels):
     ts_uuid = [model.uuid_for_part(part) for part in model.parts_list_of_type('obj_TimeSeries')]
 
     # Act
-    element = pc.time_series_uuid_list()
+    element = set(pc.time_series_uuid_list())
 
     # Assert
-    assert element == ts_uuid
+    assert element == set(ts_uuid)
 
 
 def test_uom_list(example_model_with_properties):
@@ -1935,10 +1935,10 @@ def test_uom_list(example_model_with_properties):
     pc = model.grid().property_collection
 
     # Act
-    element = pc.uom_list()
+    element = set(pc.uom_list())
 
     # Assert
-    assert element == ['m3/m3', 'mD']
+    assert element == set(['m3/m3', 'mD'])
 
 
 def test_string_lookup_uuid_list(example_model_with_prop_ts_rels):
@@ -1948,10 +1948,10 @@ def test_string_lookup_uuid_list(example_model_with_prop_ts_rels):
     lookup_uuid = [model.uuid_for_part(part) for part in model.parts_list_of_type('obj_StringTableLookup')]
 
     # Act
-    element = pc.string_lookup_uuid_list()
+    element = set(pc.string_lookup_uuid_list())
 
     # Assert
-    assert element == lookup_uuid
+    assert element == set(lookup_uuid)
 
 
 def test_shape_and_type_of_part(example_model_with_properties):
@@ -2366,6 +2366,34 @@ def test_copy_imported_from_other(example_model_with_properties):
     newpc.inherit_imported_list_from_other_collection(pc)
 
     assert newpc.imported_list == old_list
+
+
+def test_add_similar(example_model_with_properties):
+    # Arrange
+    model = example_model_with_properties
+    grid = model.grid()
+    extent_kji = tuple(grid.extent_kji)
+    pc = grid.extract_property_collection()
+    sat_uuid = pc.uuid_for_part(pc.singleton(property_kind = 'saturation'))
+    sat_a = np.full(extent_kji, 0.3, dtype = float)
+    sat_b = np.full(extent_kji, 0.5, dtype = float)
+    # Act
+    pc.add_similar_to_imported_list(sat_uuid, sat_a)
+    pc.add_similar_to_imported_list(sat_uuid, sat_b, facet = 'gas', title = 'SG')
+    pc.write_hdf5_for_imported_list()
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    # Assert
+    assert len(uuids) == 2
+    assert len(pc.selective_parts_list(property_kind = 'saturation')) == 3
+    assert len(pc.selective_parts_list(facet_type = 'what')) == 3
+    assert len(pc.selective_parts_list(facet = 'water')) == 2
+    gas_sat_parts = pc.selective_parts_list(property_kind = 'saturation', facet_type = 'what', facet = 'gas')
+    assert len(gas_sat_parts) == 1
+    assert pc.citation_title_for_part(gas_sat_parts[0]) == 'SG'
+    gas_sat = pc.single_array_ref(facet = 'gas')
+    assert gas_sat is not None
+    assert gas_sat.shape == extent_kji
+    assert_array_almost_equal(gas_sat, 0.5)
 
 
 def test_remove_cached_from_imported_list(example_model_with_properties):
