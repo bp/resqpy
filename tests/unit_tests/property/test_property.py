@@ -2379,14 +2379,17 @@ def test_add_similar(example_model_with_properties):
     sat_b = np.full(extent_kji, 0.5, dtype = float)
     # Act
     pc.add_similar_to_imported_list(sat_uuid, sat_a)
-    pc.add_similar_to_imported_list(sat_uuid, sat_b, facet = 'gas')
+    pc.add_similar_to_imported_list(sat_uuid, sat_b, facet = 'gas', title = 'SG')
     pc.write_hdf5_for_imported_list()
-    pc.create_xml_for_imported_list_and_add_parts_to_model()
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
     # Assert
+    assert len(uuids) == 2
     assert len(pc.selective_parts_list(property_kind = 'saturation')) == 3
     assert len(pc.selective_parts_list(facet_type = 'what')) == 3
     assert len(pc.selective_parts_list(facet = 'water')) == 2
-    assert len(pc.selective_parts_list(property_kind = 'saturation', facet_type = 'what', facet = 'gas')) == 1
+    gas_sat_parts = pc.selective_parts_list(property_kind = 'saturation', facet_type = 'what', facet = 'gas')
+    assert len(gas_sat_parts) == 1
+    assert pc.citation_title_for_part(gas_sat_parts[0]) == 'SG'
     gas_sat = pc.single_array_ref(facet = 'gas')
     assert gas_sat is not None
     assert gas_sat.shape == extent_kji
