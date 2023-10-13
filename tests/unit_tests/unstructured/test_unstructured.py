@@ -225,8 +225,9 @@ def test_tetra_grid(tmp_path):
     tetra.nodes_per_face[42:45] = (3, 0, 7)  # face 11
     tetra.nodes_per_face[45:] = (0, 2, 7)  # face 12
     # face handedness
-    tetra.cell_face_is_right_handed = np.zeros(20, dtype = bool)  # False for all faces for external cells (1 to 4)
-    tetra.cell_face_is_right_handed[:4] = True  # True for all faces of internal cell (0)
+    tetra.cell_face_is_right_handed = np.full(20, True, dtype = bool)  # True for most faces
+    tetra.cell_face_is_right_handed[4::4] = False  # False for internal faces of external cells
+    test_handedness = tetra.cell_face_is_right_handed.copy()
     # points
     tetra.points_cached = np.zeros((8, 3))
     # internal cell (0) points
@@ -260,6 +261,14 @@ def test_tetra_grid(tmp_path):
     assert tetra.cell_count == 5
     assert tetra.cell_shape == 'tetrahedral'
     tetra.check_tetra()
+    assert np.all(tetra.cell_face_is_right_handed == test_handedness)
+
+    # test setting of face handedness from geometry
+    tetra.set_cell_face_is_right_handed_from_geometry()
+    assert tetra.cell_face_is_right_handed.shape == (20,)
+    assert np.count_nonzero(tetra.cell_face_is_right_handed) == 16
+    assert not np.any(tetra.cell_face_is_right_handed[4::4])
+    assert np.all(tetra.cell_face_is_right_handed == test_handedness)
 
     # test volume calculation
     expected_cell_volume = ((2.0 * half_edge)**3) / (6.0 * maths.sqrt(2.0))
