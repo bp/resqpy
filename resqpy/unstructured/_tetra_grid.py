@@ -6,7 +6,9 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.grid as grr
+import resqpy.olio.vector_utilities as vec
 import resqpy.olio.volume as vol
 import resqpy.unstructured
 import resqpy.unstructured._unstructured_grid as rug
@@ -68,6 +70,18 @@ class TetraGrid(rug.UnstructuredGrid):
         assert self.faces_per_cell_cl[0] == 4 and np.all(self.faces_per_cell_cl[1:] - self.faces_per_cell_cl[:-1] == 4)
         assert self.nodes_per_face_cl[0] == 3 and np.all(self.nodes_per_face_cl[1:] - self.nodes_per_face_cl[:-1] == 3)
 
+    def faces_for_cell(self, cell):
+        """Returns a numpy int array of shape (4,) being the face indices for a single cell."""
+
+        start = 4 * cell
+        return self.faces_per_cell[start:start + 4]
+
+    def nodes_for_face(self, face_index):
+        """Returns a numpy int array of shape (3,) being the node indices for a single face."""
+
+        start = 3 * face_index
+        return self.nodes_per_face[start:start + 3]
+
     def face_centre_point(self, face_index):
         """Returns a nominal centre point for a single face calculated as the mean position of its nodes.
 
@@ -89,8 +103,8 @@ class TetraGrid(rug.UnstructuredGrid):
            float being the volume of the tetrahedral cell
 
         note:
-            if required_uom is not specified, returned units will be cube of crs units if xy & z are the same
-            and either 'm' or 'ft', otherwise 'm3' will be used
+           if required_uom is not specified, returned units will be cube of crs units if xy & z are the same
+           and either 'm' or 'ft', otherwise 'm3' will be used
         """
 
         self.cache_all_geometry_arrays()
@@ -110,6 +124,51 @@ class TetraGrid(rug.UnstructuredGrid):
         for cell in range(self.cell_count):
             v += self.volume(cell)
         return v
+
+    def determine_cell_face_right_handedness(self, cell):
+        """Returns boolean array indicating which faces are right handed, for a single cell, from its geometry.
+
+        arguments:
+           cell (int): the index of the cell for which the volume is required
+
+        returns:
+           numpy bool array of shape (4, ) being True for faces which are right handed when viewed from within
+           the cell
+        """
+
+        self.cache_all_geometry_arrays()
+        faces = self.faces_for_cell(cell)
+        assert faces.shape == (4,)
+        faces_p = np.empty((4, 3, 3), dtype = float)
+        for fi in range(4):
+            face_start = 3 * faces[fi]
+            nodes = self.nodes_per_face[face_start:face_start + 3]
+            faces_p[fi] = self.points_cached[nodes]
+        centre = np.mean(faces_p, axis = (0, 1))
+        right = np.empty(4, dtype = bool)
+
+        for fi in range(4):
+            view = np.mean(faces_p[fi], axis = 0) - centre
+            rotation_matrix = vec.rotation_matrix_3d_vector(view)
+            face_p = vec.rotate_array(rotation_matrix, faces_p[fi])
+            right[fi] = (vec.clockwise(face_p[0], face_p[1], face_p[2]) > 0.0)
+
+        if not hasattr(self, 'crs'):
+            self.crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+
+        if self.crs.is_right_handed_xyz():
+            right = np.logical_not(right)
+
+        return right
+
+    def set_cell_face_is_right_handed_from_geometry(self):
+        """Determines the cell face handedness from the geometry, for all faces of all cells."""
+
+        # todo: optimise to use numpy array operations and/or njit instead of loop
+        handedness = np.empty((self.cell_count, 4), dtype = bool)
+        for ci in range(self.cell_count):
+            handedness[ci, :] = self.determine_cell_face_right_handedness(ci)
+        self.cell_face_is_right_handed = handedness.flatten()
 
     @classmethod
     def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}, set_handedness = False):
@@ -211,8 +270,7 @@ class TetraGrid(rug.UnstructuredGrid):
 
             tetra.cell_face_is_right_handed = np.ones(len(tetra.faces_per_cell), dtype = bool)
             if set_handedness:
-                # TODO: set handedness correctly and make default for set_handedness True
-                raise NotImplementedError('code not written to set handedness for tetra from unstructured cell')
+                tetra.set_cell_face_is_right_handed_from_geometry()
 
         tetra.check_tetra()
 
