@@ -817,7 +817,8 @@ def property_parts(model,
         for part in parts:
             root = model.root_for_part(part)
             if facet_match(root, facet_type, facet):
-                pk_parts.append(part)
+                f_parts.append(part)
+        parts = f_parts
     return parts
 
 
