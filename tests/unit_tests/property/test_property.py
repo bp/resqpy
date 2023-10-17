@@ -1409,14 +1409,20 @@ def test_property_parts_with_facets(example_model_with_properties):
     assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'rock permeability')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', property_kind = 'permeability rock')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'permeability rock')) == 0
+    assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = '*')) == 2
+    assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = 'none')) == 3
     assert rqp.property_part(model,
                              'ContinuousProperty',
                              property_kind = 'permeability rock',
                              facet_type = 'direction',
                              facet = 'I') is not None
+    assert rqp.property_part(model, 'ContinuousProperty', facet_type = 'direction', facet = 'I') is not None
     assert rqp.property_part(
         model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
         facet = 'J') is None
+    assert rqp.property_part(
+        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
+        facet = 'none') is None
     assert rqp.property_part(model,
                              obj_type = 'Continuous',
                              property_kind = 'permeability rock',
