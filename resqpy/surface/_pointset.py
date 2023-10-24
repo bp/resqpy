@@ -38,7 +38,8 @@ class PointSet(rqsb.BaseSurface):
                  irap_file = None,
                  title = None,
                  originator = None,
-                 extra_metadata = None):
+                 extra_metadata = None,
+                 remove_trailing_999 = True):
         """Creates an empty Point Set object and optionally populates from xml or other source.
 
         arguments:
@@ -66,6 +67,8 @@ class PointSet(rqsb.BaseSurface):
               ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the point set;
               ignored if uuid is not None
+           remove_trailing_999 (bool, default True): if True, when loading from an irap_file, if the last point
+              in the file is triple 999.0, then it is excluded from the point set
 
         returns:
            newly created PointSet object
@@ -104,7 +107,7 @@ class PointSet(rqsb.BaseSurface):
             self.from_charisma(charisma_file)
 
         elif irap_file is not None:  # Points from IRAP simple points
-            self.from_irap(irap_file)
+            self.from_irap(irap_file, remove_trailing_999)
 
         if not self.title:
             self.title = 'point set'
@@ -148,21 +151,22 @@ class PointSet(rqsb.BaseSurface):
         if not self.title:
             self.title = charisma_file
 
-    def from_irap(self, irap_file):
+    def from_irap(self, irap_file, remove_trailing_999 = True):
         """Instantiate a pointset using points from an input irap file.
 
         arguments:
-            irap_file: a IRAP classic points format file
+            irap_file (str): an existing IRAP classic points format file
+            remove_trailing_999 (bool, default True): if True, and the last point in the irap file is triple 999.0, then
+                it is excluded
         """
         with open(irap_file, 'r') as points:
             cpoints = np.loadtxt(points, encoding = 'uft-8')
-            # for i, line in enumerate(points.readlines()):
-            #     if i == 0:
-            #         cpoints = np.array([[float(x) for x in line.split(" ")]])
-            #     else:
-            #         curr = np.array([[float(x) for x in line.split(" ")]])
-            #         cpoints = np.concatenate((cpoints, curr))
-        self.add_patch(cpoints)
+        assert len(cpoints), f'no points loaded from irap file: {irap_file}'
+        assert cpoints.ndim == 2 and cpoints.shape[1] == 3
+        if remove_trailing_999 and np.all(np.isclose(cpoints[-1], 999.0)):
+            self.add_patch(cpoints[:-1])
+        else:
+            self.add_patch(cpoints)
         assert self.crs_uuid is not None, 'crs uuid missing when establishing point set from irap file'
         if not self.title:
             self.title = irap_file
