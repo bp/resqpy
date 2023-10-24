@@ -71,6 +71,53 @@ def test_from_irap_method(mocker, example_model_and_crs):
     assert_array_almost_equal(patch_mock.call_args[0][0], array)
 
 
+def test_from_irap_method_filter_999(mocker, example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    irap_file = "429450.658333 6296954.224574 2403.837646\n429444.793211 6296965.263155 2403.449707\n999.00000 999.00000 999.00000\n"
+    open_mock = mocker.mock_open(read_data = irap_file)
+    mocker.patch("builtins.open", open_mock)
+    test_path = "path/to/file"
+
+    array = np.array([[429450.658333, 6296954.224574, 2403.837646], [429444.793211, 6296965.263155, 2403.449707]])
+
+    patch_mock = mocker.MagicMock(name = 'add_patch')
+
+    # Act
+    pointset = resqpy.surface.PointSet(model, crs_uuid = crs.uuid)
+    pointset.add_patch = patch_mock
+    pointset.from_irap("path/to/file")
+
+    # Assert
+    open_mock.assert_called_once_with(test_path, 'r')
+    patch_mock.assert_called_once()
+    assert_array_almost_equal(patch_mock.call_args[0][0], array)
+
+
+def test_from_irap_method_no_filter_999(mocker, example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+    irap_file = "429450.658333 6296954.224574 2403.837646\n429444.793211 6296965.263155 2403.449707\n999.00000 999.00000 999.00000\n"
+    open_mock = mocker.mock_open(read_data = irap_file)
+    mocker.patch("builtins.open", open_mock)
+    test_path = "path/to/file"
+
+    array = np.array([[429450.658333, 6296954.224574, 2403.837646], [429444.793211, 6296965.263155, 2403.449707],
+                      [999.0, 999.0, 999.0]])
+
+    patch_mock = mocker.MagicMock(name = 'add_patch')
+
+    # Act
+    pointset = resqpy.surface.PointSet(model, crs_uuid = crs.uuid)
+    pointset.add_patch = patch_mock
+    pointset.from_irap("path/to/file", remove_trailing_999 = False)
+
+    # Assert
+    open_mock.assert_called_once_with(test_path, 'r')
+    patch_mock.assert_called_once()
+    assert_array_almost_equal(patch_mock.call_args[0][0], array)
+
+
 def test_from_irap_method_failure(mocker, example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
