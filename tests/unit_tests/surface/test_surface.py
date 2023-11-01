@@ -7,8 +7,8 @@ import resqpy.grid_surface as rqgs
 import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
-import resqpy.organize
-import resqpy.surface
+import resqpy.organize as rqo
+import resqpy.surface as rqs
 import resqpy.crs as rcrs
 import resqpy.olio.triangulation as tri
 
@@ -21,7 +21,7 @@ def test_surface(tmp_model):
     # Set up a Surface
     title = 'Mountbatten'
     model = tmp_model
-    surf = resqpy.surface.Surface(parent_model = model, title = title)
+    surf = rqs.Surface(parent_model = model, title = title)
     surf.create_xml()
 
     # Add a interpretation
@@ -31,8 +31,8 @@ def test_surface(tmp_model):
 
     # Check fault can be loaded in again
     model.store_epc()
-    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = surf.represented_interpretation_uuid)
-    fault_feature = resqpy.organize.TectonicBoundaryFeature(model, uuid = fault_interp.tectonic_boundary_feature.uuid)
+    fault_interp = rqo.FaultInterpretation(model, uuid = surf.represented_interpretation_uuid)
+    fault_feature = rqo.TectonicBoundaryFeature(model, uuid = fault_interp.tectonic_boundary_feature.uuid)
 
     # Check title matches expected title
     assert fault_feature.feature_name == title
@@ -54,7 +54,7 @@ def test_faces_for_surface(tmp_model):
     triangles = np.zeros((2, 3), dtype = int)
     triangles[0] = (0, 1, 2)
     triangles[1] = (3, 1, 2)
-    surf = resqpy.surface.Surface(tmp_model, crs_uuid = crs.uuid)
+    surf = rqs.Surface(tmp_model, crs_uuid = crs.uuid)
     surf.set_from_triangles_and_points(triangles, points.reshape((-1, 3)))
     assert surf is not None
     assert surf.node_count() == 4
@@ -91,7 +91,7 @@ def test_delaunay_triangulation(example_model_and_crs):
     p = np.stack((x, y, z), axis = -1)
 
     # make a PointSet object
-    ps = resqpy.surface.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
 
     # make another PointSet as random points within a closed polyline
     vertices = np.array(
@@ -99,17 +99,17 @@ def test_delaunay_triangulation(example_model_and_crs):
     polygon = rql.Polyline(model, set_crs = crs.uuid, is_closed = True, set_coord = vertices, title = 'the pentagon')
     polygon.write_hdf5()
     polygon.create_xml()
-    ps2 = resqpy.surface.PointSet(model,
-                                  crs_uuid = crs.uuid,
-                                  polyline = polygon,
-                                  random_point_count = n,
-                                  title = 'random points in polygon')
+    ps2 = rqs.PointSet(model,
+                       crs_uuid = crs.uuid,
+                       polyline = polygon,
+                       random_point_count = n,
+                       title = 'random points in polygon')
 
     # process the point sets into triangulated surfaces
     for point_set in (ps, ps2):
         point_set.write_hdf5()
         point_set.create_xml()
-        surf = resqpy.surface.Surface(model, point_set = point_set, title = 'surface from ' + str(point_set.title))
+        surf = rqs.Surface(model, point_set = point_set, title = 'surface from ' + str(point_set.title))
         assert surf is not None
         surf.write_hdf5()
         surf.create_xml()
@@ -130,7 +130,7 @@ def test_surface_from_mesh_file(example_model_and_crs, test_data_path, mesh_file
     in_file = test_data_path / mesh_file
 
     # Act
-    surface = resqpy.surface.Surface(parent_model = model, mesh_file = in_file, mesh_format = mesh_format)
+    surface = rqs.Surface(parent_model = model, mesh_file = in_file, mesh_format = mesh_format)
 
     # Assert
     assert surface is not None
@@ -145,7 +145,7 @@ def test_surface_from_tsurf_file(example_model_and_crs, test_data_path):
     in_file = test_data_path / 'Surface_tsurf.txt'
 
     # Act
-    surface = resqpy.surface.Surface(parent_model = model, tsurf_file = in_file, title = 'horizon')
+    surface = rqs.Surface(parent_model = model, tsurf_file = in_file, title = 'horizon')
     surface.create_interpretation_and_feature(kind = 'horizon')
 
     # Assert
@@ -169,17 +169,17 @@ def test_regular_mesh(example_model_and_crs):
     z = (np.random.random(ni * nj) * 20.0 + 1000.0).reshape((nj, ni))
 
     # make a regular mesh representation
-    mesh = resqpy.surface.Mesh(model,
-                               crs_uuid = crs.uuid,
-                               mesh_flavour = 'reg&z',
-                               ni = ni,
-                               nj = nj,
-                               origin = origin,
-                               dxyz_dij = np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]),
-                               z_values = z,
-                               title = 'random mesh',
-                               originator = 'Andy',
-                               extra_metadata = {'testing mode': 'automated'})
+    mesh = rqs.Mesh(model,
+                    crs_uuid = crs.uuid,
+                    mesh_flavour = 'reg&z',
+                    ni = ni,
+                    nj = nj,
+                    origin = origin,
+                    dxyz_dij = np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]),
+                    z_values = z,
+                    title = 'random mesh',
+                    originator = 'Andy',
+                    extra_metadata = {'testing mode': 'automated'})
     assert mesh is not None
     mesh.write_hdf5()
     mesh.create_xml()
@@ -194,7 +194,7 @@ def test_regular_mesh(example_model_and_crs):
     assert bu.matching_uuids(model.uuid(obj_type = 'Grid2dRepresentation', title = 'random mesh'), mesh_uuid)
 
     # establish a resqpy Mesh from the object in the RESQML dataset
-    persistent_mesh = resqpy.surface.Mesh(model, uuid = mesh_uuid)
+    persistent_mesh = rqs.Mesh(model, uuid = mesh_uuid)
 
     # check some of the metadata
     assert persistent_mesh.ni == ni and persistent_mesh.nj == nj
@@ -234,17 +234,17 @@ def test_refandz_mesh(example_model_and_crs):
     z_values = z * 2.5
 
     # make a regular mesh representation
-    support = resqpy.surface.Mesh(model,
-                                  crs_uuid = crs.uuid,
-                                  mesh_flavour = 'regular',
-                                  ni = ni,
-                                  nj = nj,
-                                  origin = origin,
-                                  dxyz_dij = np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]),
-                                  z_values = z,
-                                  title = 'random regular mesh',
-                                  originator = 'Emma',
-                                  extra_metadata = {'testing mode': 'automated'})
+    support = rqs.Mesh(model,
+                       crs_uuid = crs.uuid,
+                       mesh_flavour = 'regular',
+                       ni = ni,
+                       nj = nj,
+                       origin = origin,
+                       dxyz_dij = np.array([[di, 0.0, 0.0], [0.0, dj, 0.0]]),
+                       z_values = z,
+                       title = 'random regular mesh',
+                       originator = 'Emma',
+                       extra_metadata = {'testing mode': 'automated'})
     assert support is not None
     support.write_hdf5()
     support.create_xml()
@@ -253,15 +253,15 @@ def test_refandz_mesh(example_model_and_crs):
     # model.store_epc()
     # model = rq.Model(model.epc_file)
 
-    refz = resqpy.surface.Mesh(model,
-                               crs_uuid = crs.uuid,
-                               z_values = z_values,
-                               ni = ni,
-                               nj = nj,
-                               z_supporting_mesh_uuid = support_uuid,
-                               title = 'random refz mesh',
-                               originator = 'Emma',
-                               extra_metadata = {'testing mode': 'automated'})
+    refz = rqs.Mesh(model,
+                    crs_uuid = crs.uuid,
+                    z_values = z_values,
+                    ni = ni,
+                    nj = nj,
+                    z_supporting_mesh_uuid = support_uuid,
+                    title = 'random refz mesh',
+                    originator = 'Emma',
+                    extra_metadata = {'testing mode': 'automated'})
 
     assert refz is not None
     refz.write_hdf5()
@@ -277,7 +277,7 @@ def test_refandz_mesh(example_model_and_crs):
     assert bu.matching_uuids(reload.uuid(obj_type = 'Grid2dRepresentation', title = 'random refz mesh'), refz_uuid)
 
     # establish a resqpy Mesh from the object in the RESQML dataset
-    reload_refzmesh = resqpy.surface.Mesh(reload, uuid = refz_uuid)
+    reload_refzmesh = rqs.Mesh(reload, uuid = refz_uuid)
 
     # check some of the metadata
     assert reload_refzmesh.ni == ni and reload_refzmesh.nj == nj
@@ -302,13 +302,13 @@ def test_explicit_mesh(example_model_and_crs):
                      np.array([1 + val / 100, 1. + val / 100, 1 + val / 100]).T) for val in np.arange(0, 20)])
 
     # make an explicit mesh representation
-    mesh = resqpy.surface.Mesh(model,
-                               crs_uuid = crs.uuid,
-                               mesh_flavour = 'explicit',
-                               xyz_values = xyz_values,
-                               title = 'random explicit mesh',
-                               originator = 'Emma',
-                               extra_metadata = {'testing mode': 'automated'})
+    mesh = rqs.Mesh(model,
+                    crs_uuid = crs.uuid,
+                    mesh_flavour = 'explicit',
+                    xyz_values = xyz_values,
+                    title = 'random explicit mesh',
+                    originator = 'Emma',
+                    extra_metadata = {'testing mode': 'automated'})
     assert mesh is not None
     mesh.write_hdf5()
     mesh.create_xml()
@@ -323,7 +323,7 @@ def test_explicit_mesh(example_model_and_crs):
     assert bu.matching_uuids(model.uuid(obj_type = 'Grid2dRepresentation', title = 'random explicit mesh'), mesh_uuid)
 
     # establish a resqpy Mesh from the object in the RESQML dataset
-    persistent_mesh = resqpy.surface.Mesh(model, uuid = mesh_uuid)
+    persistent_mesh = rqs.Mesh(model, uuid = mesh_uuid)
 
     # check some of the metadata
     assert persistent_mesh.flavour == 'explicit'
@@ -349,14 +349,14 @@ def test_mesh_file(example_model_and_crs, test_data_path, flavour, infile, filet
     mesh_file = test_data_path / infile
 
     # make an explicit mesh representation
-    mesh = resqpy.surface.Mesh(model,
-                               crs_uuid = crs.uuid,
-                               mesh_flavour = flavour,
-                               mesh_file = mesh_file,
-                               mesh_format = filetype,
-                               title = 'mesh from file',
-                               originator = 'Emma',
-                               extra_metadata = {'testing mode': 'automated'})
+    mesh = rqs.Mesh(model,
+                    crs_uuid = crs.uuid,
+                    mesh_flavour = flavour,
+                    mesh_file = mesh_file,
+                    mesh_format = filetype,
+                    title = 'mesh from file',
+                    originator = 'Emma',
+                    extra_metadata = {'testing mode': 'automated'})
     assert mesh is not None
     mesh.write_hdf5()
     mesh.create_xml()
@@ -371,7 +371,7 @@ def test_mesh_file(example_model_and_crs, test_data_path, flavour, infile, filet
     assert bu.matching_uuids(model.uuid(obj_type = 'Grid2dRepresentation', title = 'mesh from file'), mesh_uuid)
 
     # establish a resqpy Mesh from the object in the RESQML dataset
-    persistent_mesh = resqpy.surface.Mesh(model, uuid = mesh_uuid)
+    persistent_mesh = rqs.Mesh(model, uuid = mesh_uuid)
 
     # check some of the metadata
     assert persistent_mesh.flavour == flavour
@@ -390,12 +390,12 @@ def test_pointset_from_array(example_model_and_crs):
     z = (np.random.random(50) * 500 + 2000)
 
     # make a pointset representation
-    points = resqpy.surface.PointSet(model,
-                                     crs_uuid = crs.uuid,
-                                     points_array = np.array([x, y, z]).T,
-                                     title = 'random points',
-                                     originator = 'Emma',
-                                     extra_metadata = {'testing mode': 'automated'})
+    points = rqs.PointSet(model,
+                          crs_uuid = crs.uuid,
+                          points_array = np.array([x, y, z]).T,
+                          title = 'random points',
+                          originator = 'Emma',
+                          extra_metadata = {'testing mode': 'automated'})
     assert points is not None
     points.create_interpretation_and_feature(kind = 'horizon')
     points.write_hdf5()
@@ -411,7 +411,7 @@ def test_pointset_from_array(example_model_and_crs):
     assert bu.matching_uuids(model.uuid(obj_type = 'PointSetRepresentation', title = 'random points'), points_uuid)
 
     # establish a resqpy Pointset from the object in the RESQML dataset
-    saved_points = resqpy.surface.PointSet(model, uuid = points_uuid)
+    saved_points = rqs.PointSet(model, uuid = points_uuid)
 
     # check a fully expanded version of the points
     assert_array_almost_equal(saved_points.full_array_ref(), points.full_array_ref())
@@ -426,12 +426,12 @@ def test_pointset_from_2d_array(example_model_and_crs):
     y = (np.random.random(50) * 10000)
 
     # make a pointset representation
-    points = resqpy.surface.PointSet(model,
-                                     crs_uuid = crs.uuid,
-                                     points_array = np.array([x, y]).T,
-                                     title = 'random 2d points',
-                                     originator = 'Emma',
-                                     extra_metadata = {'testing mode': 'automated'})
+    points = rqs.PointSet(model,
+                          crs_uuid = crs.uuid,
+                          points_array = np.array([x, y]).T,
+                          title = 'random 2d points',
+                          originator = 'Emma',
+                          extra_metadata = {'testing mode': 'automated'})
     assert points is not None
     points.write_hdf5()
     points.create_xml()
@@ -446,7 +446,7 @@ def test_pointset_from_2d_array(example_model_and_crs):
     assert bu.matching_uuids(model.uuid(obj_type = 'PointSetRepresentation', title = 'random 2d points'), points_uuid)
 
     # establish a resqpy Pointset from the object in the RESQML dataset
-    saved_points = resqpy.surface.PointSet(model, uuid = points_uuid)
+    saved_points = rqs.PointSet(model, uuid = points_uuid)
 
     # check a fully expanded version of the points
     assert_array_almost_equal(saved_points.full_array_ref(), points.full_array_ref())
@@ -463,12 +463,12 @@ def test_pointset_from_array_multipatch(example_model_and_crs):
     y2 = (np.random.random(50) * 10000)
 
     # make a pointset representation
-    points = resqpy.surface.PointSet(model,
-                                     crs_uuid = crs.uuid,
-                                     points_array = np.array([x, y]).T,
-                                     title = 'random 2d points',
-                                     originator = 'Emma',
-                                     extra_metadata = {'testing mode': 'automated'})
+    points = rqs.PointSet(model,
+                          crs_uuid = crs.uuid,
+                          points_array = np.array([x, y]).T,
+                          title = 'random 2d points',
+                          originator = 'Emma',
+                          extra_metadata = {'testing mode': 'automated'})
     assert points is not None
     points.add_patch(points_array = np.array([x2, y2]).T)
     points.write_hdf5()
@@ -484,7 +484,7 @@ def test_pointset_from_array_multipatch(example_model_and_crs):
     assert bu.matching_uuids(model.uuid(obj_type = 'PointSetRepresentation', title = 'random 2d points'), points_uuid)
 
     # establish a resqpy Pointset from the object in the RESQML dataset
-    saved_points = resqpy.surface.PointSet(model, uuid = points_uuid)
+    saved_points = rqs.PointSet(model, uuid = points_uuid)
 
     # check a fully expanded version of the points
     assert_array_almost_equal(saved_points.full_array_ref(), points.full_array_ref())
@@ -497,14 +497,14 @@ def test_pointset_from_charisma(example_model_and_crs, test_data_path, tmp_path)
     model, crs = example_model_and_crs
 
     charisma_file = test_data_path / "Charisma_points.txt"
-    points = resqpy.surface.PointSet(parent_model = model, charisma_file = str(charisma_file), crs_uuid = crs.uuid)
+    points = rqs.PointSet(parent_model = model, charisma_file = str(charisma_file), crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
     model.store_epc()
 
     # Test reload from resqml
     model = rq.Model(epc_file = model.epc_file)
-    reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
+    reload = rqs.PointSet(parent_model = model, uuid = points.uuid)
 
     assert reload.title == str(charisma_file)
 
@@ -528,14 +528,14 @@ def test_pointset_from_irap(example_model_and_crs, test_data_path, tmp_path):
     # Set up a PointSet and save to resqml file
     model, crs = example_model_and_crs
     irap_file = test_data_path / "IRAP_points.txt"
-    points = resqpy.surface.PointSet(parent_model = model, irap_file = str(irap_file), crs_uuid = crs.uuid)
+    points = rqs.PointSet(parent_model = model, irap_file = str(irap_file), crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
     model.store_epc()
 
     # Test reload from resqml
     model = rq.Model(epc_file = model.epc_file)
-    reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
+    reload = rqs.PointSet(parent_model = model, uuid = points.uuid)
 
     assert reload.title == str(irap_file)
 
@@ -573,14 +573,14 @@ def test_pointset_from_polyline(example_model_and_crs):
     model = rq.Model(epc_file = model.epc_file)
     reload_lines = resqpy.lines.Polyline(parent_model = model, uuid = lines.uuid)
 
-    points = resqpy.surface.PointSet(parent_model = model, polyline = reload_lines, crs_uuid = crs.uuid)
+    points = rqs.PointSet(parent_model = model, polyline = reload_lines, crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
     model.store_epc()
 
     # Reload the model, and ensure the coordinates are as expected
     model = rq.Model(epc_file = model.epc_file)
-    reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
+    reload = rqs.PointSet(parent_model = model, uuid = points.uuid)
     assert_array_almost_equal(reload.full_array_ref(), coords)
 
 
@@ -612,14 +612,14 @@ def test_pointset_from_polylineset(example_model_and_crs):
     model = rq.Model(epc_file = model.epc_file)
     reload_lines = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
-    points = resqpy.surface.PointSet(parent_model = model, polyset = reload_lines, crs_uuid = crs.uuid)
+    points = rqs.PointSet(parent_model = model, polyset = reload_lines, crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
     model.store_epc()
 
     # Reload the model, and ensure the coordinates are as expected
     model = rq.Model(epc_file = model.epc_file)
-    reload = resqpy.surface.PointSet(parent_model = model, uuid = points.uuid)
+    reload = rqs.PointSet(parent_model = model, uuid = points.uuid)
 
     assert_array_almost_equal(reload.full_array_ref(), np.concatenate((coords1, coords2), axis = 0))
 
@@ -630,7 +630,7 @@ def test_pointset_minimum_xy_area_rectangle(example_model_and_crs):
     coords = np.array([(0.0, 0.0, 0.0), (140.0 * r3_2, 70.0, -12.7), (-17.0, 34.0 * r3_2, 5.6),
                        (140.0 * r3_2 - 17.0, 34.0 * r3_2 + 70.0, 923.0)],
                       dtype = float)
-    ps = resqpy.surface.PointSet(model, points_array = coords, crs_uuid = crs.uuid, title = 'oblong')
+    ps = rqs.PointSet(model, points_array = coords, crs_uuid = crs.uuid, title = 'oblong')
     d1, d2, theta = ps.minimum_xy_area_rectangle(delta_theta = 3.0)
     assert 33.0 < d1 < 35.0
     assert 138.0 < d2 < 142.0
@@ -643,7 +643,7 @@ def test_tripatch_set_to_triangle(example_model_and_crs):
     corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_to_triangle(corners)
 
     # Assert
@@ -658,7 +658,7 @@ def test_tripatch_verticalscale(example_model_and_crs):
     corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_to_triangle(corners)
 
     # Assert
@@ -677,7 +677,7 @@ def test_tripatch_set_from_irregularmesh(example_model_and_crs):
     mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
 
     # Assert
@@ -695,7 +695,7 @@ def test_tripatch_columnfromindex(example_model_and_crs):
     mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
     assert tripatch is not None
     j0, i0 = tripatch.column_from_triangle_index(0)
@@ -714,7 +714,7 @@ def test_tripatch_columnfromindex_quad(example_model_and_crs):
     mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
     assert tripatch is not None
     j0, i0 = tripatch.column_from_triangle_index(0)
@@ -739,7 +739,7 @@ def test_tripatch_set_from_irregularmesh_quad(example_model_and_crs):
     mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
 
     # Assert
@@ -758,7 +758,7 @@ def test_tripatch_set_from_sparse(example_model_and_crs):
                          [[0, 2, 1], [1, 2, 1], [2, 2, 1]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_sparse_mesh(mesh_xyz = mesh_xyz)
 
     # Assert
@@ -778,7 +778,7 @@ def test_tripatch_set_from_torn(example_model_and_crs):
                           [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz)
 
     # Assert
@@ -798,7 +798,7 @@ def test_tripatch_set_from_torn_quad(example_model_and_crs):
                           [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
 
     # Assert
@@ -819,7 +819,7 @@ def test_tripatch_set_cellface_corp(example_model_and_crs):
     cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_to_cell_faces_from_corner_points(cp = cp)
 
     # Assert
@@ -838,7 +838,7 @@ def test_tripatch_set_cellface_corp_quadfalse(example_model_and_crs):
     cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
 
     # Act
-    tripatch = resqpy.surface.TriangulatedPatch(parent_model = model)
+    tripatch = rqs.TriangulatedPatch(parent_model = model)
     tripatch.set_to_cell_faces_from_corner_points(cp = cp, quad_triangles = False)
 
     # Assert
@@ -855,7 +855,7 @@ def test_surface_normal_vectors(tmp_model):
     # Arrange
     points = np.array([[1.0, 1.0, 1.0], [2.0, 0.0, 1.0], [2.0, 2.0, 1.0], [3.0, 1.0, 2.0]])
     triangles = tri.dt(points)
-    surface = resqpy.surface.Surface(tmp_model)
+    surface = rqs.Surface(tmp_model)
     surface.set_from_triangles_and_points(triangles, points)
     normal_vectors_expected = np.array([[0.70710678, 0.0, -0.70710678], [0.0, 0.0, -1.0]])
 
@@ -870,7 +870,7 @@ def test_surface_normal_vectors(tmp_model):
 def test_sample_z_at_xy_points(example_model_and_crs):
     # Arrange
     model, crs = example_model_and_crs
-    s1 = resqpy.surface.Surface(model, crs_uuid = crs.uuid, title = 'test 1')
+    s1 = rqs.Surface(model, crs_uuid = crs.uuid, title = 'test 1')
     s1.set_to_horizontal_plane(1066.0, box_xyz = np.array([[0.0, 0.0, 0.0], [100.0, 100.0, 0.0]], dtype = float))
     p3 = np.array([(30.0, 50.0, 12345.0), (20.0, 80.0, -1234.0), (50.0, 50.0, 0.0)], dtype = float)
     p2 = p3[:, :2]
@@ -889,14 +889,14 @@ def test_axial_edge_crossings(example_model_and_crs):
     model, crs = example_model_and_crs
     z_values = np.array([(-100.0, -100.0, -100.0, -100.0), (100.0, 100.0, 100.0, 100.0), (500.0, 500.0, 500.0, 500.0)],
                         dtype = float)
-    trim = resqpy.surface.TriMesh(model,
-                                  t_side = 100.0,
-                                  nj = 3,
-                                  ni = 4,
-                                  z_values = z_values,
-                                  crs_uuid = crs.uuid,
-                                  title = 'test tri mesh')
-    surf = resqpy.surface.Surface.from_tri_mesh(trim)
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 3,
+                       ni = 4,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    surf = rqs.Surface.from_tri_mesh(trim)
 
     # z axis
     z_cross = surf.axial_edge_crossings(2)
@@ -970,7 +970,7 @@ def test_adjust_flange_z(example_model_and_crs):
     for i, sauciness in enumerate((0.0, 0.25, 0.5, 0.75, 0.9)):
         p = points.copy()
         # adjust z values of outliers using the function being tested
-        resqpy.surface._adjust_flange_z(model, crs.uuid, p, outer_start, t, flange, sauciness)
+        rqs._adjust_flange_z(model, crs.uuid, p, outer_start, t, flange, sauciness)
         # check z values against expectation
         assert_array_almost_equal(p[:, :2], points[:, :2])  # no change in x or y
         assert_array_almost_equal(p[:outer_start, 2], points[:outer_start, 2])  # no change in z for non-outliers
@@ -993,8 +993,8 @@ def test_resampling(tmp_path):
     zs = np.random.randint(low = 5, high = 10, size = xs.shape)
     points = np.array([xs, ys, zs], dtype = float).T
 
-    pointset = resqpy.surface.PointSet(model, title = 'points', crs_uuid = crs.uuid, points_array = points)
-    surf = resqpy.surface.Surface(model, title = 'surface', crs_uuid = crs.uuid, point_set = pointset)
+    pointset = rqs.PointSet(model, title = 'points', crs_uuid = crs.uuid, points_array = points)
+    surf = rqs.Surface(model, title = 'surface', crs_uuid = crs.uuid, point_set = pointset)
 
     surf.write_hdf5()
     surf.create_xml()
@@ -1012,8 +1012,8 @@ def test_resampling(tmp_path):
 
     # Assert
     reload = rq.Model(model.epc_file)
-    resampled = resqpy.surface.Surface(reload, resampled.uuid)
-    resampled_name = resqpy.surface.Surface(reload, resampled_name.uuid)
+    resampled = rqs.Surface(reload, resampled.uuid)
+    resampled_name = rqs.Surface(reload, resampled_name.uuid)
     assert resampled is not None
     assert resampled_name is not None
 
@@ -1034,3 +1034,27 @@ def test_resampling(tmp_path):
     assert resampled_name.citation_title == 'testing'
     assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
     assert resampled_name.extra_metadata == {'resampled from surface': str(surf.uuid)}
+
+
+def test_from_downsampling_surface(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.random.random((20, 25)) * 100.0 + 950.0
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 20,
+                       ni = 25,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'tri mesh for downsampling')
+    fine_surf = rqs.Surface.from_tri_mesh(trim)
+    surf = rqs.Surface.from_downsampling_surface(fine_surf, point_count = 50, title = 'rough')
+    assert surf is not None
+    assert surf.title == 'rough'
+    assert surf.node_count() == 50
+    surf.write_hdf5()
+    surf.create_xml()
+    surf_reload = rqs.Surface(model, uuid = surf.uuid)
+    assert surf_reload is not None
+    t, p = surf_reload.triangles_and_points()
+    assert p.shape == (50, 3)
+    assert np.all(p[:, 2] >= 950.0) and np.all(p[:, 2] <= 1050.0)
