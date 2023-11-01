@@ -466,6 +466,8 @@ class PolylineSet(rql_c._BasePolyline):
             closed_node = rqet.find_nested_tags(self.root, ['LinePatch', 'ClosedPolylines'])
             if closed_node is not None:
                 closed_array[:] = self.get_bool_array(closed_node)
+            else:
+                closed_array = None
         if coordinates is None:
             coordinates = self.coordinates
         if crs_uuid is None:
@@ -478,11 +480,14 @@ class PolylineSet(rql_c._BasePolyline):
             if i != len(count_perpol) - 1:
                 subset = coordinates[count:int(count_perpol[i]) + count].copy()
             else:
-                subset = coordinates[count:int(count_perpol[i]) + count + 1].copy()
-            if vu.isclose(subset[0], subset[-1]):
-                isclosed = True
+                subset = coordinates[count:int(count_perpol[i]) + count + 1].copy()  # is this correct?
+            duplicated_end_points = np.all(np.isclose(subset[0], subset[-1])) and len(subset) > 2
+            if closed_array is None:
+                isclosed = duplicated_end_points
             else:
                 isclosed = closed_array[i]
+            if isclosed and duplicated_end_points:
+                subset = subset[:-1]
             count += int(count_perpol[i])
             subtitle = f"{self.title} {i+1}"
             polys.append(

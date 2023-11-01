@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 import resqpy.model as rq
@@ -61,3 +62,11 @@ def test_polyline_set_mixed_closure(example_model_and_crs):
         assert pl_set_reloaded is not None
         assert pl_set_reloaded.boolnotconstant
         assert pl_set_reloaded.boolvalue != ('true' in pl_set_reloaded.title.lower())
+
+
+# def test_polyline_set_from_irap_single_open_line(example_model_and_crs):
+#     model, crs = example_model_and_crs
+#     irap_file = os.path.join(os.dirname(model.epc_file), 'irap_line.txt')
+#     with open(irap_file, 'w') as fp:
+#         for line in lines:
+#             fp.write(line)
