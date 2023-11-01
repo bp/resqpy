@@ -1058,3 +1058,55 @@ def test_from_downsampling_surface(example_model_and_crs):
     t, p = surf_reload.triangles_and_points()
     assert p.shape == (50, 3)
     assert np.all(p[:, 2] >= 950.0) and np.all(p[:, 2] <= 1050.0)
+
+
+def test_from_downsampling_surface_few_source_points(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.random.random((10, 5)) * 100.0 + 950.0
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 10,
+                       ni = 5,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'small surface')
+    fine_surf = rqs.Surface.from_tri_mesh(trim)
+    surf = rqs.Surface.from_downsampling_surface(fine_surf, point_count = 60)
+    assert surf is not None
+    assert surf.title == 'small surface'
+    assert surf.node_count() == 50
+    surf.write_hdf5()
+    surf.create_xml()
+    surf_reload = rqs.Surface(model, uuid = surf.uuid)
+    assert surf_reload is not None
+    t, p = surf_reload.triangles_and_points()
+    assert p.shape == (50, 3)
+    ft, fp = fine_surf.triangles_and_points()
+    assert np.all(t == ft)
+    assert_array_almost_equal(p, fp)
+
+
+def test_from_downsampling_surface_different_model(example_model_and_crs):
+    model, crs = example_model_and_crs
+    new_m = rq.new_model(model.epc_file[:-4] + '_new.epc')
+    z_values = np.random.random((20, 25)) * 100.0 + 950.0
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 20,
+                       ni = 25,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'tri mesh for downsampling')
+    fine_surf = rqs.Surface.from_tri_mesh(trim)
+    surf = rqs.Surface.from_downsampling_surface(fine_surf, point_count = 50, title = 'rough', target_model = new_m)
+    assert surf is not None
+    assert surf.title == 'rough'
+    assert surf.node_count() == 50
+    assert surf.model is new_m
+    surf.write_hdf5()
+    surf.create_xml()
+    surf_reload = rqs.Surface(new_m, uuid = surf.uuid)
+    assert surf_reload is not None
+    t, p = surf_reload.triangles_and_points()
+    assert p.shape == (50, 3)
+    assert np.all(p[:, 2] >= 950.0) and np.all(p[:, 2] <= 1050.0)
