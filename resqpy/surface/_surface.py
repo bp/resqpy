@@ -137,6 +137,76 @@ class Surface(rqsb.BaseSurface):
         surf.represented_interpretation_root = tri_mesh.represented_interpretation_root
         return surf
 
+    @classmethod
+    def from_downsampling_surface(cls,
+                                  fine_surface,
+                                  point_count = None,
+                                  title = None,
+                                  target_model = None,
+                                  inherit_extra_metadata = True,
+                                  inherit_represented_interpretation = True,
+                                  convexity_parameter = 5.0):
+        """Create a Surface by taking a random subset of points from an existing surface and re-triangulating.
+
+        arguments:
+           fine_surface (Surface): a finely triangulated existing surface
+           point_count (int, optional): the number of randomly selected points to keep; defaults to 1% of
+              the fine surface point count
+           title (str, optional): the title for the new (coarse) surface; defaults to the title of the
+              fine surface
+           target_model (Model, optional): the model to receive the new surface; defaults to that of the
+              fine surface
+           inherit_extra_metadata (bool, default True): if True, the coarse surface will inherit any extra
+              metadata that the fine surface has
+           inherit_represented_interpretation (bool, default True): if True and the fine surface has a
+              represented interpretation then it is inherited by the coarse surface
+           convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
+              convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very
+              little chance of even a slight concavity
+
+        returns:
+            new Surface, without its hdf5 having been written, nor xml created
+
+        note:
+            if the fine surface does not have more points than point count, then a copy of that surface
+            is returned without re-triangulating
+        """
+
+        assert fine_surface is not None
+        if title is None:
+            title = fine_surface.title
+        inter_model = target_model is not None and target_model is not fine_surface.model
+        if target_model is None:
+            target_model = fine_surface.model
+        fine_t, fine_p = fine_surface.triangles_and_points()
+        if point_count is None:
+            point_count = len(fine_p) // 100
+        if point_count < 3:
+            point_count = 3
+        if inter_model:
+            target_model.copy_uuid_from_other_model(fine_surface.model, fine_surface.crs_uuid)
+            if inherit_represented_interpretation and fine_surface.represented_interpretation_root is not None:
+                ri_uuid = fine_surface.model.uuid_for_root(fine_surface.represented_interpretation_root)
+                target_model.copy_uuid_from_other_model(fine_surface.model, ri_uuid)
+        em = (fine_surface.extra_metadata
+              if inherit_extra_metadata and hasattr(fine_surface, 'extra_metadata') else None)
+        surf = cls(target_model,
+                   crs_uuid = fine_surface.crs_uuid,
+                   title = title,
+                   surface_role = fine_surface.surface_role,
+                   extra_metadata = em)
+        if point_count >= len(fine_p):
+            t, p = fine_t, fine_p
+        else:
+            p = fine_p.copy()
+            np.random.default_rng().shuffle(p, axis = 0)
+            p = p[:point_count]
+            t = triangulate.dt(p[:, :2], container_size_factor = convexity_parameter, algorithm = "scipy")
+        surf.set_from_triangles_and_points(t, p)
+        if inherit_represented_interpretation:
+            surf.represented_interpretation_root = fine_surface.represented_interpretation_root
+        return surf
+
     def _load_from_xml(self):
         root_node = self.root
         assert root_node is not None
@@ -191,12 +261,11 @@ class Surface(rqsb.BaseSurface):
     def triangles_and_points(self):
         """Returns arrays representing combination of all the patches in the surface.
 
-        Returns:
-           Tuple (triangles, points):
-
-           * triangles (int array of shape[:, 3]): integer indices into points array,
-             being the nodes of the corners of the triangles
-           * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
+        returns:
+           tuple (triangles, points):
+              triangles (int array of shape[:, 3]): integer indices into points array,
+                  being the nodes of the corners of the triangles;
+              points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
 
         :meta common:
         """
