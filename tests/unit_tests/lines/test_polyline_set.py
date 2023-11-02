@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 import resqpy.model as rq
 import resqpy.lines as rql
@@ -64,9 +65,107 @@ def test_polyline_set_mixed_closure(example_model_and_crs):
         assert pl_set_reloaded.boolvalue != ('true' in pl_set_reloaded.title.lower())
 
 
-# def test_polyline_set_from_irap_single_open_line(example_model_and_crs):
-#     model, crs = example_model_and_crs
-#     irap_file = os.path.join(os.dirname(model.epc_file), 'irap_line.txt')
-#     with open(irap_file, 'w') as fp:
-#         for line in lines:
-#             fp.write(line)
+def test_polyline_set_from_irap_single_open_line(example_model_and_crs):
+    model, crs = example_model_and_crs
+    irap_file = os.path.join(os.path.dirname(model.epc_file), 'irap_line.txt')
+    lines = [
+        '123.45  678.90  1010.0', '145.67  689.01  1020.0', '167.89  699.11  1015.0', '181.81  711.22  1025.0',
+        '999.00  999.00  999.00'
+    ]
+    with open(irap_file, 'w') as fp:
+        for line in lines:
+            fp.write(line + '\n')
+    ps = rql.PolylineSet(model, irap_file = irap_file, crs_uuid = crs.uuid, title = 'one open')
+    ps.write_hdf5()
+    ps.create_xml()
+    ps = rql.PolylineSet(model, uuid = ps.uuid)
+    assert ps is not None
+    assert ps.polys is not None and len(ps.polys) == 1
+    assert not ps.polys[0].isclosed
+    assert ps.polys[0].coordinates.shape == (4, 3)
+    expected = np.array([(123.45, 678.90, 1010.0), (145.67, 689.01, 1020.0), (167.89, 699.11, 1015.0),
+                         (181.81, 711.22, 1025.0)],
+                        dtype = float)
+    assert_array_almost_equal(ps.polys[0].coordinates, expected)
+
+
+def test_polyline_set_from_irap_single_closed_line(example_model_and_crs):
+    model, crs = example_model_and_crs
+    irap_file = os.path.join(os.path.dirname(model.epc_file), 'irap_line.txt')
+    lines = [
+        '123.45  678.90  1010.0', '145.67  689.01  1020.0', '167.89  699.11  1015.0', '181.81  711.22  1025.0',
+        '123.45  678.90  1010.0', '999.00  999.00  999.00'
+    ]
+    with open(irap_file, 'w') as fp:
+        for line in lines:
+            fp.write(line + '\n')
+    ps = rql.PolylineSet(model, irap_file = irap_file, crs_uuid = crs.uuid, title = 'one open')
+    ps.write_hdf5()
+    ps.create_xml()
+    ps = rql.PolylineSet(model, uuid = ps.uuid)
+    assert ps is not None
+    assert ps.polys is not None and len(ps.polys) == 1
+    assert ps.polys[0].isclosed
+    assert ps.polys[0].coordinates.shape == (4, 3)
+    expected = np.array([(123.45, 678.90, 1010.0), (145.67, 689.01, 1020.0), (167.89, 699.11, 1015.0),
+                         (181.81, 711.22, 1025.0)],
+                        dtype = float)
+    assert_array_almost_equal(ps.polys[0].coordinates, expected)
+
+
+def test_polyline_set_from_irap_two_closed_lines(example_model_and_crs):
+    model, crs = example_model_and_crs
+    irap_file = os.path.join(os.path.dirname(model.epc_file), 'irap_line.txt')
+    lines = [
+        '123.45  678.90  1010.0', '145.67  689.01  1020.0', '167.89  699.11  1015.0', '181.81  711.22  1025.0',
+        '123.45  678.90  1010.0', '999.00  999.00  999.00', '321.32  543.21  900.0', '654.32  589.89  910.5',
+        '444.44  201.01  932.0', '321.32  543.21  900.0', '999.00  999.00  999.00'
+    ]
+    with open(irap_file, 'w') as fp:
+        for line in lines:
+            fp.write(line + '\n')
+    ps = rql.PolylineSet(model, irap_file = irap_file, crs_uuid = crs.uuid, title = 'one open')
+    ps.write_hdf5()
+    ps.create_xml()
+    ps = rql.PolylineSet(model, uuid = ps.uuid)
+    assert ps is not None
+    assert ps.polys is not None and len(ps.polys) == 2
+    assert ps.polys[0].isclosed
+    assert ps.polys[0].coordinates.shape == (4, 3)
+    expected = np.array([(123.45, 678.90, 1010.0), (145.67, 689.01, 1020.0), (167.89, 699.11, 1015.0),
+                         (181.81, 711.22, 1025.0)],
+                        dtype = float)
+    assert_array_almost_equal(ps.polys[0].coordinates, expected)
+    assert ps.polys[1].isclosed
+    assert ps.polys[1].coordinates.shape == (3, 3)
+    expected = np.array([(321.32, 543.21, 900.0), (654.32, 589.89, 910.5), (444.44, 201.01, 932.0)], dtype = float)
+    assert_array_almost_equal(ps.polys[1].coordinates, expected)
+
+
+def test_polyline_set_from_irap_two_lines_one_open_one_closed(example_model_and_crs):
+    model, crs = example_model_and_crs
+    irap_file = os.path.join(os.path.dirname(model.epc_file), 'irap_line.txt')
+    lines = [
+        '123.45  678.90  1010.0', '145.67  689.01  1020.0', '167.89  699.11  1015.0', '181.81  711.22  1025.0',
+        '999.00  999.00  999.00', '321.32  543.21  900.0', '654.32  589.89  910.5', '444.44  201.01  932.0',
+        '321.32  543.21  900.0', '999.00  999.00  999.00'
+    ]
+    with open(irap_file, 'w') as fp:
+        for line in lines:
+            fp.write(line + '\n')
+    ps = rql.PolylineSet(model, irap_file = irap_file, crs_uuid = crs.uuid, title = 'one open')
+    ps.write_hdf5()
+    ps.create_xml()
+    ps = rql.PolylineSet(model, uuid = ps.uuid)
+    assert ps is not None
+    assert ps.polys is not None and len(ps.polys) == 2
+    assert not ps.polys[0].isclosed
+    assert ps.polys[0].coordinates.shape == (4, 3)
+    expected = np.array([(123.45, 678.90, 1010.0), (145.67, 689.01, 1020.0), (167.89, 699.11, 1015.0),
+                         (181.81, 711.22, 1025.0)],
+                        dtype = float)
+    assert_array_almost_equal(ps.polys[0].coordinates, expected)
+    assert ps.polys[1].isclosed
+    assert ps.polys[1].coordinates.shape == (3, 3)
+    expected = np.array([(321.32, 543.21, 900.0), (654.32, 589.89, 910.5), (444.44, 201.01, 932.0)], dtype = float)
+    assert_array_almost_equal(ps.polys[1].coordinates, expected)
