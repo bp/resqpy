@@ -120,10 +120,12 @@ def test_irap(example_model_and_crs, test_data_path):
     reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
     assert reload.title == 'IRAP_example'
-    assert (reload.count_perpol == [15]).all(),  \
-        f"Expected count per polyline to be [15], found {reload.count_perpol}"
-    assert len(reload.coordinates) == 15,  \
-        f"Expected length of coordinates to be 15, found {len(reload.coordinates)}"
+    assert len(reload.polys) == 1
+    assert reload.polys[0].isclosed
+    assert (reload.count_perpol == [14]).all(),  \
+        f"Expected count per polyline to be [14], found {reload.count_perpol}"
+    assert len(reload.coordinates) == 14,  \
+        f"Expected length of coordinates to be 14, found {len(reload.coordinates)}"
 
 
 def test_is_clockwise(example_model_and_crs):
