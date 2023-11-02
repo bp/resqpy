@@ -19,13 +19,15 @@ def test_lines(example_model_and_crs):
                                  set_crs = crs.uuid,
                                  is_closed = True,
                                  set_coord = np.array([[0, 0, 0], [1, 1, 1]]))
-    line.write_hdf5()
-    line.create_xml()
 
     # Add a interpretation
     assert line.rep_int_root is None
     line.create_interpretation_and_feature(kind = 'fault')
     assert line.rep_int_root is not None
+
+    # Finalise the polyline
+    line.write_hdf5()
+    line.create_xml()
 
     # Check fault can be loaded in again
     model.store_epc()
@@ -33,7 +35,7 @@ def test_lines(example_model_and_crs):
     reload = resqpy.lines.Polyline(parent_model = model, uuid = line.uuid)
     assert reload.citation_title == title
 
-    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = line.rep_int_uuid)
+    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = reload.rep_int_uuid)
     fault_feature = resqpy.organize.TectonicBoundaryFeature(model, uuid = fault_interp.feature_uuid)
 
     # Check title matches expected title
