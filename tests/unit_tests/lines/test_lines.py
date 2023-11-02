@@ -19,13 +19,15 @@ def test_lines(example_model_and_crs):
                                  set_crs = crs.uuid,
                                  is_closed = True,
                                  set_coord = np.array([[0, 0, 0], [1, 1, 1]]))
-    line.write_hdf5()
-    line.create_xml()
 
     # Add a interpretation
     assert line.rep_int_root is None
     line.create_interpretation_and_feature(kind = 'fault')
     assert line.rep_int_root is not None
+
+    # Finalise the polyline
+    line.write_hdf5()
+    line.create_xml()
 
     # Check fault can be loaded in again
     model.store_epc()
@@ -33,7 +35,7 @@ def test_lines(example_model_and_crs):
     reload = resqpy.lines.Polyline(parent_model = model, uuid = line.uuid)
     assert reload.citation_title == title
 
-    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = line.rep_int_uuid)
+    fault_interp = resqpy.organize.FaultInterpretation(model, uuid = reload.rep_int_uuid)
     fault_feature = resqpy.organize.TectonicBoundaryFeature(model, uuid = fault_interp.feature_uuid)
 
     # Check title matches expected title
@@ -120,10 +122,12 @@ def test_irap(example_model_and_crs, test_data_path):
     reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
 
     assert reload.title == 'IRAP_example'
-    assert (reload.count_perpol == [15]).all(),  \
-        f"Expected count per polyline to be [15], found {reload.count_perpol}"
-    assert len(reload.coordinates) == 15,  \
-        f"Expected length of coordinates to be 15, found {len(reload.coordinates)}"
+    assert len(reload.polys) == 1
+    assert reload.polys[0].isclosed
+    assert (reload.count_perpol == [14]).all(),  \
+        f"Expected count per polyline to be [14], found {reload.count_perpol}"
+    assert len(reload.coordinates) == 14,  \
+        f"Expected length of coordinates to be 14, found {len(reload.coordinates)}"
 
 
 def test_is_clockwise(example_model_and_crs):

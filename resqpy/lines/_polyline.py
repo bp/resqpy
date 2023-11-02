@@ -8,15 +8,15 @@ import math as maths
 import numpy as np
 import warnings
 
-import resqpy.olio.intersection as meet
-import resqpy.lines
+import resqpy.crs as rqc
+import resqpy.lines._common as rql_c
 import resqpy.property as rqp
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.lines._common as rql_c
+import resqpy.olio.intersection as meet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
 
@@ -330,21 +330,17 @@ class Polyline(rql_c._BasePolyline):
         return result
 
     def is_clockwise(self, trust_metadata = True):
-        """Returns True if first non-straight triplet of nodes is clockwise in the xy plane; False if anti-clockwise.
+        """Returns True if closed polyline is clockwise when viewed from above; False if anti-clockwise."""
 
-        note:
-           this method currently assumes that the xy axes are left-handed
-        """
-
+        assert self.isclosed, 'Polyline.is_clockwise() called for open polyline (only applicable to closed polylines)'
         if trust_metadata and self.extra_metadata is not None and 'is_clockwise' in self.extra_metadata.keys():
             return str(self.extra_metadata['is_clockwise']).lower() == 'true'
-        result = None
-        for node in range(3, len(self.coordinates)):
-            cw = vu.clockwise(self.coordinates[node - 2], self.coordinates[node - 1], self.coordinates[node])
-            if cw == 0.0:
-                continue  # striaght line section
-            result = (cw > 0.0)
-            break
+        centre = np.mean(self.coordinates, axis = 0)
+        cw = vu.clockwise(centre, self.coordinates[0], self.coordinates[1])
+        result = (cw > 0.0)
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+        if crs.is_right_handed_xy():
+            result = not result
         if result is not None:
             self.append_extra_metadata({'is_clockwise': str(result).lower()})
         return result
@@ -716,8 +712,8 @@ class Polyline(rql_c._BasePolyline):
 
         assert mode in ['square', 'perimeter', 'circle']
         assert 0.0 <= norm_x <= 1.0 and 0.0 <= norm_y <= 1.0
-        assert self.is_convex(
-        ), 'attempt to find denormalised x,y within a polyline that is not a closed convex polygon'
+        assert self.is_convex(),  \
+            'attempt to find denormalised x,y within a polyline that is not a closed convex polygon'
         centre_xy = self.balanced_centre()[:2]
         x, y = None, None
         if mode == 'square':
