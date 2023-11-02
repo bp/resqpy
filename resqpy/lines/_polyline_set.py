@@ -474,6 +474,7 @@ class PolylineSet(rql_c._BasePolyline):
             crs_uuid = self.crs_uuid
         if rep_int_root is None:
             rep_int_root = self.rep_int_root
+
         polys = []
         count = 0
         for i in range(len(count_perpol)):
