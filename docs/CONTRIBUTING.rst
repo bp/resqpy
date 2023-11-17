@@ -222,10 +222,9 @@ versions of the code:
 These automatically re-build when the relevant branch is updated, or when a new
 tag is pushed.
 
-The `docs` version is intended for previewing changes to documentation. Just
-create a new feature branch called `docs` and push changes there; you can then
-use the link above to check it renders correctly. One can delete the `docs` git
-branch as usual when closing a PR, and re-create it when needed.
+The documentation is also automatically built in a temporary staging area for
+all open Pull Requests. Check the "Checks" section of your Pull Request to see
+how the docs will look.
 
 You may find it helpful to run a linter to check that the syntax of your
 ReStructured text is correct: the python package `restructuredtext-lint` is
