@@ -3070,7 +3070,7 @@ class BlockedWell(BaseResqpy):
                     if BlockedWell.__is_float_column(col_name):
                         form = '{0:>' + str(width) + '.3f}'
                         value = row[col_name]
-                        if col_name == 'ANGLA' and (np.isnan(value) or value is None):
+                        if col_name == 'ANGLA' and (pd.isna(row[col_name]) or value is None or np.isnan(value)):
                             value = 0.0
                         fp.write(sep + form.format(float(value)))
                     else:

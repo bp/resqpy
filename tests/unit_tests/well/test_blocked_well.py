@@ -847,7 +847,7 @@ def test_write_wellspec(example_model_and_crs):
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
     source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 'ON'], [2, 2, 2, 45, -90.0, 2.5, 0.25, 'OFF'],
-                              [2, 3, 2, 45, -90.0, 1.0, 0.20, 'OFF'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 'ON']],
+                              [2, 3, 2, 45, -90.0, 1.0, 0.20, 'OFF'], [2, 3, 3, 0.0, None, -0.5, 0.20, 'ON']],
                              columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'STAT'])
     with open(wellspec_file, 'w') as fp:
         fp.write(F'WELLSPEC {well_name}\n')
