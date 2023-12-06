@@ -312,7 +312,8 @@ class BlockedWell(BaseResqpy):
                 expanded_grid_indices[::2] = self.grid_indices
                 self.grid_indices = expanded_grid_indices
             else:
-                raise ValueError(f'incorrect grid indices size with respect to node count in blocked well: {self.title}')
+                raise ValueError(
+                    f'incorrect grid indices size with respect to node count in blocked well: {self.title}')
         # end of temporary code
         unique_grid_indices = np.unique(self.grid_indices)  # sorted list of unique values
         self.gridind_null = rqet.find_tag_int(gi_node, 'NullValue')
