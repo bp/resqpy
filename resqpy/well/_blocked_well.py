@@ -1490,6 +1490,10 @@ class BlockedWell(BaseResqpy):
 
         grid_crs_list = self.__verify_number_of_grids_and_crs_units(column_list = column_list)
 
+        if doing_kh or doing_xyz or doing_angles or doing_entry_exit:
+            for grid in self.grid_list:
+                grid.cache_all_geometry_arrays()
+
         k_face_check = np.zeros((2, 2), dtype = int)
         k_face_check[1, 1] = 1  # now represents entry, exit of K-, K+
         k_face_check_end = k_face_check.copy()
