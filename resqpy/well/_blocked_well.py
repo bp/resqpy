@@ -1,7 +1,7 @@
 """BlockedWell class."""
 
 # Nexus is a registered trademark of the Halliburton Company
-# RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an Emerson company
+# RMS and ROXAR are registered trademarks of Roxar Software Solutions AS, an AspenTech company
 
 import logging
 
@@ -301,7 +301,19 @@ class BlockedWell(BaseResqpy):
         gi_node = rqet.find_tag(node, 'GridIndices')
         assert gi_node is not None, 'blocked well grid indices hdf5 reference not found in xml'
         rqwu.load_hdf5_array(self, gi_node, 'grid_indices', dtype = 'int')
-        assert self.grid_indices is not None and self.grid_indices.ndim == 1 and self.grid_indices.size == self.node_count - 1
+        # assert self.grid_indices is not None and self.grid_indices.ndim == 1 and self.grid_indices.size == self.node_count - 1
+        # temporary code to handle blocked wells with incorrectly shaped grid indices wrt. nodes
+        assert self.grid_indices is not None and self.grid_indices.ndim == 1
+        if self.grid_indices.size != self.node_count - 1:
+            if self.grid_indices.size == self.cell_count and self.node_count == 2 * self.cell_count:
+                log.warning(f'handling node duplication or missing unblocked intervals in blocked well: {self.title}')
+
+                expanded_grid_indices = np.full(self.node_count - 1, -1, dtype = int)
+                expanded_grid_indices[::2] = self.grid_indices
+                self.grid_indices = expanded_grid_indices
+            else:
+                raise ValueError(f'incorrect grid indices size with respect to node count in blocked well: {self.title}')
+        # end of temporary code
         unique_grid_indices = np.unique(self.grid_indices)  # sorted list of unique values
         self.gridind_null = rqet.find_tag_int(gi_node, 'NullValue')
         if self.gridind_null is None:
