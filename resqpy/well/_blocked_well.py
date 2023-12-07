@@ -3376,7 +3376,8 @@ class BlockedWell(BaseResqpy):
         interp_root = None
         if self.wellbore_interpretation is not None:
             interp_root = self.wellbore_interpretation.root
-            ref_uuid = self.wellbore_interpretation.uuid if interp_root is None else bu.uuid_from_string(interp_root.attrib['uuid'])
+            ref_uuid = self.wellbore_interpretation.uuid if interp_root is None else bu.uuid_from_string(
+                interp_root.attrib['uuid'])
             self.model.create_ref_node('RepresentedInterpretation',
                                        rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
                                        ref_uuid,
