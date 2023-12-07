@@ -3366,18 +3366,20 @@ class BlockedWell(BaseResqpy):
                                    root = bw_node)
         for grid in self.grid_list:
             grid_root = grid.root
+            ref_uuid = grid.uuid if grid_root is None else bu.uuid_from_string(grid_root.attrib['uuid'])
             self.model.create_ref_node('Grid',
                                        rqet.find_nested_tags_text(grid_root, ['Citation', 'Title']),
-                                       bu.uuid_from_string(grid_root.attrib['uuid']),
+                                       ref_uuid,
                                        content_type = 'obj_IjkGridRepresentation',
                                        root = bw_node)
 
         interp_root = None
         if self.wellbore_interpretation is not None:
             interp_root = self.wellbore_interpretation.root
+            ref_uuid = self.wellbore_interpretation.uuid if interp_root is None else bu.uuid_from_string(interp_root.attrib['uuid'])
             self.model.create_ref_node('RepresentedInterpretation',
                                        rqet.find_nested_tags_text(interp_root, ['Citation', 'Title']),
-                                       bu.uuid_from_string(interp_root.attrib['uuid']),
+                                       ref_uuid,
                                        content_type = 'obj_WellboreInterpretation',
                                        root = bw_node)
         return traj_root, grid_root, interp_root
