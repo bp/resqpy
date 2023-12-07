@@ -16,6 +16,7 @@ def grid_flavour(grid_root):
     flavour = em.get('grid_flavour')
     if flavour is None:
         node_type = rqet.node_type(grid_root, strip_obj = True)
+        log.warning(f'grid node type: {node_type}')
         if node_type == 'IjkGridRepresentation':
             geom = rqet.find_tag(grid_root, 'Geometry')
             if geom is None:

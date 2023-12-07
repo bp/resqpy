@@ -59,6 +59,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert isinstance(blocked_well, rqw.BlockedWell)
     assert isinstance(blocked_well.trajectory, rqw.Trajectory)
     assert grid is not None
+    assert grid.root is not None
 
     flavour = grr.grid_flavour(grid.root)
     if not flavour.startswith('Ijk'):
