@@ -1128,6 +1128,8 @@ def test_temporary_handling_of_badly_formed_grid_indices(example_model_and_crs):
     # corrupt the nodes to mimic bad data (non-resqpy) and write
     assert bw.node_count == bw.cell_count + 2  # one extra top node in good test data
     assert bw.grid_indices.size == bw.node_count - 1
+    bw._set_cell_interval_map()
+    assert np.all(bw.cell_interval_map == np.arange(bw.cell_count, dtype = int) + 1)
     node_mds = np.zeros(2 * bw.cell_count, dtype = float)
     node_mds[::2] = bw.node_mds[1:-1]  # drop the first node
     node_mds[1::2] = bw.node_mds[2:]  # duplicate all the internal nodes
