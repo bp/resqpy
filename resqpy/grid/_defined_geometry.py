@@ -387,7 +387,10 @@ def __complete_all_pillars(cells_update_needed, grid, points, surround_z):
     if hasattr(grid, 'array_pillar_geometry_is_defined'):
         del grid.array_pillar_geometry_is_defined
     cells_update_needed = False
-    assert not np.any(np.isnan(points))
+    nan_mask = np.isnan(points)
+    if np.any(nan_mask):
+        log.warning('remaining NaNs after filling missing pillar geometry will be set to zero')
+        points[nan_mask] = 0.0
     grid.geometry_defined_for_all_cells_cached = True
     if hasattr(grid, 'array_cell_geometry_is_defined'):
         del grid.array_cell_geometry_is_defined
