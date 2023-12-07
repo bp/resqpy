@@ -847,7 +847,7 @@ def test_write_wellspec(example_model_and_crs):
     wellspec_file = os.path.join(model.epc_directory, 'wellspec.dat')
     well_name = 'DOGLEG'
     source_df = pd.DataFrame([[2, 2, 1, 0.0, 0.0, 0.0, 0.25, 'ON'], [2, 2, 2, 45, -90.0, 2.5, 0.25, 'OFF'],
-                              [2, 3, 2, 45, -90.0, 1.0, 0.20, 'OFF'], [2, 3, 3, 0.0, 0.0, -0.5, 0.20, 'ON']],
+                              [2, 3, 2, 45, -90.0, 1.0, 0.20, 'OFF'], [2, 3, 3, 0.0, None, -0.5, 0.20, 'ON']],
                              columns = ['IW', 'JW', 'L', 'ANGLV', 'ANGLA', 'SKIN', 'RADW', 'STAT'])
     with open(wellspec_file, 'w') as fp:
         fp.write(F'WELLSPEC {well_name}\n')
@@ -1106,3 +1106,45 @@ def test_add_grid_properties(example_model_and_crs):
 
     assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float
     assert bw_pc.single_array_ref(property_kind = 'example data static').dtype == int
+
+
+def test_temporary_handling_of_badly_formed_grid_indices(example_model_and_crs):
+
+    # --------- Arrange ----------
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, use_lattice = False)
+    well_name = 'VERTICAL'
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
+    bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1, 1))
+
+    # --------- Act ----------
+    # corrupt the nodes to mimic bad data (non-resqpy) and write
+    assert bw.node_count == bw.cell_count + 2  # one extra top node in good test data
+    assert bw.grid_indices.size == bw.node_count - 1
+    bw._set_cell_interval_map()
+    assert np.all(bw.cell_interval_map == np.arange(bw.cell_count, dtype = int) + 1)
+    node_mds = np.zeros(2 * bw.cell_count, dtype = float)
+    node_mds[::2] = bw.node_mds[1:-1]  # drop the first node
+    node_mds[1::2] = bw.node_mds[2:]  # duplicate all the internal nodes
+    bw.grid_indices = bw.grid_indices[1:]  # drop the first interval from the grid indices
+    bw.node_mds = node_mds
+    bw.node_count = 2 * bw.cell_count
+    bw.write_hdf5()
+    bw.create_xml()
+    model.store_epc()
+
+    # --------- Assert ----------
+    reload = rq.Model(model.epc_file)
+    bw2 = rqw.BlockedWell(reload, uuid = bw.uuid)
+    assert bw2 is not None
+    assert bw2.node_count == 2 * bw.cell_count
+    assert bw2.grid_indices.size == bw2.node_count - 1
+    assert bw2.cell_count == bw.cell_count
+    assert np.all(bw2.grid_indices[1::2] == -1)
