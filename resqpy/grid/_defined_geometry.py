@@ -585,7 +585,7 @@ def __fill_holes(grid, holes_mask):
 def __fill_surround(grid, surround_mask):
     # note: only fills x,y; based on bottom layer of points; assumes surround mask is a regularly shaped frame of columns
     log.debug(f'filling {np.count_nonzero(surround_mask)} pillars for surround')
-    points = grid.points_ref(masked = False).reshape((grid.nk, -1, 3))
+    points = grid.points_ref(masked = False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
     points_view = points[-1, :, :2].reshape((-1, 2))[:(grid.nj + 1) * (grid.ni + 1), :].reshape(
         (grid.nj + 1, grid.ni + 1, 2))
     modified = False
