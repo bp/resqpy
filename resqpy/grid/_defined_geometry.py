@@ -390,7 +390,7 @@ def __complete_all_pillars(cells_update_needed, grid, points, surround_z):
     cells_update_needed = False
     nan_mask = np.isnan(points)
     if np.any(nan_mask):
-        log.warning('remaining NaNs after filling missing pillar geometry will be set to zero')
+        log.warning('remaining NaNs after filling missing pillar geometry will be set to zero (dangerous)')
         points[nan_mask] = 0.0
     grid.geometry_defined_for_all_cells_cached = True
     if hasattr(grid, 'array_cell_geometry_is_defined'):
