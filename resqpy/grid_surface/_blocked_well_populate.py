@@ -60,7 +60,10 @@ def populate_blocked_well_from_trajectory(blocked_well,
     assert isinstance(blocked_well.trajectory, rqw.Trajectory)
     assert grid is not None
 
-    flavour = grr.grid_flavour(grid.root)
+    flavour = grid.grid_representation
+    if flavour is None:
+        assert grid.root is not None
+        flavour = grr.grid_flavour(grid.root)
     if not flavour.startswith('Ijk'):
         raise NotImplementedError('well blocking only implemented for IjkGridRepresentation')
     is_regular = (flavour == 'IjkBlockGrid') and hasattr(grid, 'is_aligned') and grid.is_aligned

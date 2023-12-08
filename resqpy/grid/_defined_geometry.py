@@ -348,6 +348,7 @@ def set_geometry_is_defined(grid,
 
     if complete_all:
         cells_update_needed = __complete_all_pillars(cells_update_needed, grid, points, surround_z)
+        cells_update_needed = True
 
     if cells_update_needed:
         # note: each pillar is either fully defined or fully undefined at this point
@@ -387,7 +388,10 @@ def __complete_all_pillars(cells_update_needed, grid, points, surround_z):
     if hasattr(grid, 'array_pillar_geometry_is_defined'):
         del grid.array_pillar_geometry_is_defined
     cells_update_needed = False
-    assert not np.any(np.isnan(points))
+    nan_mask = np.isnan(points)
+    if np.any(nan_mask):
+        log.warning('remaining NaNs after filling missing pillar geometry will be set to zero (dangerous)')
+        points[nan_mask] = 0.0
     grid.geometry_defined_for_all_cells_cached = True
     if hasattr(grid, 'array_cell_geometry_is_defined'):
         del grid.array_cell_geometry_is_defined
@@ -585,7 +589,7 @@ def __fill_holes(grid, holes_mask):
 def __fill_surround(grid, surround_mask):
     # note: only fills x,y; based on bottom layer of points; assumes surround mask is a regularly shaped frame of columns
     log.debug(f'filling {np.count_nonzero(surround_mask)} pillars for surround')
-    points = grid.points_ref(masked = False)
+    points = grid.points_ref(masked = False).reshape((grid.nk_plus_k_gaps + 1, -1, 3))
     points_view = points[-1, :, :2].reshape((-1, 2))[:(grid.nj + 1) * (grid.ni + 1), :].reshape(
         (grid.nj + 1, grid.ni + 1, 2))
     modified = False
