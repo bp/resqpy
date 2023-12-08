@@ -807,6 +807,7 @@ def test_dataframe_from_trajectory(example_model_and_crs):
                                 length_uom = 'm')
     trajectory.write_hdf5()
     trajectory.create_xml()
+    grid.grid_representation = None  # check that the grid flavour is still identified
     bw = rqw.BlockedWell(model, well_name = well_name, grid = grid, trajectory = trajectory, use_face_centres = True)
 
     # --------- Act ----------

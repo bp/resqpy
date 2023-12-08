@@ -43,6 +43,58 @@ def add_grid_with_missing_points(model, crs, missing_pillar = False):
     return grid
 
 
+def add_grid_with_lots_of_missing_points(model, crs):
+    """Create an irregular grid with a lot of points missing."""
+    grid = grr.Grid(model, title = 'partial')
+    grid.crs = crs
+    grid.crs_uuid = crs.uuid
+    grid.extent_kji = (4, 3, 3)
+    grid.nk, grid.nj, grid.ni = grid.extent_kji
+    grid.grid_is_right_handed = True
+    grid.k_direction_is_down = True
+    grid.pillar_shape = 'straight'
+    grid.has_split_coordinate_lines = False
+    # yapf: disable
+    grid.points_cached = np.array(
+        [[[(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
+          [(np.NaN, np.NaN, np.NaN), (100.0, 1200.0, 5000.0), (200.0, 1200.0, 5000.0), (300.0, 1200.0, 5000.0)],
+          [(np.NaN, np.NaN, np.NaN), (100.0, 1400.0, 5000.0), (200.0, 1400.0, 5000.0), (300.0, 1400.0, 5000.0)],
+          [(np.NaN, np.NaN, np.NaN), (100.0, 1500.0, 5000.0), (200.0, 1500.0, 5000.0), (300.0, 1500.0, 5000.0)]],
+         [[(np.NaN, np.NaN, np.NaN), (110.0, 1005.0, 5020.0), (210.0, 1005.0, 5020.0), (310.0, 1005.0, 5020.0)],
+          [(np.NaN, np.NaN, np.NaN), (110.0, 1205.0, 5020.0), (210.0, 1205.0, 5020.0), (310.0, 1205.0, 5020.0)],
+          [(np.NaN, np.NaN, np.NaN), (110.0, 1405.0, 5020.0), (np.NaN, np.NaN, np.NaN), (310.0, 1405.0, 5020.0)],
+          [(np.NaN, np.NaN, np.NaN), (110.0, 1505.0, 5020.0), (210.0, 1505.0, 5020.0), (310.0, 1505.0, 5020.0)]],
+         [[(np.NaN, np.NaN, np.NaN), (110.0, 1005.0, 5030.0), (210.0, 1005.0, 5030.0), (310.0, 1005.0, 5030.0)],
+          [(np.NaN, np.NaN, np.NaN), (110.0, 1205.0, 5030.0), (210.0, 1205.0, 5030.0), (310.0, 1205.0, 5030.0)],
+          [(np.NaN, np.NaN, np.NaN), (110.0, 1405.0, 5030.0), (210.0, 1405.0, 5030.0), (310.0, 1405.0, 5030.0)],
+          [(np.NaN, np.NaN, np.NaN), (110.0, 1505.0, 5030.0), (210.0, 1505.0, 5030.0), (310.0, 1505.0, 5030.0)]],
+         [[(np.NaN, np.NaN, np.NaN), (120.0, 1010.0, 5040.0), (220.0, 1010.0, 5040.0), (320.0, 1010.0, 5040.0)],
+          [(np.NaN, np.NaN, np.NaN), (120.0, 1210.0, 5040.0), (220.0, 1210.0, 5040.0), (320.0, 1210.0, 5040.0)],
+          [(np.NaN, np.NaN, np.NaN), (120.0, 1410.0, 5040.0), (220.0, 1410.0, 5040.0), (320.0, 1410.0, 5040.0)],
+          [(np.NaN, np.NaN, np.NaN), (120.0, 1510.0, 5040.0), (220.0, 1510.0, 5040.0), (320.0, 1510.0, 5040.0)]],
+         [[(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
+          [(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
+          [(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
+          [(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)]]],
+        dtype = float)
+    # yapf: enable
+    assert grid.points_cached.shape == (5, 4, 4, 3)
+    grid.array_cell_geometry_is_defined = np.ones((4, 3, 3), dtype = bool)
+    grid.array_cell_geometry_is_defined[3, :, :] = False
+    grid.array_cell_geometry_is_defined[0, 0, :] = False
+    grid.array_cell_geometry_is_defined[1, 2, 2] = False
+    grid.array_cell_geometry_is_defined[1, 2, 1] = False
+    grid.array_cell_geometry_is_defined[1, 1, 2] = False
+    grid.array_cell_geometry_is_defined[1, 1, 1] = False
+    grid.array_cell_geometry_is_defined[2, 2, 2] = False
+    grid.array_cell_geometry_is_defined[2, 2, 1] = False
+    grid.array_cell_geometry_is_defined[2, 1, 2] = False
+    grid.array_cell_geometry_is_defined[2, 1, 1] = False
+    grid.write_hdf5_from_caches()
+    grid.create_xml()
+    return grid
+
+
 def test_cell_geometry_is_defined_regular_grid(basic_regular_grid):
     grid = basic_regular_grid
     assert grid.geometry_defined_for_all_cells(cache_array = False)
@@ -146,6 +198,19 @@ def test_set_geometry_is_defined_complete_partial_pillars(example_model_and_crs)
     model = rq.Model(model.epc_file)
     grid = model.grid()
     grid.set_geometry_is_defined(complete_partial_pillars = True)
+    if hasattr(grid, 'array_cell_geometry_is_defined'):
+        assert np.all(grid.array_cell_geometry_is_defined)
+    else:
+        assert grid.geometry_defined_for_all_cells_cached
+
+
+def test_set_geometry_is_defined_complete_partial_pillars_a_lot_missing(example_model_and_crs):
+    model, crs = example_model_and_crs
+    add_grid_with_lots_of_missing_points(model, crs)
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    grid = model.grid()
+    grid.set_geometry_is_defined(complete_all = True)
     if hasattr(grid, 'array_cell_geometry_is_defined'):
         assert np.all(grid.array_cell_geometry_is_defined)
     else:

@@ -348,6 +348,7 @@ def set_geometry_is_defined(grid,
 
     if complete_all:
         cells_update_needed = __complete_all_pillars(cells_update_needed, grid, points, surround_z)
+        cells_update_needed = True
 
     if cells_update_needed:
         # note: each pillar is either fully defined or fully undefined at this point
