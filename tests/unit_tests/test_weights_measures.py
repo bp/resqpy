@@ -276,3 +276,9 @@ def test_nexus_units():
     assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per time') == 'bbl/d'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'volume per time',
                                       english_volume_flavour = 'surface gas rate') == '1000 ft3/d'
+    assert wam.nexus_uom_for_quantity('METRIC', 'rock permeability') == 'mD'
+    assert wam.nexus_uom_for_quantity('METRIC', 'permeability rock') == 'mD'
+    assert wam.nexus_uom_for_quantity('METBAR', 'rock permeability') == 'mD'
+    assert wam.nexus_uom_for_quantity('METBAR', 'permeability rock') == 'mD'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'rock permeability') == 'mD'
+    assert wam.nexus_uom_for_quantity('ENGLISH', 'permeability rock') == 'mD'
