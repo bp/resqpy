@@ -624,7 +624,7 @@ class VerticalPrismGrid(PrismGrid):
             ppc = rqp.selective_version_of_collection(pc,
                                                       continuous = True,
                                                       realization = realization,
-                                                      property_kind = 'permeability rock')
+                                                      property_kind = 'rock permeability')
             assert ppc.number_of_parts() > 0, 'no permeability properties available for vertical prism grid'
 
             # look for a triple permeability; if present, assume to be per face horizontal permeabilities

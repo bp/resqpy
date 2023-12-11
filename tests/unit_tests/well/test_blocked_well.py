@@ -687,7 +687,7 @@ def test_dataframe(example_model_and_crs, ntg_multiplier, length_mode, status):
                                           source_info = 'random',
                                           keyword = 'PERMI',
                                           support_uuid = grid.uuid,
-                                          property_kind = 'permeability rock',
+                                          property_kind = 'rock permeability',
                                           indexable_element = 'cells',
                                           uom = 'Euc')
     ntg_prop = rqp.Property.from_array(model,

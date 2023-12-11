@@ -2754,7 +2754,7 @@ class BlockedWell(BaseResqpy):
             'ANGLE': ('dega', 'plane angle', False),
             'TEMP': (temperature_uom, 'thermodynamic temperature', False),
             'MDCON': length_uom_pk_discrete,
-            'K': ('mD', 'permeability rock', False),
+            'K': ('mD', 'rock permeability', False),
             'DZ': (length_uom, 'cell length', False),  # TODO: add direction facet
             'DTOP': (length_uom, 'depth', False),
             'DBOT': (length_uom, 'depth', False),
