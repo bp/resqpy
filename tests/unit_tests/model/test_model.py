@@ -438,7 +438,7 @@ def test_one_epc_using_multiple_hdf5(tmp_path, example_model_with_prop_ts_rels):
                                              keyword = 'Jittery Permeability',
                                              discrete = False,
                                              uom = 'mD',
-                                             property_kind = 'permeability rock',
+                                             property_kind = 'rock permeability',
                                              facet_type = 'direction',
                                              facet = 'IJK',
                                              realization = i,

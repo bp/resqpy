@@ -78,7 +78,7 @@ expected_facet_type_dict = {
     'property multiplier': (
         'what',
         [
-            'rock volume',  # made up; todo: add rock permeability?
+            'rock volume',  # made up; todo: add rock permeability? (would need multiple facets)
             'pore volume',
             'transmissibility'
         ]),
@@ -159,7 +159,7 @@ def property_kind_and_facet_from_keyword(keyword):
     elif len(lk) >= 2 and lk[0] == 'd' and lk[1] in 'xyz':
         property_kind, facet_type, facet = _pkf_from_keyword_length(lk)
     elif lk[:4] == 'perm' or (len(lk) == 2 and lk[0] == 'k'):  # permeability
-        property_kind = 'permeability rock'
+        property_kind = 'rock permeability'
         (facet_type, facet) = _facet_info_for_dir_ch(lk[-1])
     elif lk[:5] == 'trans' or (len(lk) == 2 and lk[0] == 't'):  # transmissibility (for unit viscosity)
         if 'mult' in lk:

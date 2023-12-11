@@ -1326,7 +1326,7 @@ def test_add_faults(tmp_path):
         perm = np.linspace(start = 20.0, stop = 200.0, num = grid.cell_count()).reshape(tuple(grid.extent_kji))
         rqdm.add_one_grid_property_array(epc,
                                          perm,
-                                         property_kind = 'permeability rock',
+                                         property_kind = 'rock permeability',
                                          grid_uuid = grid.uuid,
                                          title = 'PERM',
                                          uom = 'mD')

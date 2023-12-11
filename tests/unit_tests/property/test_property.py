@@ -47,7 +47,7 @@ def test_property(tmp_path):
                                  facet_type = 'direction',
                                  facet = 'IJ',
                                  support_uuid = grid.uuid,
-                                 property_kind = 'permeability rock',
+                                 property_kind = 'rock permeability',
                                  indexable_element = 'cells',
                                  uom = 'mD')
     a7 = np.random.random(grid.extent_kji) * 100.0
@@ -58,7 +58,7 @@ def test_property(tmp_path):
                                  facet_type = 'direction',
                                  facet = 'K',
                                  support_uuid = grid.uuid,
-                                 property_kind = 'permeability rock',
+                                 property_kind = 'rock permeability',
                                  indexable_element = 'cells',
                                  uom = 'mD')
     a3 = np.random.random((grid.nk + 1, grid.nj + 1, grid.ni + 1))
@@ -1408,33 +1408,33 @@ def test_property_parts_with_facets(example_model_with_properties):
     # Assert
     assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'rock permeability')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', property_kind = 'permeability rock')) == 2
-    assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'permeability rock')) == 0
+    assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'rock permeability')) == 0
     assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = '*')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = 'none')) == 3
     assert rqp.property_part(model,
                              'ContinuousProperty',
-                             property_kind = 'permeability rock',
+                             property_kind = 'rock permeability',
                              facet_type = 'direction',
                              facet = 'I') is not None
     assert rqp.property_part(model, 'ContinuousProperty', facet_type = 'direction', facet = 'I') is not None
     assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
+        model, obj_type = 'Continuous', property_kind = 'rock permeability', facet_type = 'direction',
         facet = 'J') is None
     assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'direction',
+        model, obj_type = 'Continuous', property_kind = 'rock permeability', facet_type = 'direction',
         facet = 'none') is None
     assert rqp.property_part(model,
                              obj_type = 'Continuous',
-                             property_kind = 'permeability rock',
+                             property_kind = 'rock permeability',
                              facet_type = 'direction',
                              facet = 'K') is not None
     assert rqp.property_part(model,
                              'Continuous',
-                             property_kind = 'rock permeability',
+                             property_kind = 'permeability rock',
                              facet_type = 'direction',
                              facet = 'K') is not None
     assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'permeability rock', facet_type = 'what', facet = 'I') is None
+        model, obj_type = 'Continuous', property_kind = 'rock permeability', facet_type = 'what', facet = 'I') is None
 
 
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
@@ -1453,7 +1453,7 @@ def test_basic_static_property_parts_perm_facet(example_model_with_properties, f
                                          source_info = '',
                                          keyword = 'Testfacet',
                                          discrete = False,
-                                         property_kind = 'permeability rock',
+                                         property_kind = 'rock permeability',
                                          facet_type = 'direction',
                                          facet = facet)
     pc.write_hdf5_for_imported_list()
@@ -1491,7 +1491,7 @@ def test_basic_static_property_parts_perm_multiple_facet(example_model_with_prop
                                              source_info = '',
                                              keyword = f'Testfacet_{facet}',
                                              discrete = False,
-                                             property_kind = 'permeability rock',
+                                             property_kind = 'rock permeability',
                                              facet_type = 'direction',
                                              facet = facet)
     pc.write_hdf5_for_imported_list()
@@ -1526,7 +1526,7 @@ def test_basic_static_property_parts_perm_multiple_name(example_model_with_prope
                                              source_info = '',
                                              keyword = name,
                                              discrete = False,
-                                             property_kind = 'rock permeability')
+                                             property_kind = 'permeability rock')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -1558,7 +1558,7 @@ def test_basic_static_property_parts_perm_repeat(example_model_with_properties, 
                                              discrete = False,
                                              facet_type = 'direction',
                                              facet = facet,
-                                             property_kind = 'permeability rock')
+                                             property_kind = 'rock permeability')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -1586,7 +1586,7 @@ def test_basic_static_property_parts_perm_options(example_model_with_properties)
                                          discrete = False,
                                          facet_type = 'direction',
                                          facet = 'J',
-                                         property_kind = 'rock permeability')
+                                         property_kind = 'permeability rock')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -1624,7 +1624,7 @@ def test_basic_static_property_parts_perm_options_ntg(example_model_with_propert
                                          discrete = False,
                                          facet_type = 'direction',
                                          facet = 'J',
-                                         property_kind = 'permeability rock')
+                                         property_kind = 'rock permeability')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -1651,7 +1651,7 @@ def test_basic_static_property_parts_perm_options_ntgsquared(example_model_with_
                                          discrete = False,
                                          facet_type = 'direction',
                                          facet = 'J',
-                                         property_kind = 'permeability rock')
+                                         property_kind = 'rock permeability')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
@@ -2193,7 +2193,7 @@ expected_disc = np.ones(shape = (3, 5, 5))  # for discrete array result is the v
                           (ntgarray, 'NTG', False, 'net to gross ratio', None, None, expected_ntg),
                           (porarray, 'por', False, 'porosity', None, None, expected_por),
                           (satarray, 'sw', False, 'saturation', None, None, expected_sat),
-                          (karray, 'kx', False, 'permeability rock', 'direction', 'I', expected_k),
+                          (karray, 'kx', False, 'rock permeability', 'direction', 'I', expected_k),
                           (discarray, 'zone', True, 'discrete', None, None, expected_disc)])
 def test_coarsening_reservoir_properties(example_fine_coarse_model, inarray, keyword, discrete, kind, facettype, facet,
                                          outarray):

@@ -941,7 +941,7 @@ def _extend_imported_get_fine_collections(other, realization):
     source_sat = rqp_c.selective_version_of_collection(other, realization = realization, property_kind = 'saturation')
     source_perm = rqp_c.selective_version_of_collection(other,
                                                         realization = realization,
-                                                        property_kind = 'permeability rock')
+                                                        property_kind = 'rock permeability')
     # todo: add kh and some other property kinds
 
     return source_rv, source_ntg, source_poro, source_sat, source_perm

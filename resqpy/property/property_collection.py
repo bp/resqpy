@@ -2796,7 +2796,7 @@ class PropertyCollection():
                                     share_perm_parts = False,
                                     perm_k_mode = None,
                                     perm_k_ratio = 1.0):
-        """Returns five parts: net to gross ratio, porosity, permeability rock I, J & K; each returned part may be None.
+        """Returns five parts: net to gross ratio, porosity, rock permeability I, J & K; each returned part may be None.
 
         arguments:
            realization: (int, optional): if present, only properties with the given realization are considered; if None,
@@ -2832,7 +2832,7 @@ class PropertyCollection():
 
         perms = rqp_c.selective_version_of_collection(self,
                                                       realization = realization,
-                                                      property_kind = 'permeability rock')
+                                                      property_kind = 'rock permeability')
         if perms is None or perms.number_of_parts() == 0:
             log.error('no rock permeabilities present')
         else:
@@ -2869,7 +2869,7 @@ class PropertyCollection():
                                     share_perm_parts = False,
                                     perm_k_mode = None,
                                     perm_k_ratio = 1.0):
-        """Returns five uuids: net to gross ratio, porosity, permeability rock I, J & K; each returned uuid may be None.
+        """Returns five uuids: net to gross ratio, porosity, rock permeability I, J & K; each returned uuid may be None.
 
         note:
            see basic_static_property_parts() method for argument documentation

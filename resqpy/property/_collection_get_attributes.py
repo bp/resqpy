@@ -222,7 +222,7 @@ def _get_perm_k_part(collection, perms, perm_k_mode, share_perm_parts, perm_i_pa
                                                         uom = 'mD',
                                                         time_index = None,
                                                         null_value = None,
-                                                        property_kind = 'permeability rock',
+                                                        property_kind = 'rock permeability',
                                                         facet_type = 'direction',
                                                         facet = 'K',
                                                         realization = perms.realization_for_part(perm_i_part),

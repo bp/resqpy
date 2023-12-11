@@ -40,8 +40,8 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
         'length', 'area', 'volume', 'volume per volume', 'permeability rock', 'rock permeability', 'time',
         'thermodynamic temperature', 'mass per volume', 'pressure', 'volume per time'
     ]
-    if quantity == 'rock permeability':
-        quantity = 'permeability rock'
+    if quantity == 'permeability rock':
+        quantity = 'rock permeability'
 
     if (nexus_unit_system == 'ENGLISH' and english_volume_flavour is not None):
         english_volume_flavour = english_volume_flavour.lower()
@@ -68,7 +68,7 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'area': 'm2',
             'volume': 'm3',
             'volume per volume': 'm3/m3',
-            'permeability rock': 'mD',
+            'rock permeability': 'mD',
             'time': 'd',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'kg/m3',
@@ -80,7 +80,7 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'area': 'm2',
             'volume': 'm3',
             'volume per volume': 'm3/m3',
-            'permeability rock': 'mD',
+            'rock permeability': 'mD',
             'time': 'd',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'kg/m3',
@@ -92,7 +92,7 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'area': 'm2',
             'volume': 'm3',
             'volume per volume': 'm3/m3',
-            'permeability rock': 'mD',
+            'rock permeability': 'mD',
             'time': 'd',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'kg/m3',
@@ -104,7 +104,7 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'area': 'cm2',
             'volume': 'cm3',
             'volume per volume': 'cm3/cm3',
-            'permeability rock': 'mD',
+            'rock permeability': 'mD',
             'time': 'h',
             'thermodynamic temperature': 'degC',
             'mass per volume': 'g/cm3',
@@ -116,7 +116,7 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
             'area': 'ft2',
             'volume': 'ft3',  # NB. Nexus expects bbl in some situations!
             'volume per volume': 'ft3/ft3',  # note: some special cases dealt with above
-            'permeability rock': 'mD',
+            'rock permeability': 'mD',
             'time': 'd',
             'thermodynamic temperature': 'degF',
             'mass per volume': 'lbm/ft3',
