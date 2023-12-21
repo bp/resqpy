@@ -209,12 +209,15 @@ class TriMesh(rqs.Mesh):
         if self.origin is not None:
             x -= self.origin[0]
             y -= self.origin[1]
+        mask = np.logical_or(np.isnan(x), np.isnan(y))
+        x[mask] = 0.0
+        y[mask] = 0.0
         jp = y / (self.t_side * root_3_by_2)
-        j = np.floor(jp)
-        mask = np.logical_or(j < 0, j >= self.nj - 1)
+        j = np.floor(jp).astype(int)
+        mask = np.logical_or(mask, np.logical_or(j < 0, j >= self.nj - 1))
         fy = np.where(j % 2, (j + 1).astype(float) - jp, jp - j.astype(float))
         ip = x / self.t_side - 0.5 * fy
-        i = np.floor(ip)
+        i = np.floor(ip).astype(int)
         mask = np.logical_or(mask, np.logical_or(i < 0, i >= self.ni - 1))
         fx = ip - i.astype(float)
         i *= 2
