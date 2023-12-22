@@ -63,7 +63,9 @@ class Trajectory(BaseResqpy):
                  set_tangent_vectors = False,
                  hdf5_source_model = None,
                  originator = None,
-                 extra_metadata = None):
+                 extra_metadata = None,
+                 mds = None,
+                 control_points = None):
         """Creates a new trajectory object and optionally loads it from xml, deviation survey, pandas dataframe, or
 
         ascii file.
@@ -106,6 +108,10 @@ class Trajectory(BaseResqpy):
               ignored if uuid is not None
            extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the trajectory;
               ignored if uuid is not None
+           mds (1D numpy float array, optional): mwasured depths; can be used alongside control_points as an
+              alternative to data_frame
+           control_points (2D numpy float array of shape (N, 3)): control points; can be used alongside mds as
+              an alternative to data_frame
 
         returns:
            the newly created wellbore trajectory object
@@ -163,6 +169,13 @@ class Trajectory(BaseResqpy):
         # Using dictionary mapping to replicate a switch statement. The init_function key is chosen based on the
         # data source and the correct function is then called based on the init_function_dict
         init_function_dict = {
+            'control_points':
+                partial(self.load_from_mds_and_control_points,
+                        mds,
+                        control_points,
+                        md_uom = length_uom,
+                        md_datum = md_datum,
+                        set_tangent_vectors = set_tangent_vectors),
             'deviation_survey':
                 partial(self.compute_from_deviation_survey,
                         method = 'minimum curvature',
@@ -190,7 +203,9 @@ class Trajectory(BaseResqpy):
         chosen_init_method = self.__choose_init_method(data_frame = data_frame,
                                                        cell_kji0_list = cell_kji0_list,
                                                        wellspec_file = wellspec_file,
-                                                       deviation_survey_file = ascii_trajectory_file)
+                                                       deviation_survey_file = ascii_trajectory_file,
+                                                       mds = mds,
+                                                       control_points = control_points)
 
         try:
             init_function_dict[chosen_init_method]()
@@ -215,10 +230,13 @@ class Trajectory(BaseResqpy):
             if self.knot_count > 1:
                 self.set_tangents()
 
-    def __choose_init_method(self, data_frame, cell_kji0_list, wellspec_file, deviation_survey_file):
+    def __choose_init_method(self, data_frame, cell_kji0_list, wellspec_file, deviation_survey_file, mds,
+                             control_points):
         """Choose an init method based on data source."""
 
-        if data_frame is not None:
+        if mds is not None and control_points is not None:
+            return 'control_points'
+        elif data_frame is not None:
             return 'data_frame'
         elif cell_kji0_list is not None:
             return 'cell_kji0_list'
@@ -388,6 +406,40 @@ class Trajectory(BaseResqpy):
             self.md_datum = md_datum
         except Exception:
             log.exception('failed to load trajectory object from data frame')
+
+    def load_from_mds_and_control_points(
+            self,
+            mds,
+            control_points,
+            md_uom = 'm',
+            md_domain = None,
+            md_datum = None,  # MdDatum object
+            title = None,
+            set_tangent_vectors = True):
+        """Load MD and control points (xyz) data directly from numpy arrays."""
+
+        try:
+            self.knot_count = len(mds)
+            assert self.knot_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
+            assert control_points.shape == (self.knot_count, 3)
+            self.line_kind_index = 5  # assume minimum curvature spline
+            self.md_uom = wam.rq_length_unit(md_uom)
+            if title:
+                self.title = title
+            self.start_md = mds[0]
+            self.finish_md = mds[-1]
+            if md_domain is not None:
+                self.md_domain = md_domain
+            self.measured_depths = np.empty(self.knot_count, dtype = float)
+            self.measured_depths[:] = mds
+            self.control_points = np.empty((self.knot_count, 3), dtype = float)
+            self.control_points[:] = control_points
+            self.tangent_vectors = None
+            if set_tangent_vectors:
+                self.set_tangents()
+            self.md_datum = md_datum
+        except Exception:
+            log.exception('failed to load trajectory object from measured depths and control points')
 
     def load_from_cell_list(self, grid, cell_kji0_list, spline_mode = 'cube', md_uom = 'm'):
         """Loads the trajectory object based on the centre points of a list of cells."""
@@ -650,7 +702,8 @@ class Trajectory(BaseResqpy):
                            max_segment_length = None,
                            max_degrees_per_knot = 5.0,
                            use_tangents_if_present = True,
-                           store_tangents_if_calculated = True):
+                           store_tangents_if_calculated = True,
+                           inherit_interpretation = True):
         """Creates and returns a new Trajectory derived as a cubic spline of this trajectory.
 
         arguments:
@@ -717,6 +770,10 @@ class Trajectory(BaseResqpy):
         spline_traj.knot_count = len(spline_traj.control_points)
 
         spline_traj.set_measured_depths()
+
+        if inherit_interpretation:
+            spline_traj.wellbore_interpretation = self.wellbore_interpretation
+            spline_traj.wellbore_feature = self.wellbore_feature
 
         return spline_traj
 
