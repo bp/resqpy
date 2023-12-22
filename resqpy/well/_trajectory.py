@@ -210,7 +210,7 @@ class Trajectory(BaseResqpy):
         try:
             init_function_dict[chosen_init_method]()
         except KeyError:
-            log.warning('invalid combination of input arguments specified')
+            log.error('invalid combination of input arguments specified')
 
         # todo: create from already loaded deviation_survey node (ie. derive xyz points)
 
@@ -406,6 +406,7 @@ class Trajectory(BaseResqpy):
             self.md_datum = md_datum
         except Exception:
             log.exception('failed to load trajectory object from data frame')
+            raise
 
     def load_from_mds_and_control_points(
             self,
@@ -418,28 +419,25 @@ class Trajectory(BaseResqpy):
             set_tangent_vectors = True):
         """Load MD and control points (xyz) data directly from numpy arrays."""
 
-        try:
-            self.knot_count = len(mds)
-            assert self.knot_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
-            assert control_points.shape == (self.knot_count, 3)
-            self.line_kind_index = 5  # assume minimum curvature spline
-            self.md_uom = wam.rq_length_unit(md_uom)
-            if title:
-                self.title = title
-            self.start_md = mds[0]
-            self.finish_md = mds[-1]
-            if md_domain is not None:
-                self.md_domain = md_domain
-            self.measured_depths = np.empty(self.knot_count, dtype = float)
-            self.measured_depths[:] = mds
-            self.control_points = np.empty((self.knot_count, 3), dtype = float)
-            self.control_points[:] = control_points
-            self.tangent_vectors = None
-            if set_tangent_vectors:
-                self.set_tangents()
-            self.md_datum = md_datum
-        except Exception:
-            log.exception('failed to load trajectory object from measured depths and control points')
+        self.knot_count = len(mds)
+        assert self.knot_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
+        assert control_points.shape == (self.knot_count, 3)
+        self.line_kind_index = 5  # assume minimum curvature spline
+        self.md_uom = wam.rq_length_unit(md_uom)
+        if title:
+            self.title = title
+        self.start_md = mds[0]
+        self.finish_md = mds[-1]
+        if md_domain is not None:
+            self.md_domain = md_domain
+        self.measured_depths = np.empty(self.knot_count, dtype = float)
+        self.measured_depths[:] = mds
+        self.control_points = np.empty((self.knot_count, 3), dtype = float)
+        self.control_points[:] = control_points
+        self.tangent_vectors = None
+        if set_tangent_vectors:
+            self.set_tangents()
+        self.md_datum = md_datum
 
     def load_from_cell_list(self, grid, cell_kji0_list, spline_mode = 'cube', md_uom = 'm'):
         """Loads the trajectory object based on the centre points of a list of cells."""
