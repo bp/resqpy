@@ -2194,6 +2194,8 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def _single_uom_xyz(xyz, crs, required_uom):
+        if xyz is None:
+            return None
         xyz = np.array(xyz, dtype = float)
         if crs.xy_units != required_uom:
             xyz[0] = wam.convert_lengths(xyz[0], crs.xy_units, required_uom)
