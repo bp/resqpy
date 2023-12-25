@@ -2239,17 +2239,19 @@ class BlockedWell(BaseResqpy):
                                                                                        cell_kji0 = cell_kji0,
                                                                                        vector = vector,
                                                                                        a_ref_vector = a_ref_vector)
-        else:
-            if angla is None:
-                angla = 0.0
-            if anglv is None:
-                anglv = 0.0
+        if angla is None:
+            angla = 0.0
+        if anglv is None:
+            anglv = 0.0
 
         return anglv, sine_anglv, cosine_anglv, angla, sine_angla, cosine_angla
 
     @staticmethod
     def __get_angla_for_interval(angla, grid, cell_kji0, vector, a_ref_vector):
         """Calculate angla and related trigonometric transforms for the interval."""
+
+        if vector is None:
+            return None, None, None
 
         # project well vector and i-axis vector onto plane defined by normal vector a_ref_vector
         i_axis = grid.interface_vector(cell_kji0, 2)
@@ -2287,6 +2289,9 @@ class BlockedWell(BaseResqpy):
     def __get_anglv_for_interval(anglv, entry_xyz, exit_xyz, ee_crs, traj_z_inc_down, grid, grid_crs, cell_kji0,
                                  anglv_ref, angla_plane_ref):
         """Get anglv and related trigonometric transforms for the interval."""
+
+        if entry_xyz is None or exit_xyz is None:
+            return None, None, None, None, None
 
         entry_xyz, exit_xyz = BlockedWell._single_uom_entry_exit_xyz(entry_xyz, exit_xyz, ee_crs)
         vector = vec.unit_vector(np.array(exit_xyz) - np.array(entry_xyz))  # nominal wellbore vector for interval
