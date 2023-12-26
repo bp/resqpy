@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import math
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from resqpy.grid import RegularGrid
 from resqpy.model import Model
@@ -56,7 +57,7 @@ def test_Trajectory_load_from_xml(example_model_and_crs):
     # Check all attributes were loaded from disk correctly
     assert trajectory2 is not None
     assert trajectory2.well_name == well_name
-    np.testing.assert_almost_equal(trajectory2.measured_depths, mds)
+    assert_almost_equal(trajectory2.measured_depths, mds)
     assert trajectory2.md_datum == datum
     assert trajectory2.md_uom == 'm'
 
@@ -242,27 +243,26 @@ def test_load_from_ascii_file(example_model_and_crs):
             assert trajectory_from_ascii is not None
             trajectory_from_ascii.write_hdf5()
             trajectory_from_ascii.create_xml()
-            np.testing.assert_almost_equal(trajectory_from_ascii.tangent_vectors[0],
-                                           trajectory_from_ascii.tangent_vectors[1])
+            assert_almost_equal(trajectory_from_ascii.tangent_vectors[0], trajectory_from_ascii.tangent_vectors[1])
             vec.isclose(trajectory_from_ascii.tangent_vectors[:, 2], np.array([1, 1]), 0.01)
 
 
 def test_set_tangents(example_model_and_crs):
     # --------- Arrange ----------
     model, crs = example_model_and_crs
-    elevation = 100
+    elevation = 100.0
     # Create a measured depth datum
     datum = resqpy.well.MdDatum(parent_model = model,
                                 crs_uuid = crs.uuid,
                                 location = (0, 0, -elevation),
                                 md_reference = 'kelly bushing')
-    mds = np.array([300, 310, 330, 340])
+    mds = np.array([300, 310, 330, 340], dtype = float)
     zs = mds - elevation
     well_name = 'JubJub'
     source_dataframe = pd.DataFrame({
         'MD': mds,
-        'X': [1, 2, 3, 4],
-        'Y': [1, 2, 3, 4],
+        'X': [1.0, 2, 3, 4],
+        'Y': [1.0, 2, 3, 4],
         'Z': zs,
         'WELL': ['JubJub', 'JubJub', 'JubJub', 'JubJub']
     })
@@ -281,8 +281,9 @@ def test_set_tangents(example_model_and_crs):
     assert trajectory.tangent_vectors is not None
     assert trajectory.tangent_vectors.shape == (trajectory.knot_count, 3)
     assert vec.isclose(trajectory.tangent_vectors[0], trajectory.tangent_vectors[1], tolerance = 0.01)
-    np.testing.assert_equal(vec.azimuths(trajectory.tangent_vectors),
-                            np.array([45, 45, 45, 45]))  # X and Y coordinates follow straight line x = y
+    assert_array_almost_equal(vec.azimuths(trajectory.tangent_vectors),
+                              np.array([45, 45, 45, 45],
+                                       dtype = float))  # X and Y coordinates follow straight line x = y
     for v in trajectory.tangent_vectors:
         assert vec.inclination(v) < 10
 
@@ -355,8 +356,8 @@ def test_splined_trajectory(example_model_and_crs):
 
     # -------- Assert ---------
     assert splined_trajectory is not None
-    np.testing.assert_almost_equal(trajectory.measured_depths[0], splined_trajectory.measured_depths[0], 0)
-    np.testing.assert_almost_equal(trajectory.measured_depths[-1], splined_trajectory.measured_depths[-1], 0)
+    assert_almost_equal(trajectory.measured_depths[0], splined_trajectory.measured_depths[0], 0)
+    assert_almost_equal(trajectory.measured_depths[-1], splined_trajectory.measured_depths[-1], 0)
 
 
 def test_dataframe(example_model_and_crs):
@@ -392,6 +393,31 @@ def test_dataframe(example_model_and_crs):
     pd.testing.assert_frame_equal(source_dataframe.astype(float), returned_dataframe)
 
 
+def test_arrays(example_model_and_crs):
+
+    model, crs = example_model_and_crs
+    elevation = 100.0
+    # Create a measured depth datum
+    datum = resqpy.well.MdDatum(parent_model = model,
+                                crs_uuid = crs.uuid,
+                                location = (123.0, 345.0, -elevation),
+                                md_reference = 'kelly bushing')
+    mds = np.array([300.0, 310.0, 330.0, 340.0], dtype = float)
+    xyz = np.array([(123.0, 345.0, 200.0), (123.0, 345.0, 210.0), (140.0, 345.0, 220.0), (140.0, 353.0, 225.0)],
+                   dtype = float)
+
+    # Create a trajectory from dataframe
+    trajectory = resqpy.well.Trajectory(parent_model = model,
+                                        mds = mds,
+                                        control_points = xyz,
+                                        md_datum = datum,
+                                        length_uom = 'm')
+
+    # check that MDs and control points have been set correctly
+    assert_array_almost_equal(trajectory.measured_depths, mds)
+    assert_array_almost_equal(trajectory.control_points, xyz)
+
+
 def test_trajectory_inclinations(example_model_and_crs):
 
     # --------- Arrange ----------
@@ -419,4 +445,4 @@ def test_trajectory_inclinations(example_model_and_crs):
 
     # -------- Assert ---------
     assert incl.shape == (4,)
-    np.testing.assert_array_almost_equal(incl, (0.0, 45.0, 90.0, 135.0))
+    assert_array_almost_equal(incl, (0.0, 45.0, 90.0, 135.0))
