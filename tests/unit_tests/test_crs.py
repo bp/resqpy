@@ -157,6 +157,7 @@ def test_crs(tmp_path):
                                 rotation_units = 'rad')
     crs_south = rqc.Crs(model, axis_order = 'southing westing')
     crs_south_elevation = rqc.Crs(model, axis_order = 'southing westing', z_inc_down = False)
+    crs_west = rqc.Crs(model, axis_order = 'westing southing')
     crs_time_s = rqc.Crs(model, xy_units = 'm', time_units = 's')
     crs_time_ms = rqc.Crs(model, xy_units = 'm', time_units = 'ms')
     for crs_time in [crs_time_s, crs_time_ms]:
@@ -196,8 +197,8 @@ def test_crs(tmp_path):
 
     # create some xml
     for crs in [
-            crs_default, crs_m, crs_ft, crs_mixed, crs_offset, crs_elevation, crs_rotate, crs_south, crs_time_s,
-            crs_time_ms, crs_offset_rotate, crs_em_a
+            crs_default, crs_m, crs_ft, crs_mixed, crs_offset, crs_elevation, crs_rotate, crs_south, crs_west,
+            crs_time_s, crs_time_ms, crs_offset_rotate, crs_em_a
     ]:
         crs.create_xml()
     model.store_epc()
@@ -245,6 +246,18 @@ def test_crs(tmp_path):
     assert_array_almost_equal(a[..., 0], -b[..., 1])
     assert_array_almost_equal(a[..., 1], -b[..., 0])
     assert_array_almost_equal(a[..., 2], -b[..., 2])
+    a[:] = b
+    crs_south.convert_array_to(crs_west, a)
+    assert_array_almost_equal(a[..., 0], b[..., 1])
+    assert_array_almost_equal(a[..., 1], b[..., 0])
+    assert_array_almost_equal(a[..., 2], b[..., 2])
+    crs_south.convert_array_from(crs_west, a)
+    assert_array_almost_equal(a, b)
+    xyz = crs_south.convert_to(crs_west, a[0])
+    assert len(xyz) == 3
+    assert_array_almost_equal(xyz, (a[0, 1], a[0, 0], a[0, 2]))
+    xyz = crs_south.convert_from(crs_west, xyz)
+    assert_array_almost_equal(xyz, a[0])
 
     # test single point conversion
     p = (456.78, 678.90, -1234.56)
