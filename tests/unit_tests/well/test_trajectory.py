@@ -411,11 +411,24 @@ def test_arrays(example_model_and_crs):
                                         mds = mds,
                                         control_points = xyz,
                                         md_datum = datum,
-                                        length_uom = 'm')
+                                        length_uom = 'm',
+                                        set_tangent_vectors = True)
+    trajectory.write_hdf5()
+    trajectory.create_xml()
+    traj = resqpy.well.Trajectory(model, uuid = trajectory.uuid)
 
     # check that MDs and control points have been set correctly
-    assert_array_almost_equal(trajectory.measured_depths, mds)
-    assert_array_almost_equal(trajectory.control_points, xyz)
+    assert_array_almost_equal(traj.measured_depths, mds)
+    assert_array_almost_equal(traj.control_points, xyz)
+
+    # write to ascii file
+    ascii_file = model.epc_file[:-4] + '_traj.dat'
+    trajectory.write_to_ascii_file(ascii_file)
+
+    # check reload from ascii file
+    traj = resqpy.well.Trajectory(model, ascii_trajectory_file = ascii_file, length_uom = 'm', md_datum = datum)
+    assert_array_almost_equal(traj.measured_depths, mds)
+    assert_array_almost_equal(traj.control_points, xyz)
 
 
 def test_trajectory_inclinations(example_model_and_crs):
