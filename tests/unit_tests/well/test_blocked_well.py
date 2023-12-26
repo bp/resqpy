@@ -11,6 +11,7 @@ import pytest
 
 import resqpy
 import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.property as rqp
 import resqpy.time_series as rqts
@@ -1149,3 +1150,46 @@ def test_temporary_handling_of_badly_formed_grid_indices(example_model_and_crs):
     assert bw2.grid_indices.size == bw2.node_count - 1
     assert bw2.cell_count == bw.cell_count
     assert np.all(bw2.grid_indices[1::2] == -1)
+
+
+def test_single_uom_xyz(example_model_and_crs):
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, use_lattice = False)
+    well_name = 'VERTICAL'
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
+    bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1, 1))
+    crs_mixed = rqc.Crs(model, xy_units = 'dm', z_units = 'ft')
+    crs_mixed.create_xml()
+    xyz = (100.0, 200.0, 3.0)
+    xyz = bw._single_uom_xyz(xyz, crs_mixed, 'm')
+    assert_array_almost_equal(xyz, (10.0, 20.0, 3.0 * 0.3048))
+    xyz = bw._single_uom_xyz(None, crs_mixed, 'm')
+    assert xyz is None
+
+
+def test_get_angles_none(example_model_and_crs):
+    model, crs = example_model_and_crs
+    grid = grr.RegularGrid(model,
+                           extent_kji = (5, 3, 3),
+                           dxyz = (50.0, -50.0, 50.0),
+                           origin = (0.0, 0.0, 100.0),
+                           crs_uuid = crs.uuid,
+                           set_points_cached = True)
+    grid.write_hdf5()
+    grid.create_xml(write_geometry = True, use_lattice = False)
+    well_name = 'VERTICAL'
+    bw = rqw.BlockedWell(model, well_name = well_name, use_face_centres = True, add_wellspec_properties = True)
+    bw.set_for_column(well_name = well_name, grid = grid, col_ji0 = (1, 1))
+    v_tuple = bw._BlockedWell__get_anglv_for_interval(0.0, None, None, crs, True, grid, grid.crs, (0, 1, 1), 'gravity',
+                                                      'gravity')
+    assert len(v_tuple) == 5
+    assert all([a is None for a in v_tuple])
+    a, sin_a, cos_a = bw._BlockedWell__get_angla_for_interval(30.0, grid, (3, 1, 1), None, np.array((1.0, 0.0, 0.0)))
+    assert a is None and sin_a is None and cos_a is None
