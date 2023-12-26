@@ -11,18 +11,150 @@ import resqpy.model as rq
 import resqpy.olio.uuid as bu
 
 
+def test_switch_axes():
+    xy = rqc.switch_axes("easting northing", "easting northing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (2.0, 3.0))
+    xy = rqc.switch_axes("northing easting", "northing easting", 2.0, 3.0)
+    assert_array_almost_equal(xy, (2.0, 3.0))
+    xy = rqc.switch_axes("easting northing", "northing easting", 2.0, 3.0)
+    assert_array_almost_equal(xy, (3.0, 2.0))
+    xy = rqc.switch_axes("northing easting", "easting northing", -2.0, 3.0)
+    assert_array_almost_equal(xy, (3.0, -2.0))
+    xy = rqc.switch_axes("easting northing", "westing southing", 2.0, -3.0)
+    assert_array_almost_equal(xy, (-2.0, 3.0))
+    xy = rqc.switch_axes("westing southing", "easting northing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (-2.0, -3.0))
+    xy = rqc.switch_axes("northing easting", "westing southing", -2.0, -3.0)
+    assert_array_almost_equal(xy, (3.0, 2.0))
+    xy = rqc.switch_axes("westing southing", "northing easting", 2.0, 3.0)
+    assert_array_almost_equal(xy, (-3.0, -2.0))
+    xy = rqc.switch_axes("westing southing", "northing easting", 0.0, 0.0)
+    assert_array_almost_equal(xy, (0.0, 0.0))
+    xy = rqc.switch_axes("westing southing", "westing southing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (2.0, 3.0))
+    xy = rqc.switch_axes("easting northing", "southing westing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (-3.0, -2.0))
+    xy = rqc.switch_axes("southing westing", "northing easting", 2.0, 3.0)
+    assert_array_almost_equal(xy, (-2.0, -3.0))
+    xy = rqc.switch_axes("easting northing", "northing westing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (3.0, -2.0))
+    xy = rqc.switch_axes("northing westing", "easting northing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (-3.0, 2.0))
+    xy = rqc.switch_axes("northing westing", "westing southing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (3.0, -2.0))
+    xy = rqc.switch_axes("westing southing", "northing westing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (-3.0, 2.0))
+    xy = rqc.switch_axes("westing northing", "westing southing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (2.0, -3.0))
+    xy = rqc.switch_axes("westing southing", "westing northing", 2.0, 3.0)
+    assert_array_almost_equal(xy, (2.0, -3.0))
+
+
+def test_switch_axes_array():
+    a = np.array([(2.0, 3.0, 5.0), (7.0, 11.0, 13.0), (17.0, 19.0, 23.0), (29.0, 31.0, 37.0)], dtype = float)
+    xyz = a.copy()
+    rqc.switch_axes_array("easting northing", "easting northing", xyz)
+    assert_array_almost_equal(xyz, a)
+    xyz = a.copy()
+    rqc.switch_axes_array("northing easting", "northing easting", xyz)
+    assert_array_almost_equal(xyz, a)
+    xyz = a.copy()
+    rqc.switch_axes_array("easting northing", "northing easting", xyz)
+    assert_array_almost_equal(xyz[:, 0], a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], a[:, 0])
+    assert_array_almost_equal(xyz[:, 2], a[:, 2])
+    xyz = a.copy()
+    rqc.switch_axes_array("northing easting", "easting northing", xyz)
+    assert_array_almost_equal(xyz[:, 0], a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], a[:, 0])
+    assert_array_almost_equal(xyz[:, 2], a[:, 2])
+    xyz = a.copy()
+    rqc.switch_axes_array("easting northing", "westing southing", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 0])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 1])
+    assert_array_almost_equal(xyz[:, 2], a[:, 2])
+    xyz = a.copy()
+    rqc.switch_axes_array("westing southing", "easting northing", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 0])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 1])
+    xyz = a.copy()
+    rqc.switch_axes_array("northing easting", "westing southing", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 0])
+    xy = a[:, :2].copy()  # check working for xy data only
+    rqc.switch_axes_array("westing southing", "northing easting", xy)
+    assert_array_almost_equal(xy[:, 0], -a[:, 1])
+    assert_array_almost_equal(xy[:, 1], -a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("westing southing", "northing easting", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("westing southing", "westing southing", xyz)
+    assert_array_almost_equal(xyz, a)
+    xyz = a.copy()
+    rqc.switch_axes_array("easting northing", "southing westing", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("southing westing", "northing easting", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 0])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 1])
+    xyz = a.copy()
+    rqc.switch_axes_array("easting northing", "northing westing", xyz)
+    assert_array_almost_equal(xyz[:, 0], a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("northing westing", "easting northing", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("northing westing", "westing southing", xyz)
+    assert_array_almost_equal(xyz[:, 0], a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("westing southing", "northing westing", xyz)
+    assert_array_almost_equal(xyz[:, 0], -a[:, 1])
+    assert_array_almost_equal(xyz[:, 1], a[:, 0])
+    xyz = a.copy()
+    rqc.switch_axes_array("westing northing", "westing southing", xyz)
+    assert_array_almost_equal(xyz[:, 0], a[:, 0])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 1])
+    xyz = a.copy()
+    rqc.switch_axes_array("westing southing", "westing northing", xyz)
+    assert_array_almost_equal(xyz[:, 0], a[:, 0])
+    assert_array_almost_equal(xyz[:, 1], -a[:, 1])
+    # check also working for a single point
+    xyz = np.array((3.0, -5.0, 7.0), dtype = float)
+    rqc.switch_axes_array("northing westing", "westing southing", xyz)
+    assert_array_almost_equal(xyz, (-5.0, -3.0, 7.0))
+
+
 def test_crs(tmp_path):
     # create some coordinate reference systems
     model = rq.new_model(os.path.join(tmp_path, 'crs_test.epc'))
     crs_default = rqc.Crs(model)
     assert crs_default.null_transform
     crs_m = rqc.Crs(model, xy_units = 'm', z_units = 'm')
+    crs_em_a = rqc.Crs(model, xy_units = 'm', z_units = 'm', extra_metadata = {'ab': 'a'})
+    crs_em_b = rqc.Crs(model, xy_units = 'm', z_units = 'm', extra_metadata = {'ab': 'b'})
+    crs_em_c = rqc.Crs(model, xy_units = 'm', z_units = 'm', extra_metadata = {'c': 'a'})
     crs_ft = rqc.Crs(model, xy_units = 'ft', z_units = 'ft')
     crs_mixed = rqc.Crs(model, xy_units = 'm', z_units = 'ft')
     crs_offset = rqc.Crs(model, xy_units = 'm', z_units = 'm', x_offset = 100.0, y_offset = -100.0, z_offset = -50.0)
     assert not crs_offset.null_transform
     crs_elevation = rqc.Crs(model, z_inc_down = False)
     crs_rotate = rqc.Crs(model, rotation = maths.pi / 2.0, rotation_units = 'rad')
+    crs_north_rotate = rqc.Crs(model,
+                               axis_order = 'northing easting',
+                               rotation = maths.pi / 2.0,
+                               rotation_units = 'rad')
+    crs_offset_rotate = rqc.Crs(model,
+                                x_offset = 10.0,
+                                y_offset = -10.0,
+                                z_offset = -5.0,
+                                rotation = maths.pi / 2.0,
+                                rotation_units = 'rad')
     crs_south = rqc.Crs(model, axis_order = 'southing westing')
     crs_south_elevation = rqc.Crs(model, axis_order = 'southing westing', z_inc_down = False)
     crs_time_s = rqc.Crs(model, xy_units = 'm', time_units = 's')
@@ -32,11 +164,16 @@ def test_crs(tmp_path):
 
     # check that distincitveness is recognised
     assert crs_default.is_equivalent(crs_m)
+    assert not crs_em_a == crs_m
+    assert not crs_em_b == crs_em_a
+    assert not crs_em_c == crs_em_a
     assert not crs_m.is_equivalent(crs_ft)
     assert not crs_mixed.is_equivalent(crs_m)
     assert not crs_m.is_equivalent(crs_offset)
+    assert not crs_m.is_equivalent(crs_offset_rotate)
     assert not crs_m.is_equivalent(crs_elevation)
     assert not crs_m.is_equivalent(crs_rotate)
+    assert not crs_m.is_equivalent(crs_north_rotate)
     assert not crs_m.is_equivalent(crs_south)
     assert not crs_time_s.is_equivalent(crs_time_ms)
     assert not crs_south_elevation.z_inc_down
@@ -49,7 +186,9 @@ def test_crs(tmp_path):
     assert not crs_m.is_right_handed_xy()
     assert not crs_m.is_right_handed_xyz()
     assert not crs_elevation.is_right_handed_xy()
+    assert not crs_offset_rotate.is_right_handed_xy()
     assert crs_elevation.is_right_handed_xyz()
+    assert crs_north_rotate.is_right_handed_xy()
     assert crs_south.is_right_handed_xy()
     assert crs_south.is_right_handed_xyz()
     assert crs_south_elevation.is_right_handed_xy()
@@ -58,7 +197,7 @@ def test_crs(tmp_path):
     # create some xml
     for crs in [
             crs_default, crs_m, crs_ft, crs_mixed, crs_offset, crs_elevation, crs_rotate, crs_south, crs_time_s,
-            crs_time_ms
+            crs_time_ms, crs_offset_rotate, crs_em_a
     ]:
         crs.create_xml()
     model.store_epc()
@@ -75,23 +214,37 @@ def test_crs(tmp_path):
 
     b = a.copy()
     crs_m.convert_array_from(crs_default, a)
-    assert np.max(np.abs(b - a)) < 1.0e-6
+    assert_array_almost_equal(a, b)
     a[:] = b
     crs_m.convert_array_to(crs_m, a)
     assert np.all(a == b)
     crs_ft.convert_array_from(crs_m, a)
-    assert np.max(np.abs(b - a * ft_to_m)) < 1.0e-6
+    assert_array_almost_equal(b, a * ft_to_m)
     crs_ft.convert_array_to(crs_m, a)
-    assert np.max(np.abs(b - a)) < 1.0e-6
+    assert_array_almost_equal(a, b)
     a[:] = b
     crs_m.local_to_global_array(a)
-    assert np.max(np.abs(b - a)) < 1.0e-6
+    assert_array_almost_equal(a, b)
     a[:] = b
     crs_offset.global_to_local_array(a)
     a[:, 0] += 100.0
     a[:, 1] -= 100.0
     a[:, 2] -= 50.0
     assert_array_almost_equal(a, b)
+    a[:] = b
+    crs_mixed.convert_array_from(crs_m, a)
+    assert_array_almost_equal(b[..., :2], a[..., :2])
+    assert_array_almost_equal(b[..., 2], a[..., 2] * ft_to_m)
+    a[:] = b
+    crs_south.convert_array_from(crs_m, a)
+    assert_array_almost_equal(a[..., 0], -b[..., 1])
+    assert_array_almost_equal(a[..., 1], -b[..., 0])
+    assert_array_almost_equal(a[..., 2], b[..., 2])
+    a[:] = b
+    crs_south_elevation.convert_array_from(crs_m, a)
+    assert_array_almost_equal(a[..., 0], -b[..., 1])
+    assert_array_almost_equal(a[..., 1], -b[..., 0])
+    assert_array_almost_equal(a[..., 2], -b[..., 2])
 
     # test single point conversion
     p = (456.78, 678.90, -1234.56)

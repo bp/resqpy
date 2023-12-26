@@ -22,6 +22,16 @@ from resqpy.olio.xml_namespaces import curly_namespace as ns
 PointType = Union[Tuple[float, float, float], List[float], np.ndarray]
 
 
+axis_reordering = {  # dictionary mapping from axis ordering to 2x2 transform matrix to convert from key to "easting northing"
+    "easting northing": np.array([(1.0, 0.0), (0.0, 1.0)], dtype = float),
+    "northing easting": np.array([(0.0, 1.0), (1.0, 0.0)], dtype = float),
+    "westing southing": np.array([(-1.0, 0.0), (0.0, -1.0)], dtype = float),
+    "southing westing": np.array([(0.0, -1.0), (-1.0, 0.0)], dtype = float),
+    "northing westing": np.array([(0.0, 1.0), (-1.0, 0.0)], dtype = float),
+    "westing northing": np.array([(-1.0, 0.0), (0.0, 1.0)], dtype = float),
+}
+
+
 class Crs(BaseResqpy):
     """Coordinate reference system object."""
 
@@ -180,10 +190,17 @@ class Crs(BaseResqpy):
 
         return self.is_right_handed_xy() is bool(self.z_inc_down)
 
-    def global_to_local(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
+    def global_to_local(self,
+                        xyz: PointType,
+                        global_z_inc_down: bool = True,
+                        global_axis_order = 'easting northing') -> Tuple[float, float, float]:
         """Convert a single xyz point from the parent coordinate reference system to this one."""
 
         x, y, z = xyz
+        # note: x & y offsets assumed to be in local axis ordering
+        if self.axis_order != global_axis_order:
+            assert global_axis_order in self.valid_axis_orders, f'invalid axis order: {global_axis_order}'
+            x, y = switch_axes(global_axis_order, self.axis_order, x, y)
         if self.x_offset != 0.0:
             x -= self.x_offset
         if self.y_offset != 0.0:
@@ -196,9 +213,16 @@ class Crs(BaseResqpy):
             (x, y, z) = vec.rotate_vector(self.rotation_matrix, np.array((x, y, z)))
         return (x, y, z)
 
-    def global_to_local_array(self, xyz: np.ndarray, global_z_inc_down: bool = True):
+    def global_to_local_array(self,
+                              xyz: np.ndarray,
+                              global_z_inc_down: bool = True,
+                              global_axis_order = 'easting northing'):
         """Convert in situ a numpy array of xyz points from the parent coordinate reference system to this one."""
 
+        # note: x & y offsets assumed to be in local axis ordering
+        if self.axis_order != global_axis_order:
+            assert global_axis_order in self.valid_axis_orders, f'invalid axis order: {global_axis_order}'
+            switch_axes_array(global_axis_order, self.axis_order, xyz)
         if self.x_offset != 0.0:
             xyz[..., 0] -= self.x_offset
         if self.y_offset != 0.0:
@@ -212,7 +236,10 @@ class Crs(BaseResqpy):
             a = vec.rotate_array(self.rotation_matrix, xyz)
             xyz[:] = a
 
-    def local_to_global(self, xyz: PointType, global_z_inc_down: bool = True) -> Tuple[float, float, float]:
+    def local_to_global(self,
+                        xyz: PointType,
+                        global_z_inc_down: bool = True,
+                        global_axis_order = 'easting northing') -> Tuple[float, float, float]:
         """Convert a single xyz point from this coordinate reference system to the parent one."""
 
         if self.rotated:
@@ -227,9 +254,16 @@ class Crs(BaseResqpy):
             z += self.z_offset
         if global_z_inc_down != self.z_inc_down:
             z = -z
+        # note: x & y offsets assumed to be in local axis ordering
+        if self.axis_order != global_axis_order:
+            assert global_axis_order in self.valid_axis_orders, f'invalid axis order: {global_axis_order}'
+            x, y = switch_axes(self.axis_order, global_axis_order, x, y)
         return (x, y, z)
 
-    def local_to_global_array(self, xyz: np.ndarray, global_z_inc_down: bool = True):
+    def local_to_global_array(self,
+                              xyz: np.ndarray,
+                              global_z_inc_down: bool = True,
+                              global_axis_order = 'easting northing'):
         """Convert in situ a numpy array of xyz points from this coordinate reference system to the parent one."""
 
         if self.rotated:
@@ -244,6 +278,10 @@ class Crs(BaseResqpy):
         if global_z_inc_down != self.z_inc_down:
             z = np.negative(xyz[..., 2])
             xyz[..., 2] = z
+        # note: x & y offsets assumed to be in local axis ordering
+        if self.axis_order != global_axis_order:
+            assert global_axis_order in self.valid_axis_orders, f'invalid axis order: {global_axis_order}'
+            switch_axes_array(self.axis_order, global_axis_order, xyz)
 
     def has_same_epsg_code(self, other_crs: 'Crs') -> bool:
         """Returns True if either of the crs'es has a null EPSG code, or if they are the same."""
@@ -495,6 +533,20 @@ class Crs(BaseResqpy):
             self.model.crs_uuid = self.uuid  # mark's as 'main' (ie. first) crs for model
 
         return crs
+
+
+def switch_axes(from_order, to_order, x, y):
+    """Return x, y pair converting from one axis order to another."""
+    matrix = np.matmul(axis_reordering[to_order].T, axis_reordering[from_order])
+    return tuple(np.matmul(np.array((x, y), dtype = float), matrix))
+
+
+def switch_axes_array(from_order, to_order, xyz_array):
+    """Modify x & y values of array in situ, converting from one axis order to another."""
+    matrix = np.matmul(axis_reordering[to_order].T, axis_reordering[from_order])
+    assert xyz_array.shape[-1] in [2, 3]
+    xy = np.matmul(xyz_array[..., :2], matrix)
+    xyz_array[..., :2] = xy
 
 
 def _as_xyz_tuple(xyz):
