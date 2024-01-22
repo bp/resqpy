@@ -124,8 +124,20 @@ class Surface(rqsb.BaseSurface):
             self.set_from_tsurf_file(tsurf_file)
 
     @classmethod
-    def from_tri_mesh(cls, tri_mesh):
-        """Create a Surface from a TriMesh."""
+    def from_tri_mesh(cls, tri_mesh, exclude_nans = False):
+        """Create a Surface from a TriMesh.
+
+        arguments:
+            tri_mesh (TriMesh): the tri mesh for which an equivalent Surface is required
+            exclude_nans (bool, default False): if True, and tri mesh point involving a not-a-number is
+                excluded from the surface points, along with any triangle that has such a point as a vertex
+
+        returns:
+            a new Surface using the points and triangles of the tri mesh
+
+        note:
+            this method does not write hdf5 data nor create xml for the new Surface
+        """
         assert isinstance(tri_mesh, rqs.TriMesh)
         surf = cls(tri_mesh.model,
                    crs_uuid = tri_mesh.crs_uuid,
@@ -133,6 +145,8 @@ class Surface(rqsb.BaseSurface):
                    surface_role = tri_mesh.surface_role,
                    extra_metadata = tri_mesh.extra_metadata if hasattr(tri_mesh, 'extra_metadata') else None)
         t, p = tri_mesh.triangles_and_points()
+        if exclude_nans:
+            t, p = nan_removed_triangles_and_points(t, p)
         surf.set_from_triangles_and_points(t, p)
         surf.represented_interpretation_root = tri_mesh.represented_interpretation_root
         return surf
@@ -1201,6 +1215,28 @@ def distill_triangle_points(t, p):
     assert np.all(triangles_mapped < len(points_distilled))
 
     return triangles_mapped, points_distilled
+
+
+def nan_removed_triangles_and_points(t, p):
+    """Returns a (triangles, points) pair which excludes any point involving a NaN and related triangles."""
+    assert p.ndim == 2 and p.shape[1] == 3
+    assert t.ndim == 2 and t.shape[1] == 3
+    p_nan_mask = np.any(np.isnan(p), axis = 1)
+    p_non_nan_mask = np.logical_not(p_nan_mask)
+    expanded_mask = np.empty(p.shape, dtype = bool)
+    expanded_mask[:] = np.expand_dims(p_non_nan_mask, axis = -1)
+    p_filtered = p[expanded_mask].reshape((-1, 3))
+    t_nan_mask = np.any(p_nan_mask[t], axis = 1)
+    expanded_mask = np.empty(t.shape, dtype = bool)
+    expanded_mask[:] = np.expand_dims(np.logical_not(t_nan_mask), axis = -1)
+    t_filtered = t[expanded_mask].reshape((-1, 3))
+    # modified the filtered t values to adjust for the compression of filtered p
+    p_map = np.full(len(p), -1, dtype = int)
+    p_map[p_non_nan_mask] = np.arange(len(p_filtered), dtype = int)
+    t_filtered = p_map[t_filtered]
+    assert t_filtered.ndim == 2 and t_filtered.shape[1] == 3
+    assert not np.any(t_filtered < 0) and not np.any(t_filtered >= len(p_filtered))
+    return (t_filtered, p_filtered)
 
 
 def _adjust_flange_z(model, crs_uuid, p_xy_e, flange_start_index, t, flange_array, saucer_parameter):
