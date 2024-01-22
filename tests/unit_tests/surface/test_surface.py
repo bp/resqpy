@@ -1110,3 +1110,33 @@ def test_from_downsampling_surface_different_model(example_model_and_crs):
     t, p = surf_reload.triangles_and_points()
     assert p.shape == (50, 3)
     assert np.all(p[:, 2] >= 950.0) and np.all(p[:, 2] <= 1050.0)
+
+
+def test_from_tri_mesh_excluding_nans(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.random.random((4, 5)) * 100.0 + 950.0
+    z_values[0, 0] = np.NaN
+    z_values[2, 2] = np.NaN
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 4,
+                       ni = 5,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'surface with nans')
+    surf_a = rqs.Surface.from_tri_mesh(trim, exclude_nans = False)
+    surf_b = rqs.Surface.from_tri_mesh(trim, exclude_nans = True)
+    t_a, p_a = surf_a.triangles_and_points()
+    t_b, p_b = surf_b.triangles_and_points()
+    assert p_a.shape == (20, 3)
+    assert t_a.shape == (24, 3)
+    assert p_b.shape == (18, 3)
+    assert t_b.shape == (17, 3)
+    assert not np.any(np.isnan(p_b))
+    assert np.all(t_b >= 0)
+    assert np.all(t_b < 18)
+    sample_points = np.array([(50.0, 45.0), (50.0, 130.0), (140.0, 210.0)], dtype = float)
+    z_sample = surf_b.sample_z_at_xy_points(sample_points, multiple_handling = 'any')
+    assert np.isnan(z_sample[0])
+    assert np.isnan(z_sample[2])
+    assert 950.0 <= z_sample[1] <= 1050.0
