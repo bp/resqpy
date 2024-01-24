@@ -77,8 +77,14 @@ class TriMesh(rqs.Mesh):
             xyz *= t_side
             if z_values is not None:
                 xyz[:, :, 2] = z_values
+            o_a = None
             if origin is not None:
-                xyz += np.expand_dims(np.expand_dims(origin, axis = 0), axis = 0)
+                o_a = np.array(origin, dtype = float)
+                assert o_a.shape == (3,)
+                if np.isnan(o_a[2]):
+                    o_a[2] = 0.0
+                assert not np.any(np.isnan(o_a))
+                xyz += np.expand_dims(np.expand_dims(o_a, axis = 0), axis = 0)
             super().__init__(parent_model,
                              mesh_flavour = 'explicit',
                              xyz_values = xyz,
@@ -90,10 +96,7 @@ class TriMesh(rqs.Mesh):
                              originator = originator,
                              extra_metadata = extra_metadata)
             self.t_side = t_side
-            self.origin = None
-            if origin is not None:
-                self.origin = np.array(origin, dtype = float)
-                assert self.origin.shape == (3,)
+            self.origin = o_a
             self.z_uom = z_uom
             self.extra_metadata['t side'] = str(t_side)
             if z_uom:
