@@ -845,7 +845,7 @@ def points_in_polygons(points: np.ndarray, polygons: np.ndarray, points_xlen: in
     return polygons_points
 
 
-@njit
+@njit(parallel = False)
 def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray,
                              points_xlen: int) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within which triangles in 2D.
@@ -860,7 +860,7 @@ def points_in_triangles_njit(points: np.ndarray, triangles: np.ndarray,
             with each row being the triangle number, points y index, and points x index.
     """
     triangles_points = np.empty((0, 3), dtype = numba.int32)
-    for triangle_num in numba.prange(len(triangles)):
+    for triangle_num in range(len(triangles)):
         triangle_points = points_in_triangle(points, triangles[triangle_num], points_xlen, triangle_num)
         triangles_points = np.append(triangles_points, triangle_points, axis = 0)
 
