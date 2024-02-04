@@ -19,9 +19,12 @@ def test_dtype_size(tmp_path):
     hdf5_sizes = []
 
     extent_kji = (1000, 100, 100)
-    a = np.random.random(extent_kji)
+    b = np.random.random(extent_kji)
 
     for filename, dtype in zip(filenames, dtypes):
+        restore = np.seterr(under = 'ignore')
+        a = b.astype(dtype)
+        np.seterr(**restore)
         epc = os.path.join(tmp_path, filename + '.epc')
         h5_file = epc[:-4] + '.h5'
         model = rq.new_model(epc)

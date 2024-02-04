@@ -139,7 +139,7 @@ def test_property(tmp_path):
     assert_array_almost_equal(tr_from_directional[0], tr_from_composite[0])
     assert_array_almost_equal(tr_from_directional[1], tr_from_composite[1])
     assert_array_almost_equal(tr_from_directional[2], tr_from_composite[2])
-    pk = rqp.PropertyKind(model, title = 'facies', parent_property_kind = 'discrete')
+    pk = rqp.PropertyKind(model, title = 'facies', parent_property_kind = 'facies')
     pk.create_xml()
     facies_dict = {0: 'background'}
     for i in range(1, 10):
@@ -347,7 +347,7 @@ def test_constant_array_expansion(tmp_path):
                                  source_info = 'test',
                                  keyword = 'constant pi',
                                  support_uuid = grid.uuid,
-                                 property_kind = 'continuous',
+                                 property_kind = 'continuous test pk',
                                  indexable_element = 'cells',
                                  const_value = maths.pi,
                                  expand_const_arrays = True)
@@ -356,7 +356,7 @@ def test_constant_array_expansion(tmp_path):
                                  source_info = 'test',
                                  keyword = 'constant three',
                                  support_uuid = grid.uuid,
-                                 property_kind = 'discrete',
+                                 property_kind = 'discrete test pk',
                                  discrete = True,
                                  indexable_element = 'cells',
                                  const_value = 3,
@@ -695,8 +695,8 @@ def test_part_str(example_model_with_prop_ts_rels):
     part_facet = pc.parts()[4]
 
     # Act / Assert
-    assert pc.part_str(part_disc) == 'Zone (Zone)'
-    assert pc.part_str(part_disc, include_citation_title = False) == 'Zone'
+    assert pc.part_str(part_disc) == 'zone (Zone)'
+    assert pc.part_str(part_disc, include_citation_title = False) == 'zone'
     assert pc.part_str(part_cont) == 'saturation: water; timestep: 2 (SW)'
     assert pc.part_str(part_cont, include_citation_title = False) == 'saturation: water; timestep: 2'
     assert pc.part_str(part_facet) == 'rock permeability: J (Perm)'
@@ -713,7 +713,7 @@ def test_part_filename(example_model_with_prop_ts_rels):
     part_facet = pc.parts()[4]
 
     # Act / Assert
-    assert pc.part_filename(part_disc) == 'Zone'
+    assert pc.part_filename(part_disc) == 'zone'
     assert pc.part_filename(part_cont) == 'saturation_water_ts_2'
     assert pc.part_filename(part_facet) == 'rock_permeability_J'
 
@@ -1204,7 +1204,7 @@ def test_create_xml_minmax_none(example_model_with_properties):
     p_node = pc.create_xml(ext_uuid = ext_uuid,
                            property_array = array,
                            title = 'Tester',
-                           property_kind = 'continuous',
+                           property_kind = 'continuous test pk',
                            support_uuid = support_uuid,
                            p_uuid = bu.new_uuid(),
                            uom = 'Euc',
@@ -1229,7 +1229,7 @@ def test_create_xml_all_nan_minmax_none(example_model_with_properties):
     p_node = pc.create_xml(ext_uuid = ext_uuid,
                            property_array = array,
                            title = 'all nan',
-                           property_kind = 'continuous',
+                           property_kind = 'continuous test pk',
                            support_uuid = support_uuid,
                            p_uuid = bu.new_uuid(),
                            uom = 'Euc',
@@ -1305,7 +1305,7 @@ def test_create_xml_minmax_none_discrete(example_model_with_properties):
     p_node = pc.create_xml(ext_uuid = ext_uuid,
                            property_array = array,
                            title = 'Tester',
-                           property_kind = 'discrete',
+                           property_kind = 'discrete test pk',
                            support_uuid = support_uuid,
                            p_uuid = bu.new_uuid(),
                            uom = 'Euc',
@@ -1843,12 +1843,11 @@ def test_property_kind_list(example_model_with_properties):
     pc = model.grid().property_collection
 
     # Act
-    element = pc.property_kind_list()
+    element = set(pc.property_kind_list())
 
     # Assert
-    assert element == [
-        'Facies', 'Fault block', 'VPC', 'Zone', 'net to gross ratio', 'porosity', 'rock permeability', 'saturation'
-    ]
+    assert element == set(
+        ['facies', 'fault block', 'vpc', 'zone', 'net to gross ratio', 'porosity', 'rock permeability', 'saturation'])
 
 
 def test_indexable_list(example_model_with_properties):
@@ -2194,7 +2193,7 @@ expected_disc = np.ones(shape = (3, 5, 5))  # for discrete array result is the v
                           (porarray, 'por', False, 'porosity', None, None, expected_por),
                           (satarray, 'sw', False, 'saturation', None, None, expected_sat),
                           (karray, 'kx', False, 'rock permeability', 'direction', 'I', expected_k),
-                          (discarray, 'zone', True, 'discrete', None, None, expected_disc)])
+                          (discarray, 'zone', True, 'zone', None, None, expected_disc)])
 def test_coarsening_reservoir_properties(example_fine_coarse_model, inarray, keyword, discrete, kind, facettype, facet,
                                          outarray):
     # Arrange
@@ -2285,7 +2284,7 @@ def test_import_ab_properties(example_model_with_properties, test_data_path):
     ab_ntg = os.path.join(test_data_path, 'ntg_355.db')
 
     # Act
-    pc.import_ab_property_to_cache(ab_facies, keyword = 'ab_facies', discrete = True, property_kind = 'discrete')
+    pc.import_ab_property_to_cache(ab_facies, keyword = 'ab_facies', discrete = True, property_kind = 'facies')
 
     pc.import_ab_property_to_cache(ab_ntg, keyword = 'ab_ntg', discrete = False, property_kind = 'net to gross ratio')
     pc.write_hdf5_for_imported_list()
@@ -2306,7 +2305,7 @@ def test_import_ab_properties(example_model_with_properties, test_data_path):
     facies = [part for part in pc.parts() if pc.citation_title_for_part(part) == 'ab_facies'][0]
     facies_array = pc.cached_part_array_ref(facies)
     assert not pc.continuous_for_part(facies)
-    assert pc.property_kind_for_part(facies) == 'ab_facies'  # local property kind now automatically generated
+    assert pc.property_kind_for_part(facies) == 'facies'
     assert np.min(facies_array) == 0
     assert np.max(facies_array) == 5
     assert np.sum(facies_array) == 170
@@ -2461,13 +2460,13 @@ def test_mesh_support(example_model_and_crs):
                                          source_info = 'cellarray',
                                          keyword = 'TESTcell',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          indexable_element = 'cells')
     pc.add_cached_array_to_imported_list(node_prop,
                                          source_info = 'nodearray',
                                          keyword = 'TESTnode',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          indexable_element = 'nodes')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2525,7 +2524,7 @@ def test_surface_support(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)
     pc.add_cached_array_to_imported_list(p_prop_float,
                                          source_info = '',
@@ -2580,7 +2579,7 @@ def test_point_set_support(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2622,7 +2621,7 @@ def test_polyline_support_closed(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2664,7 +2663,7 @@ def test_polyline_support_not_closed(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2715,7 +2714,7 @@ def test_polyline_set_support_all_closed(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2766,7 +2765,7 @@ def test_polyline_set_support_all_not_closed(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2817,7 +2816,7 @@ def test_polyline_set_support_most_closed(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
@@ -2868,7 +2867,7 @@ def test_polyline_set_support_most_not_closed(example_model_and_crs):
                                          source_info = '',
                                          keyword = 'test int',
                                          discrete = True,
-                                         property_kind = 'discrete',
+                                         property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()

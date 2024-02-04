@@ -138,7 +138,7 @@ def test_fault_connection_set(tmp_path):
                                 'test',
                                 'juxtapose',
                                 g2_fcs.uuid,
-                                property_kind = 'discrete',
+                                property_kind = 'discrete test pk',
                                 indexable_element = 'faces',
                                 discrete = True,
                                 null_value = -1)

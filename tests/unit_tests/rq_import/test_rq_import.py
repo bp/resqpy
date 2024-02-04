@@ -330,7 +330,7 @@ def test_add_ab_properties(example_model_with_properties, test_data_path):
     ab_facies = os.path.join(test_data_path, 'facies.ib')
     ab_ntg = os.path.join(test_data_path, 'ntg_355.db')
 
-    ab_list = [(ab_facies, 'facies_ab', 'discrete', None, None, None, None, None, True, None),
+    ab_list = [(ab_facies, 'facies_ab', 'facies', None, None, None, None, None, True, None),
                (ab_ntg, 'ntg_ab', 'net to gross ratio', None, None, None, None, None, False, None)]
 
     rqi.add_ab_properties(model.epc_file, ab_property_list = ab_list)

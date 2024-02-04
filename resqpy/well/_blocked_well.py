@@ -2768,7 +2768,7 @@ class BlockedWell(BaseResqpy):
             'SKIN': ('Euc', 'skin', False),
             'WI': ('Euc', 'well connection index', False),
         }
-        return uom_pk_discrete_dict.get(extra, ('Euc', 'continuous', False))
+        return uom_pk_discrete_dict.get(extra, ('Euc', 'generic continuous', False))
 
     def _get_uom_pk_discrete_for_length_based_properties(self, length_uom, extra):
         if length_uom is None or length_uom == 'Euc':

@@ -111,11 +111,10 @@ def example_model_with_properties(tmp_path) -> Model:
     collection.set_grid(grid)
     for array, name, kind, discrete, facet_type, facet in zip(
         [zone_array, vpc_array, fb_array, facies_array, ntg_array, por_array, sat_array, perm_array],
-        ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW', 'Perm'], [
-            'discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation',
-            'rock permeability'
-        ], [True, True, True, True, False, False, False, False],
-        [None, None, None, None, None, None, None, 'direction'], [None, None, None, None, None, None, None, 'I']):
+        ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW', 'Perm'],
+        ['zone', 'vpc', 'fault block', 'facies', 'net to gross ratio', 'porosity', 'saturation', 'rock permeability'],
+        [True, True, True, True, False, False, False, False], [None, None, None, None, None, None, None, 'direction'],
+        [None, None, None, None, None, None, None, 'I']):
         collection.add_cached_array_to_imported_list(cached_array = array,
                                                      source_info = '',
                                                      keyword = name,
