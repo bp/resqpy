@@ -129,11 +129,11 @@ def test_data_path(tmp_path):
    Use a fresh temporary directory for each test.
    """
     master_path = (Path(__file__) / '../../test_data').resolve()
-    data_path = Path(tmp_path) / 'test_data'
+    data_path = os.path.join(tmp_path, 'test_data')
 
     assert master_path.exists()
-    assert not data_path.exists()
-    copytree(str(master_path), str(data_path))
+    assert not os.path.exists(data_path)
+    copytree(str(master_path), data_path)
     return data_path
 
 
@@ -390,7 +390,7 @@ def example_model_with_prop_ts_rels(tmp_path):
     - SW (continuous) (recurrent)
     """
     epc = os.path.join(tmp_path, 'test_model.epc')
-    return model_with_prop_ts_rels(tmp_path)
+    return model_with_prop_ts_rels(epc)
 
 
 @pytest.fixture

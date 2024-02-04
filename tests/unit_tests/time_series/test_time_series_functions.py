@@ -46,8 +46,6 @@ def test_merge_timeseries():
     for idx, timestamp in enumerate(newts2.datetimes()):
         assert timestamp == sortedtimestamps[idx]
 
-    return True
-
 
 def test_time_series_from_list(tmp_path):
     epc = os.path.join(tmp_path, 'ts_list.epc')

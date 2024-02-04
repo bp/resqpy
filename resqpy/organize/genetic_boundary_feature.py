@@ -35,7 +35,7 @@ class GeneticBoundaryFeature(BaseResqpy):
     def _load_from_xml(self):
         self.kind = rqet.find_tag_text(self.root, 'GeneticBoundaryKind')
         age_node = rqet.find_tag(self.root, 'AbsoluteAge')
-        if age_node:
+        if age_node is not None:
             self.absolute_age = (rqet.find_tag_text(age_node, 'DateTime'), rqet.find_tag_int(age_node, 'YearOffset')
                                 )  # year offset may be None
 
