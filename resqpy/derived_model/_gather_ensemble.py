@@ -99,22 +99,20 @@ def gather_ensemble(case_epc_list,
                     assert host_index is not None, 'failed to match grids when gathering ensemble'
                     composite_model.force_consolidation_uuid_equivalence(grid_uuid, host_grid_uuids[host_index])
                     grid_relatives = case_model.parts(related_uuid = grid_uuid)
-                    t_props = 0.0
                     composite_h5_file_name = composite_model.h5_file_name()
                     composite_h5_uuid = composite_model.h5_uuid()
                     case_h5_file_name = case_model.h5_file_name()
                     for part in grid_relatives:
                         if 'Property' in part:
-                            t_p_start = time()
                             composite_model.copy_part_from_other_model(case_model,
                                                                        part,
                                                                        realization = r,
                                                                        consolidate = True,
-                                                                       force = shared_time_series,
+                                                                       force = shared_time_series and
+                                                                       'Categorical' not in part,
                                                                        self_h5_file_name = composite_h5_file_name,
                                                                        h5_uuid = composite_h5_uuid,
                                                                        other_h5_file_name = case_h5_file_name)
-                            t_props += time() - t_p_start
             else:
                 composite_model.copy_all_parts_from_other_model(case_model, realization = r, consolidate = consolidate)
         log.debug(f'case time: {time() - t_r_start:.2f} secs')  # debug

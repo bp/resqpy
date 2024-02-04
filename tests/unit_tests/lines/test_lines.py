@@ -93,7 +93,7 @@ def test_lineset(example_model_and_crs, tmp_path):
 def test_charisma(example_model_and_crs, test_data_path):
     # Set up a PolylineSet
     model, crs = example_model_and_crs
-    charisma_file = test_data_path / "Charisma_example.txt"
+    charisma_file = os.path.join(test_data_path, "Charisma_example.txt")
     lines = resqpy.lines.PolylineSet(parent_model = model, charisma_file = str(charisma_file))
     lines.write_hdf5()
     lines.create_xml()
@@ -112,7 +112,7 @@ def test_charisma(example_model_and_crs, test_data_path):
 def test_irap(example_model_and_crs, test_data_path):
     # Set up a PolylineSet
     model, crs = example_model_and_crs
-    irap_file = test_data_path / "IRAP_example.txt"
+    irap_file = os.path.join(test_data_path, "IRAP_example.txt")
     lines = resqpy.lines.PolylineSet(parent_model = model, irap_file = str(irap_file))
     lines.write_hdf5()
     lines.create_xml()

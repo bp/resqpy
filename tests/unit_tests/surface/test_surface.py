@@ -127,7 +127,7 @@ def test_delaunay_triangulation(example_model_and_crs):
 def test_surface_from_mesh_file(example_model_and_crs, test_data_path, mesh_file, mesh_format, firstval):
     # Arrange
     model, crs = example_model_and_crs
-    in_file = test_data_path / mesh_file
+    in_file = os.path.join(test_data_path, mesh_file)
 
     # Act
     surface = rqs.Surface(parent_model = model, mesh_file = in_file, mesh_format = mesh_format)
@@ -142,7 +142,7 @@ def test_surface_from_mesh_file(example_model_and_crs, test_data_path, mesh_file
 def test_surface_from_tsurf_file(example_model_and_crs, test_data_path):
     # Arrange
     model, crs = example_model_and_crs
-    in_file = test_data_path / 'Surface_tsurf.txt'
+    in_file = os.path.join(test_data_path, 'Surface_tsurf.txt')
 
     # Act
     surface = rqs.Surface(parent_model = model, tsurf_file = in_file, title = 'horizon')
@@ -346,7 +346,7 @@ def test_explicit_mesh(example_model_and_crs):
 def test_mesh_file(example_model_and_crs, test_data_path, flavour, infile, filetype):
     model, crs = example_model_and_crs
 
-    mesh_file = test_data_path / infile
+    mesh_file = os.path.join(test_data_path, infile)
 
     # make an explicit mesh representation
     mesh = rqs.Mesh(model,
@@ -496,7 +496,7 @@ def test_pointset_from_charisma(example_model_and_crs, test_data_path, tmp_path)
     # Set up a PointSet and save to resqml file
     model, crs = example_model_and_crs
 
-    charisma_file = test_data_path / "Charisma_points.txt"
+    charisma_file = os.path.join(test_data_path, "Charisma_points.txt")
     points = rqs.PointSet(parent_model = model, charisma_file = str(charisma_file), crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
@@ -514,7 +514,7 @@ def test_pointset_from_charisma(example_model_and_crs, test_data_path, tmp_path)
     assert coords.shape == (15, 3), f'Expected shape (15,3), not {coords.shape}'
 
     # Test write back to file
-    out_file = str(tmp_path / "Charisma_points_out.txt")
+    out_file = os.path.join(tmp_path, "Charisma_points_out.txt")
     reload.convert_to_charisma(out_file)
 
     assert os.path.exists(out_file)
@@ -527,7 +527,7 @@ def test_pointset_from_charisma(example_model_and_crs, test_data_path, tmp_path)
 def test_pointset_from_irap(example_model_and_crs, test_data_path, tmp_path):
     # Set up a PointSet and save to resqml file
     model, crs = example_model_and_crs
-    irap_file = test_data_path / "IRAP_points.txt"
+    irap_file = os.path.join(test_data_path, "IRAP_points.txt")
     points = rqs.PointSet(parent_model = model, irap_file = str(irap_file), crs_uuid = crs.uuid)
     points.write_hdf5()
     points.create_xml()
@@ -545,7 +545,7 @@ def test_pointset_from_irap(example_model_and_crs, test_data_path, tmp_path):
     assert coords.shape == (9, 3), f'Expected shape (9,3), not {coords.shape}'
 
     # Test write back to file
-    out_file = str(tmp_path / "IRAP_points_out.txt")
+    out_file = os.path.join(tmp_path, "IRAP_points_out.txt")
     reload.convert_to_irap(out_file)
 
     assert os.path.exists(out_file)

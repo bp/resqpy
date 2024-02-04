@@ -129,11 +129,11 @@ def test_data_path(tmp_path):
    Use a fresh temporary directory for each test.
    """
     master_path = (Path(__file__) / '../../test_data').resolve()
-    data_path = Path(tmp_path) / 'test_data'
+    data_path = os.path.join(tmp_path, 'test_data')
 
     assert master_path.exists()
-    assert not data_path.exists()
-    copytree(str(master_path), str(data_path))
+    assert not os.path.exists(data_path)
+    copytree(str(master_path), data_path)
     return data_path
 
 
@@ -225,19 +225,18 @@ def example_model_with_properties(tmp_path):
     return model
 
 
-@pytest.fixture
-def example_model_with_prop_ts_rels(tmp_path):
-    """Model with a grid (5x5x3) and properties.
-   Properties:
-   - Zone (discrete)
-   - VPC (discrete)
-   - Fault block (discrete)
-   - Facies (discrete)
-   - NTG (continuous)
-   - POR (continuous)
-   - SW (continuous) (recurrent)
-   """
-    model_path = str(tmp_path / 'test_model.epc')
+def model_with_prop_ts_rels(model_path):
+    """Model with a grid (5x5x3) and properties, including a time series and string lookup.
+
+    Properties:
+    - Zone (discrete)
+    - VPC (discrete)
+    - Fault block (discrete)
+    - Facies (discrete)
+    - NTG (continuous)
+    - POR (continuous)
+    - SW (continuous) (recurrent)
+    """
     model = Model(create_basics = True, create_hdf5_ext = True, epc_file = model_path, new_epc = True)
     model.store_epc(model.epc_file)
 
@@ -376,6 +375,41 @@ def example_model_with_prop_ts_rels(tmp_path):
     model.store_epc()
 
     return model
+
+
+@pytest.fixture
+def example_model_with_prop_ts_rels(tmp_path):
+    """Model with a grid (5x5x3) and properties, including a time series and string lookup.
+    Properties:
+    - Zone (discrete)
+    - VPC (discrete)
+    - Fault block (discrete)
+    - Facies (discrete)
+    - NTG (continuous)
+    - POR (continuous)
+    - SW (continuous) (recurrent)
+    """
+    epc = os.path.join(tmp_path, 'test_model.epc')
+    return model_with_prop_ts_rels(epc)
+
+
+@pytest.fixture
+def pair_of_models_with_prop_ts_rels(tmp_path):
+    """Model with a grid (5x5x3) and properties, including a time series and string lookup.
+    Properties:
+    - Zone (discrete)
+    - VPC (discrete)
+    - Fault block (discrete)
+    - Facies (discrete)
+    - NTG (continuous)
+    - POR (continuous)
+    - SW (continuous) (recurrent)
+    """
+    epc1 = os.path.join(tmp_path, 'test_model_1.epc')
+    epc2 = os.path.join(tmp_path, 'test_model_2.epc')
+    m1 = model_with_prop_ts_rels(epc1)
+    m2 = model_with_prop_ts_rels(epc2)
+    return (m1, m2)
 
 
 @pytest.fixture
