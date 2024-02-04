@@ -59,7 +59,8 @@ class BlockedWell(BaseResqpy):
                  originator = None,
                  extra_metadata = None,
                  add_wellspec_properties = False,
-                 usa_date_format = False):
+                 usa_date_format = False,
+                 lazy = False):
         """Creates a new blocked well object and optionally loads it from xml, or trajectory, or Nexus wellspec file.
 
         arguments:
@@ -98,6 +99,10 @@ class BlockedWell(BaseResqpy):
               if True, all numerical columns other than the cell indices are added as properties
            usa_date_format (boolean, optional): specifies whether MM/DD/YYYY (True) or DD/MM/YYYY (False) is used 
               in wellspec file
+           lazy (boolean, default False): if True, when initialising from a trajectory, initial penetration must be
+              through a top K face and blocking will cease as soon as the trajectory first leaves the gridded volume;
+              if False, initial entry may be through any external face or a fault face and re-entry will be handled;
+              ignored if not initialising from a trajectory
 
         returns:
            the newly created blocked well object
@@ -165,7 +170,7 @@ class BlockedWell(BaseResqpy):
                                    cellio_file = cellio_file,
                                    column_ji0 = column_ji0)
             if self.trajectory is not None:
-                self.compute_from_trajectory(self.trajectory, grid)
+                self.compute_from_trajectory(self.trajectory, grid, lazy = lazy)
             elif wellspec_file:
                 self.derive_from_wellspec(wellspec_file,
                                           well_name,
@@ -506,7 +511,8 @@ class BlockedWell(BaseResqpy):
                                 grid,
                                 active_only = False,
                                 quad_triangles = True,
-                                use_single_layer_tactics = True):
+                                use_single_layer_tactics = True,
+                                lazy = False):
         """Populate this blocked wellbore object based on intersection of trajectory with cells of grid.
 
         arguments:
@@ -521,6 +527,9 @@ class BlockedWell(BaseResqpy):
               layer (and only after an intersection is thus found is the actual layer identified); this significantly speeds up
               computation but may cause failure in the presence of significantly non-straight pillars and could (rarely) cause
               problems where a fault plane is significantly skewed (non-planar) even if individual pillars are straight
+           lazy (boolean, default False): if True, initial penetration must be through a top K face and blocking
+              will cease as soon as the trajectory first leaves the gridded volume; if False, initial entry may be
+              through any external face or a fault face and re-entry will be handled
 
         note:
            this method is computationally intensive and might take ~30 seconds for a tyipical grid and trajectory; large grids,
@@ -556,7 +565,7 @@ class BlockedWell(BaseResqpy):
                                                        grid,
                                                        active_only = active_only,
                                                        quad_triangles = quad_triangles,
-                                                       lazy = False,
+                                                       lazy = lazy,
                                                        use_single_layer_tactics = use_single_layer_tactics)
         if bw is None:
             log.error(f'failed to generate blocked well from trajectory with uuid: {trajectory.uuid}')

@@ -1084,6 +1084,9 @@ def test_add_grid_properties(example_model_and_crs):
     bw = rqw.BlockedWell(model, well_name = well_name, trajectory = trajectory)
     bw.write_hdf5()
     bw.create_xml()
+    bw_lazy = rqw.BlockedWell(model, well_name = well_name, trajectory = trajectory, lazy = True)
+    bw_lazy.write_hdf5()
+    bw_lazy.create_xml()
     model.store_epc()
 
     uuids_to_add = uuids_nosl + uuids_sl + uuids_static + uuids_static_continuous
@@ -1108,6 +1111,12 @@ def test_add_grid_properties(example_model_and_crs):
 
     assert bw_pc.single_array_ref(property_kind = 'example data continuous').dtype == float
     assert bw_pc.single_array_ref(property_kind = 'example data static').dtype == int
+
+    bw_lazy = rqw.BlockedWell(reload, uuid = bw_lazy.uuid)
+    assert bw_lazy.cell_count == bw.cell_count
+    assert bw_lazy.node_count == bw.node_count
+    assert np.all(bw_lazy.cell_indices == bw.cell_indices)
+    assert_array_almost_equal(bw_lazy.node_mds, bw.node_mds)
 
 
 def test_temporary_handling_of_badly_formed_grid_indices(example_model_and_crs):
