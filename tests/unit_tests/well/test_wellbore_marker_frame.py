@@ -387,7 +387,7 @@ def test_property_collection(example_model_and_crs):
                                          keyword = 'interval prop',
                                          discrete = True,
                                          null_value = -1,
-                                         property_kind = 'discrete',
+                                         property_kind = 'wellbore interval',
                                          indexable_element = 'intervals')
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()

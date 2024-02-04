@@ -1,7 +1,8 @@
 """Cuda based grid surface intersection functionality for GPU processing.
 
-note:
-   use of this module requires accessible GPUs and the corresponding numba.cuda and cupy packages to be installed
+notes:
+   use of this module requires accessible GPUs and the corresponding numba.cuda and cupy packages to be installed;
+   currently excluded from automated unit tests due to those requirements
 """
 
 import logging
@@ -30,27 +31,27 @@ compiler_lock = threading.Lock()  # Numba compiler is not threadsafe
 
 # cuda device wrappers for numpy functions
 @cuda.jit(device = True)
-def _cross_d(A: DeviceNDArray, B: DeviceNDArray, c: DeviceNDArray):
+def _cross_d(A: DeviceNDArray, B: DeviceNDArray, c: DeviceNDArray):  # pragma: no cover
     c[0] = A[1] * B[2] - A[2] * B[1]
     c[1] = A[2] * B[0] - A[0] * B[2]
     c[2] = A[0] * B[1] - A[1] * B[0]
 
 
 @cuda.jit(device = True)
-def _negative_d(v: DeviceNDArray, nv: DeviceNDArray):
+def _negative_d(v: DeviceNDArray, nv: DeviceNDArray):  # pragma: no cover
     for d in range(v.shape[0]):
         nv[d] = numba.float32(-1.0) * v[d]
 
 
 @cuda.jit(device = True)
-def _dot_d(v1: DeviceNDArray, v2: DeviceNDArray, prod: DeviceNDArray):
+def _dot_d(v1: DeviceNDArray, v2: DeviceNDArray, prod: DeviceNDArray):  # pragma: no cover
     prod[0] = 0.0
     for d in range(v1.shape[0]):
         prod[0] += v1[d] * v2[d]
 
 
 @cuda.jit(device = True)
-def _norm_d(v: DeviceNDArray, n: DeviceNDArray):
+def _norm_d(v: DeviceNDArray, n: DeviceNDArray):  # pragma: no cover
     n[0] = 0.0
     for dim in range(3):
         n[0] += v[dim]**2.0
@@ -82,7 +83,7 @@ def project_polygons_to_surfaces(
     offsets: DeviceNDArray,
     return_triangles: bool,
     triangle_per_face: DeviceNDArray,
-):
+):  # pragma: no cover
     """Maps the projection of a 3D polygon to 2D grid surfaces along a given axis, using GPUs.
 
     arguments:
@@ -286,7 +287,7 @@ def project_polygons_to_surfaces(
 
 
 @cuda.jit
-def _diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, start, stop, inc):
+def _diffuse_closed_faces(a, k_faces, j_faces, i_faces, index1, index2, axis, start, stop, inc):  # pragma: no cover
 
     tidx, tidy = cuda.grid(2)
     stridex, stridey = cuda.gridsize(2)
@@ -320,7 +321,7 @@ def bisector_from_faces_cuda(
     k_faces: np.ndarray,
     j_faces: np.ndarray,
     i_faces: np.ndarray,
-) -> Tuple[np.ndarray, bool]:
+) -> Tuple[np.ndarray, bool]:  # pragma: no cover
     """Returns a numpy bool array denoting the bisection of the grid by the face sets, using GPUs.
 
     arguments:
@@ -421,7 +422,7 @@ def find_faces_to_represent_surface_regular_cuda_sgpu(
     i_gpu = 0,
     gcs_list = None,
     props_dict_list = None,
-):
+):  # pragma: no cover
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface, using GPUs.
 
     arguments:
@@ -829,7 +830,7 @@ def find_faces_to_represent_surface_regular_cuda_mgpu(
     feature_type = "fault",
     progress_fn = None,
     return_properties = None,
-):
+):  # pragma: no cover
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface, using GPUs.
 
     arguments:

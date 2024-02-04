@@ -216,7 +216,7 @@ def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_propertie
         prop.prepare_import(cached_array = data,
                             source_info = 'test data',
                             keyword = f'TEST{i}',
-                            property_kind = 'continuous',
+                            property_kind = 'continuous test pk',
                             uom = 'm')
         for entry in prop.collection.imported_list:  # only one entry
             # override internal hdf5 path

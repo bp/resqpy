@@ -202,8 +202,8 @@ def example_model_with_properties(tmp_path):
     for array, name, kind, discrete, facet_type, facet in zip(
         [zone_array, vpc_array, fb_array, facies_array, ntg_array, por_array, sat_array, perm_array, perm_v_array],
         ['Zone', 'VPC', 'Fault block', 'Facies', 'NTG', 'POR', 'SW', 'Perm', 'PERMZ'], [
-            'discrete', 'discrete', 'discrete', 'discrete', 'net to gross ratio', 'porosity', 'saturation',
-            'rock permeability', 'permeability rock'
+            'zone', 'vpc', 'fault block', 'facies', 'net to gross ratio', 'porosity', 'saturation', 'rock permeability',
+            'permeability rock'
         ], [True, True, True, True, False, False, False, False, False],
         [None, None, None, None, None, None, 'what', 'direction', 'direction'],
         [None, None, None, None, None, None, 'water', 'I', 'K']):
@@ -307,7 +307,7 @@ def model_with_prop_ts_rels(model_path):
     # Add non-varying properties
     for array, name, kind, discrete, facet_type, facet in zip([zone_array, vpc_array, fb_array, perm_array],
                                                               ['Zone', 'VPC', 'Fault block', 'Perm'],
-                                                              ['discrete', 'discrete', 'discrete', 'permeability rock'],
+                                                              ['zone', 'vpc', 'fault block', 'permeability rock'],
                                                               [True, True, True, False],
                                                               [None, None, None, 'direction'], [None, None, None, 'J']):
         collection.add_cached_array_to_imported_list(cached_array = array,
@@ -350,7 +350,7 @@ def model_with_prop_ts_rels(model_path):
                                                  uom = None,
                                                  time_index = None,
                                                  null_value = None,
-                                                 property_kind = 'discrete',
+                                                 property_kind = 'facies',
                                                  facet_type = None,
                                                  facet = None,
                                                  realization = None)
