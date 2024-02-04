@@ -652,6 +652,7 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
     relatives = other_model.uuid_rels_dict.get(uuid.int)
     if relatives is None:  # todo: have a think about whether this is indicating a problem
         return
+    # log.debug(f'copying {len(relatives[0])} referenced parts for uuid: {uuid} of type: {model.type_of_uuid(uuid)}')
     for ref_uuid_int in relatives[0]:  # using dict in other model instead of duplicated xml
         if ref_uuid_int in model.uuid_part_dict:
             m_x._create_reciprocal_relationship(model, root_node, 'sourceObject',

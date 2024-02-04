@@ -15,6 +15,7 @@ import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
 import resqpy.olio.fine_coarse as rqfc
 import resqpy.olio.uuid as bu
+import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.surface as rqs
 
@@ -1323,3 +1324,80 @@ def test_gather_ensemble(tmp_path):
     ntg3 = ntg_pc.realizations_array_ref()
     assert ntg3.shape == (3, 3, 20, 20)
     assert np.all(ntg3 >= 0.0) and np.all(ntg3 <= 1.0)
+
+
+def test_gather_ensemble_time_series_and_string_lookup_consolidation(pair_of_models_with_prop_ts_rels):
+
+    m1, m2 = pair_of_models_with_prop_ts_rels
+    assert m1.number_of_parts() == m2.number_of_parts()
+    epc_list = [m.epc_file for m in [m1, m2]]
+    combined_epc = m1.epc_file[:-4] + '_combo.epc'
+
+    rqdm.gather_ensemble(epc_list, combined_epc, create_epc_lookup = False)
+
+    m_combo = rq.Model(combined_epc)
+    assert m_combo.number_of_parts() < 2 * m1.number_of_parts()
+    assert len(m_combo.parts(obj_type = 'LocalDepth3dCrs')) == 1
+    assert len(m_combo.parts(obj_type = 'TimeSeries')) == 1
+    # check that equivalence of string lookups is recognised
+    sl1_uuid = m1.uuid(obj_type = 'StringTableLookup')
+    sl2_uuid = m2.uuid(obj_type = 'StringTableLookup')
+    assert sl1_uuid is not None and sl2_uuid is not None
+    assert not bu.matching_uuids(sl1_uuid, sl2_uuid)
+    sl1 = rqp.StringLookup(m1, uuid = sl1_uuid)
+    sl2 = rqp.StringLookup(m2, uuid = sl2_uuid)
+    assert sl1 == sl2  # will use EQ overide, ie. is_equivalent() method
+    # check count of categorical parts
+    p1_uuids = m1.uuids(obj_type = 'CategoricalProperty')
+    p1_uuids_related = m1.uuids(obj_type = 'CategoricalProperty', related_uuid = sl1_uuid)
+    assert len(p1_uuids) > 0
+    assert len(p1_uuids_related) == len(p1_uuids)
+    p2_uuids = m2.uuids(obj_type = 'CategoricalProperty')
+    p2_uuids_related = m2.uuids(obj_type = 'CategoricalProperty', related_uuid = sl2_uuid)
+    assert len(p2_uuids) > 0
+    assert len(p2_uuids_related) == len(p2_uuids)
+    assert len(p2_uuids) == len(p1_uuids)
+    assert len(m_combo.parts(obj_type = 'StringTableLookup')) == 1
+    sl_combo_uuid = m_combo.uuid(obj_type = 'StringTableLookup')
+    assert sl_combo_uuid is not None
+    if bu.matching_uuids(sl1_uuid, sl_combo_uuid):
+        excluded_uuid = sl2_uuid
+    else:
+        assert bu.matching_uuids(sl2_uuid, sl_combo_uuid)
+        excluded_uuid = sl1_uuid
+    assert m_combo.uuid(uuid = excluded_uuid) is None
+    sl_combo = rqp.StringLookup(m_combo, uuid = sl_combo_uuid)
+    assert sl_combo == sl1
+    # check combo categorical properties
+    p_combo_uuids = m_combo.uuids(obj_type = 'CategoricalProperty')
+    p_combo_uuids_related = m_combo.uuids(obj_type = 'CategoricalProperty', related_uuid = sl_combo_uuid)
+    assert len(p_combo_uuids_related) == len(p_combo_uuids)
+    assert len(p_combo_uuids) == len(p1_uuids) + len(p2_uuids)
+    # check that string lookup reference nodes have been set correctly in combined model
+    for p_combo_uuid in p_combo_uuids:
+        root_node = m_combo.root_for_uuid(p_combo_uuid)
+        assert root_node is not None
+        ref_nodes = rqet.list_obj_references(root_node)
+        sl_found = False
+        for ref_node in ref_nodes:
+            uuid_node = rqet.find_tag(ref_node, 'UUID')
+            if bu.matching_uuids(sl_combo_uuid, uuid_node.text):
+                sl_found = True
+                break
+        assert sl_found, f'string lookup reference to combo uuid not found for property uuid: {p_combo_uuid}'
+
+
+def test_gather_ensemble_unforced_time_series_and_string_lookup_consolidation(pair_of_models_with_prop_ts_rels):
+
+    m1, m2 = pair_of_models_with_prop_ts_rels
+    assert m1.number_of_parts() == m2.number_of_parts()
+    epc_list = [m.epc_file for m in [m1, m2]]
+    combined_epc = m1.epc_file[:-4] + '_combo.epc'
+
+    rqdm.gather_ensemble(epc_list, combined_epc, shared_time_series = False, create_epc_lookup = False)
+
+    m_combo = rq.Model(combined_epc)
+    assert m_combo.number_of_parts() < 2 * m1.number_of_parts()
+    assert len(m_combo.parts(obj_type = 'LocalDepth3dCrs')) == 1
+    assert len(m_combo.parts(obj_type = 'TimeSeries')) == 1
+    assert len(m_combo.parts(obj_type = 'StringTableLookup')) == 1
