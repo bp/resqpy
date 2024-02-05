@@ -1368,6 +1368,19 @@ def test_gather_ensemble_time_series_and_string_lookup_consolidation(pair_of_mod
     assert m_combo.uuid(uuid = excluded_uuid) is None
     sl_combo = rqp.StringLookup(m_combo, uuid = sl_combo_uuid)
     assert sl_combo == sl1
+    # check facies local property kind consolidation
+    facies_pk_1_uuid = m1.uuid(obj_type = 'PropertyKind', title = 'facies')
+    facies_pk_2_uuid = m2.uuid(obj_type = 'PropertyKind', title = 'facies')
+    facies_pk_combo_uuid = m_combo.uuid(obj_type = 'PropertyKind', title = 'facies')
+    assert facies_pk_1_uuid is not None
+    assert facies_pk_2_uuid is not None
+    assert facies_pk_combo_uuid is not None
+    if bu.matching_uuids(facies_pk_1_uuid, facies_pk_combo_uuid):
+        excluded_pk_uuid = facies_pk_2_uuid
+    else:
+        assert bu.matching_uuids(facies_pk_2_uuid, facies_pk_combo_uuid)
+        excluded_pk_uuid = facies_pk_1_uuid
+    assert m_combo.uuid(uuid = excluded_pk_uuid) is None
     # check combo categorical properties
     p_combo_uuids = m_combo.uuids(obj_type = 'CategoricalProperty')
     p_combo_uuids_related = m_combo.uuids(obj_type = 'CategoricalProperty', related_uuid = sl_combo_uuid)
@@ -1385,6 +1398,20 @@ def test_gather_ensemble_time_series_and_string_lookup_consolidation(pair_of_mod
                 sl_found = True
                 break
         assert sl_found, f'string lookup reference to combo uuid not found for property uuid: {p_combo_uuid}'
+    # check locel property kind reference nodes have been set correctly
+    p_combo_uuids = m_combo.uuids(obj_type = 'CategoricalProperty', related_uuid = facies_pk_combo_uuid)
+    assert p_combo_uuids is not None and len(p_combo_uuids) > 0
+    for p_combo_uuid in p_combo_uuids:
+        root_node = m_combo.root_for_uuid(p_combo_uuid)
+        assert root_node is not None
+        ref_nodes = rqet.list_obj_references(root_node)
+        pk_found = False
+        for ref_node in ref_nodes:
+            uuid_node = rqet.find_tag(ref_node, 'UUID')
+            if bu.matching_uuids(facies_pk_combo_uuid, uuid_node.text):
+                pk_found = True
+                break
+        assert pk_found, f'local property kind reference to combo uuid not found for property uuid: {p_combo_uuid}'
 
 
 def test_gather_ensemble_unforced_time_series_and_string_lookup_consolidation(pair_of_models_with_prop_ts_rels):

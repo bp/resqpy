@@ -104,12 +104,15 @@ def gather_ensemble(case_epc_list,
                     case_h5_file_name = case_model.h5_file_name()
                     for part in grid_relatives:
                         if 'Property' in part:
+                            prop_root = case_model.root_for_part(part)
+                            forceable = (
+                                shared_time_series and ('Categorical' not in part) and
+                                rqet.find_nested_tags(prop_root, ['PropertyKind', 'LocalPropertyKind']) is None)
                             composite_model.copy_part_from_other_model(case_model,
                                                                        part,
                                                                        realization = r,
                                                                        consolidate = True,
-                                                                       force = shared_time_series and
-                                                                       'Categorical' not in part,
+                                                                       force = forceable,
                                                                        self_h5_file_name = composite_h5_file_name,
                                                                        h5_uuid = composite_h5_uuid,
                                                                        other_h5_file_name = case_h5_file_name)
