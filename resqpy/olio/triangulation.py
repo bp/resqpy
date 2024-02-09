@@ -741,7 +741,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True, sample = 5
     returns:
        numpy float array of the same shape as points, numpy xyz vector, numpy 3x3 matrix;
        the array being a copy of points rotated in 3D space to minimise the z range;
-       the vector is a normal vector to the original points;
+       the vector is a normal vector to the original points, in +ve z hemisphere;
        the matrix is rotation matrix used to transform the original points to the reoriented points
 
     notes:
@@ -791,6 +791,8 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True, sample = 5
 
     if use_linalg:
         normal_vector = linalg_normal_vector(p)
+        if normal_vector[2] < 0.0:
+            normal_vector = -normal_vector
         incl = vec.inclination(normal_vector)
         if incl == 0.0:
             rotation_m = vec.no_rotation_matrix()
@@ -840,7 +842,12 @@ def make_all_clockwise_xy(t, p):
     return t
 
 
-def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = None, inner_ring = False):
+def surrounding_xy_ring(p,
+                        count = 12,
+                        radial_factor = 10.0,
+                        radial_distance = None,
+                        inner_ring = False,
+                        saucer_angle = None):
     """Creates a set of points surrounding the point set p, in the xy plane.
 
     arguments:
@@ -852,19 +859,27 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
           results in a greater distance in which case that is used
        inner_ring (bool, default False): if True, an inner ring of points, with double count, is created
           at a radius just outside that of the furthest flung original point; this improves triangulation
-          of the extended point set when the original has a non-convex hull
+          of the extended point set when the original has a non-convex hull; radial_distance does not
+          effect the inner ring radius
+       saucer_angle (float, optional): if present, an angle in degrees, between +/- 90 (but less than 90 degrees)
+          being an angle to determine a z offset for the ring(s); a +ve angle results in a -ve z shift
 
     returns:
        numpy float array of shape (N, 3) being xyz points in surrounding ring(s); z is set constant to
-       mean value of z in p; N is count if inner_ring is False, 3 * count if True
+       mean value of z in p (optionally adjussted based on saucer_angle);
+       N is count if inner_ring is False, 3 * count if True
     """
 
-    def make_ring(count, centre, radius):
+    def make_ring(count, centre, radius, saucer_angle):
         delta_theta = 2.0 * maths.pi / float(count)
         ring = np.zeros((count, 3))
         for i in range(count):
             theta = float(i) * delta_theta
             ring[i] = centre + radius * np.array([maths.cos(theta), maths.sin(theta), 0.0])
+        if saucer_angle is not None and not maths.isclose(saucer_angle, 0.0):
+            assert abs(saucer_angle) < 90.0
+            z_shift = radius * maths.tan(vec.radians_from_degrees(saucer_angle))
+            ring[:, 2] -= z_shift
         return ring
 
     assert p.shape[-1] == 3
@@ -875,11 +890,11 @@ def surrounding_xy_ring(p, count = 12, radial_factor = 10.0, radial_distance = N
     radius = p_radius * radial_factor
     if radial_distance is not None and radial_distance > radius:
         radius = radial_distance
-    ring = make_ring(count, centre, radius)
+    ring = make_ring(count, centre, radius, saucer_angle)
     if inner_ring:
         inner_radius = p_radius * 1.1
         assert radius > inner_radius
-        in_ring = make_ring(2 * count, centre, inner_radius)
+        in_ring = make_ring(2 * count, centre, inner_radius, saucer_angle)
         return np.concatenate((in_ring, ring), axis = 0)
     return ring
 

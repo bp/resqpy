@@ -196,7 +196,8 @@ def test_reorient_vertical_pointset_2():
                        [587.86807178, 587.86807178, 157.97005384], [587.86807178, 587.86807178, 232.97005384]],
                       dtype = float)
     p, nv, m = tri.reorient(points, rough = False, use_linalg = True)
-    assert_array_almost_equal(nv, (-1.0 / maths.sqrt(2.0), -1.0 / maths.sqrt(2.0), 0.0), decimal = 2)
+    assert (np.all(np.isclose(nv, (-1.0 / maths.sqrt(2.0), -1.0 / maths.sqrt(2.0), 0.0), atol = 0.01)) or
+            np.all(np.isclose(nv, (1.0 / maths.sqrt(2.0), 1.0 / maths.sqrt(2.0), 0.0), atol = 0.01)))
     np.max(p[:, 2]) - np.min(p[:, 2]) < 5.0
 
 
@@ -356,3 +357,35 @@ def test_surrounding_xy_ring():
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
         assert_array_almost_equal(r[:2 * n], 1.1 * P_radius)  # inner ring points
         assert_array_almost_equal(r[2 * n:], 234.0)
+
+
+def test_surrounding_xy_ring_with_simple_saucer():
+    p = np.array([(-23.0, -23.0, 457.0), (-23.0, 23.0, 457.0), (23.0, 23.0, 457.0), (23.0, -23.0, 457.0)],
+                 dtype = float)
+    P_radius = maths.sqrt(2 * 23.0 * 23.0)
+    for n in (5, 17):
+        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False, saucer_angle = 45.0)
+        assert ring.shape == (n, 3)
+        assert_array_almost_equal(ring[:, 2], 457.0 - 10.0 * P_radius)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r, 10.0 * P_radius)
+    for n in (5, 17):
+        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False, saucer_angle = -45.0)
+        assert ring.shape == (n, 3)
+        assert_array_almost_equal(ring[:, 2], 457.0 + 10.0 * P_radius)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r, 10.0 * P_radius)
+    for n in (6, 11):
+        ring = tri.surrounding_xy_ring(p,
+                                       count = n,
+                                       radial_factor = 2.0,
+                                       radial_distance = 234.0,
+                                       inner_ring = True,
+                                       saucer_angle = 30.0)
+        tan_theta = maths.tan(np.radians(30.0))
+        assert ring.shape == (3 * n, 3)
+        r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
+        assert_array_almost_equal(r[:2 * n], 1.1 * P_radius)  # inner ring points
+        assert_array_almost_equal(r[2 * n:], 234.0)
+        assert_array_almost_equal(ring[:2 * n, 2], 457.0 - 1.1 * P_radius * tan_theta)  # inner ring points
+        assert_array_almost_equal(ring[2 * n:, 2], 457.0 - 234.0 * tan_theta)  # outer ring points

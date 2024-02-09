@@ -66,6 +66,12 @@ def find_faces_to_represent_surface_regular_wrapper(
         is_curtain (bool, default False): if True, only the top layer is intersected with the surface and bisector
            is generated as a column property if requested
         extend_fault_representation (bool, default False): if True, the representation is extended with a flange
+        flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
+           is created at a radius just outside that of the furthest flung original point; this improves
+           triangulation of the extended point set when the original has a non-convex hull
+        saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
+           controlling the shift of flange points in a perpendicular direction away from the fault plane;
+           see notes for how this parameter is interpreted
         retriangulate (bool, default False): if True, a retriangulation is performed even if not needed otherwise
         related_uuid (uuid, optional): if present, the uuid of an object to be softly related to the gcs (and to
            grid bisector and/or shadow property if requested)
@@ -98,7 +104,16 @@ def find_faces_to_represent_surface_regular_wrapper(
     notes:
         Use this function as argument to the multiprocessing function; it will create a new model that is saved
         in a temporary epc file and returns the required values, which are used in the multiprocessing function to
-        recombine all the objects into a single epc file
+        recombine all the objects into a single epc file;
+        the saucer_parameter is interpreted in one of two ways: (1) +ve fractoinal values between zero and one
+        are the fractional distance from the centre of the points to its rim at which to sample the surface for
+        extrapolation and thereby modify the recumbent z of flange points; 0 will usually give shallower and
+        smoother saucer; larger values (must be less than one) will lead to stronger and more erratic saucer
+        shape in flange; (2) other values between -90.0 and 90.0 are interpreted as an angle to apply out of
+        the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
+        +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
+        the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
+        to the average plane of the original points
     """
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
