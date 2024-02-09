@@ -121,6 +121,85 @@ def test_delaunay_triangulation(example_model_and_crs):
         assert_array_almost_equal(np.nanmax(original_points, axis = 0), np.nanmax(points, axis = 0))
 
 
+def test_surface_from_point_set_with_flange_extension(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # number of random points to use
+    n = 20
+
+    # create a set of random points
+    x = np.random.random(n) * 1000.0 - 500.0
+    y = np.random.random(n) * 1000.0 - 500.0
+    z = np.random.random(n)  #  note: triangulation does not use z values
+    p = np.stack((x, y, z), axis = -1)
+    centre = np.mean(p, axis = 0)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps,
+                            reorient = True,
+                            reorient_max_dip = None,
+                            extend_with_flange = True,
+                            flange_point_count = 15,
+                            flange_radial_factor = 10.0,
+                            flange_radial_distance = None,
+                            flange_inner_ring = False,
+                            saucer_parameter = None,
+                            make_clockwise = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    assert surf.node_count() == 35
+
+    # flange extension with simple saucer
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps,
+                            reorient = True,
+                            reorient_max_dip = None,
+                            extend_with_flange = True,
+                            flange_point_count = 12,
+                            flange_radial_factor = 5.0,
+                            flange_radial_distance = None,
+                            flange_inner_ring = False,
+                            saucer_parameter = 45.0,
+                            make_clockwise = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    assert surf.node_count() == 32
+
+    # flange extension with explicit radial distance, inner ring, and simple saucer
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps,
+                            reorient = True,
+                            reorient_max_dip = None,
+                            extend_with_flange = True,
+                            flange_point_count = 12,
+                            flange_radial_factor = 2.0,
+                            flange_radial_distance = 2000.0,
+                            flange_inner_ring = True,
+                            saucer_parameter = -60.0,
+                            make_clockwise = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    assert surf.node_count() == 56
+    _, p = surf.triangles_and_points()
+    min_p = np.min(p, axis = 0)
+    max_p = np.max(p, axis = 0)
+    assert -2010.0 <= min_p[0] - centre[0] < -1900.0
+    assert -2010.0 <= min_p[1] - centre[1] < -1900.0
+    assert 1900.0 < max_p[0] - centre[0] <= 2010.0
+    assert 1900.0 < max_p[1] - centre[1] <= 2010.0
+    assert 0.0 <= min_p[2] <= 1.0
+    assert 3464.0 < max_p[2] < 3465.5
+
+
 @pytest.mark.parametrize('mesh_file,mesh_format,firstval', [('Surface_roxartext.txt', 'rms', 0.4229),
                                                             ('Surface_roxartext.txt', 'roxar', 0.4229),
                                                             ('Surface_zmap.dat', 'zmap', 0.4648)])

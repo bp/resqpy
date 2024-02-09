@@ -503,10 +503,9 @@ class Surface(rqsb.BaseSurface):
            flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
               is created at a radius just outside that of the furthest flung original point; this improves
               triangulation of the extended point set when the original has a non-convex hull
-           saucer_parameter (float, optional): if present, and extend_with_flange is True, then the fractional
-              distance from the centre of the points to its rim at which to sample the surface for extrapolation
-              and thereby modify the recumbent z of flange points; 0 will usually give shallower and smoother saucer;
-              larger values (must be less than one) will lead to stronger and more erratic saucer shape in flange
+           saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
+              controlling the shift of flange points in a perpendicular direction away from the fault plane;
+              see notes for how this parameter is interpreted
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
@@ -520,9 +519,23 @@ class Surface(rqsb.BaseSurface):
            set to False (zero) for non-flange triangles and True (one) for flange triangles; this array is
            suitable for adding as a property for the surface, with indexable element 'faces';
            when flange extension occurs, the radius is the greater of the values determined from the radial factor
-           and radial distance arguments
+           and radial distance arguments;
+           the saucer_parameter is interpreted in one of two ways: (1) +ve fractoinal values between zero and one
+           are the fractional distance from the centre of the points to its rim at which to sample the surface for
+           extrapolation and thereby modify the recumbent z of flange points; 0 will usually give shallower and
+           smoother saucer; larger values (must be less than one) will lead to stronger and more erratic saucer
+           shape in flange; (2) other values between -90.0 and 90.0 are interpreted as an angle to apply out of
+           the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
+           +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
+           the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
+           to the average plane of the original points
         """
 
+        simple_saucer_angle = None
+        if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
+            assert -90.0 < saucer_parameter < 90.0, f'simple saucer angle parameter must be less than 90 degrees; too big: {saucer_parameter}'
+            simple_saucer_angle = saucer_parameter
+            saucer_parameter = None
         assert saucer_parameter is None or 0.0 <= saucer_parameter < 1.0
         crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
         p = point_set.full_array_ref()
@@ -538,12 +551,15 @@ class Surface(rqsb.BaseSurface):
             p_xy = unit_adjusted_p
         if extend_with_flange:
             if not reorient:
+                assert saucer_parameter is None and simple_saucer_angle is None,  \
+                    'flange saucer mode only available with reorientation active'
                 log.warning('extending point set with flange without reorientation')
             flange_points = triangulate.surrounding_xy_ring(p_xy,
                                                             count = flange_point_count,
                                                             radial_factor = flange_radial_factor,
                                                             radial_distance = flange_radial_distance,
-                                                            inner_ring = flange_inner_ring)
+                                                            inner_ring = flange_inner_ring,
+                                                            saucer_angle = simple_saucer_angle)
             p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
             if reorient:
                 # reorient back extenstion points into original p space
@@ -573,7 +589,6 @@ class Surface(rqsb.BaseSurface):
             flange_array = np.zeros(len(t), dtype = bool)
             flange_array[:] = np.where(np.any(t >= len(p), axis = 1), True, False)
             if saucer_parameter is not None:
-                assert reorient, 'flange saucer mode only available with reorientation active'
                 _adjust_flange_z(self.model, self.crs_uuid, p_xy_e, len(p), t, flange_array, saucer_parameter)
                 p_e = vec.rotate_array(reorient_matrix.T, p_xy_e)
         if crs.xy_units != crs.z_units and reorient:
