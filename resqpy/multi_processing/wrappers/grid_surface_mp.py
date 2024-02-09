@@ -42,7 +42,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         extra_metadata = None,
         return_properties: Optional[List[str]] = None,
         raw_bisector: bool = False,
-        use_pack: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
+        use_pack: bool = False,
+        flange_radius = None) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     arguments:
@@ -93,6 +94,8 @@ def find_faces_to_represent_surface_regular_wrapper(
            form without assessing which side is shallower (True values indicate same side as origin cell)
         use_pack (bool, default False): if True, boolean properties will be stored in numpy packed format,
            which will only be readable by resqpy based applications
+        flange_radius (float, optional): the radial distance to use for outer flange extension points; if None,
+           a large value will be calculated from the grid size; units are xy units of grid crs
 
     returns:
         Tuple containing:
@@ -138,7 +141,8 @@ def find_faces_to_represent_surface_regular_wrapper(
             log.warning(f'grid cell length property {prop_title} NOT found')
     grid = grr.RegularGrid(parent_model = model, uuid = grid_uuid)
     assert grid.is_aligned
-    flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
+    if flange_radius is None:
+        flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
     s_model = rq.Model(surface_epc, quiet = True)
     model.copy_uuid_from_other_model(s_model, uuid = str(surface_uuid))
     repr_type = model.type_of_part(model.part(uuid = surface_uuid), strip_obj = True)
@@ -175,6 +179,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                               extend_with_flange = extend_fault_representation,
                                               flange_inner_ring = flange_inner_ring,
                                               saucer_parameter = saucer_parameter,
+                                              flange_radial_factor = 1.2,
                                               flange_radial_distance = flange_radius,
                                               make_clockwise = False)
         extended = extend_fault_representation
