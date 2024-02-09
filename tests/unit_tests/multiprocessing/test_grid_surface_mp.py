@@ -214,8 +214,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
     assert len(uuid_list) == 10
 
 
-def test_find_faces_to_represent_surface_regular_wrapper_flange_radius(small_grid_and_surface:
-                                                                           Tuple[RegularGrid, Surface]):
+def test_find_faces_to_represent_surface_regular_wrapper_flange_radius(small_grid_and_surface: Tuple[RegularGrid,
+                                                                                                     Surface]):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
