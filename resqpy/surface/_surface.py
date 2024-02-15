@@ -539,6 +539,16 @@ class Surface(rqsb.BaseSurface):
         assert saucer_parameter is None or 0.0 <= saucer_parameter < 1.0
         crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
         p = point_set.full_array_ref()
+        assert p.ndim >= 2
+        assert p.shape[-1] == 3
+        p = p.reshape((-1, 3))
+        nan_mask = np.isnan(p)
+        if np.any(nan_mask):
+            row_mask = np.logical_not(np.any(nan_mask, axis = -1))
+            log.warning(
+                f'removing {len(p) - np.count_nonzero(row_mask)} NaN points from point set prior to surface triangulation'
+            )
+            p = p[row_mask, :]
         if crs.xy_units == crs.z_units or not reorient:
             unit_adjusted_p = p
         else:
