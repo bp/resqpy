@@ -200,6 +200,37 @@ def test_surface_from_point_set_with_flange_extension(example_model_and_crs):
     assert 3464.0 < max_p[2] < 3465.5
 
 
+def test_surface_from_point_set_with_nan_removal(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # number of random points to use
+    n = 20
+
+    # create a set of random points
+    x = np.random.random(n) * 1000.0 - 500.0
+    y = np.random.random(n) * 1000.0 - 500.0
+    z = np.random.random(n)  #  note: triangulation does not use z values
+    p = np.stack((x, y, z), axis = -1)
+
+    # set a few nans
+    p[5, 1] = np.NaN
+    p[7, :] = np.NaN
+    p[13, 0] = np.NaN
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps, reorient = True, reorient_max_dip = None, extend_with_flange = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    assert surf.node_count() == 32
+
+
 @pytest.mark.parametrize('mesh_file,mesh_format,firstval', [('Surface_roxartext.txt', 'rms', 0.4229),
                                                             ('Surface_roxartext.txt', 'roxar', 0.4229),
                                                             ('Surface_zmap.dat', 'zmap', 0.4648)])
