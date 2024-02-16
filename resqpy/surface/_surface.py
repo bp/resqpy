@@ -545,8 +545,8 @@ class Surface(rqsb.BaseSurface):
         nan_mask = np.isnan(p)
         if np.any(nan_mask):
             row_mask = np.logical_not(np.any(nan_mask, axis = -1))
-            log.warning(
-                f'removing {len(p) - np.count_nonzero(row_mask)} NaN points from point set prior to surface triangulation'
+            log.info(
+                f'removing {len(p) - np.count_nonzero(row_mask)} NaN points from point set {point_set.title} prior to surface triangulation'
             )
             p = p[row_mask, :]
         if crs.xy_units == crs.z_units or not reorient:
