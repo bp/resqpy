@@ -2,14 +2,14 @@ import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import os
+import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.grid
 import resqpy.grid_surface as rqgs
 import resqpy.lines as rql
-import resqpy.model as rq
-import resqpy.olio.uuid as bu
 import resqpy.organize as rqo
 import resqpy.surface as rqs
-import resqpy.crs as rcrs
+import resqpy.olio.uuid as bu
 import resqpy.olio.triangulation as tri
 
 import pytest
@@ -229,6 +229,45 @@ def test_surface_from_point_set_with_nan_removal(example_model_and_crs):
     surf.write_hdf5()
     surf.create_xml()
     assert surf.node_count() == 17
+
+
+def test_surface_change_crs(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # number of random points to use
+    n = 20
+
+    # create a set of random points
+    x = np.random.random(n) * 1000.0 + 500.0
+    y = np.random.random(n) * 1000.0 + 2500.0
+    z = np.random.random(n) * 100.0 + 1200.0
+    p = np.stack((x, y, z), axis = -1)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # make a new crs
+    crs_ft_xy = rqc.Crs(model, xy_units = 'ft', z_units = 'm')
+    crs_ft_xy.create_xml()
+
+    # change crs
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps, reorient = False, extend_with_flange = False)
+    _, sp = surf.triangles_and_points()
+    assert_array_almost_equal(sp, p)
+    old_uuid = surf.uuid
+    surf.change_crs(crs_ft_xy)
+    surf.write_hdf5()
+    surf.create_xml()
+    assert not bu.matching_uuids(surf.uuid, old_uuid)
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    _, sp = surf.triangles_and_points()
+    assert_array_almost_equal(sp[:, 2], p[:, 2])
+    assert_array_almost_equal(sp[:, :2], p[:, :2] / 0.3048)
+    assert surf.node_count() == 20
 
 
 @pytest.mark.parametrize('mesh_file,mesh_format,firstval', [('Surface_roxartext.txt', 'rms', 0.4229),
@@ -1093,7 +1132,7 @@ def test_adjust_flange_z(example_model_and_crs):
 def test_resampling(tmp_path):
     # Arrange
     model = rq.new_model(f"{tmp_path}\test.epc")
-    crs = rcrs.Crs(model, title = 'crs example')
+    crs = rqc.Crs(model, title = 'crs example')
     crs.create_xml()
     model.store_epc()
 
