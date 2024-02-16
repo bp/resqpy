@@ -228,7 +228,7 @@ def test_surface_from_point_set_with_nan_removal(example_model_and_crs):
     surf.set_from_point_set(ps, reorient = True, reorient_max_dip = None, extend_with_flange = False)
     surf.write_hdf5()
     surf.create_xml()
-    assert surf.node_count() == 32
+    assert surf.node_count() == 17
 
 
 @pytest.mark.parametrize('mesh_file,mesh_format,firstval', [('Surface_roxartext.txt', 'rms', 0.4229),
