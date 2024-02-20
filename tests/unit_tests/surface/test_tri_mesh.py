@@ -65,6 +65,33 @@ def test_tri_mesh_create_save_reload_with_z(example_model_and_crs):
     assert_array_almost_equal(p[..., 2], z_values)
 
 
+def test_tri_mesh_create_save_reload_with_z_and_origin(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(200.0, 250.0, -123.4, 300.0), (400.0, 450.0, 0.0, 500.0), (300.0, 350.0, 1234.5, 400.0)],
+                        dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 10.0,
+                       nj = 3,
+                       ni = 4,
+                       origin = (100.0, 200.0, 2000.0),
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    trim.write_hdf5()
+    trim.create_xml()
+    model.store_epc()
+    epc = model.epc_file
+    trim_uuid = trim.uuid
+    del model, trim
+    model = rq.Model(epc)
+    trim_reloaded = rqs.TriMesh(model, uuid = trim_uuid)
+    assert trim_reloaded is not None
+    assert trim_reloaded.origin is not None
+    assert_array_almost_equal(trim_reloaded.origin, (100.0, 200.0, 0.0))
+    p = trim_reloaded.full_array_ref()
+    assert_array_almost_equal(p[..., 2], z_values + 2000.0)
+
+
 def test_tri_mesh_tji_for_xy(example_model_and_crs):
     model, crs = example_model_and_crs
     trim = rqs.TriMesh(model, t_side = 10.0, nj = 4, ni = 4, crs_uuid = crs.uuid, title = 'test tri mesh')

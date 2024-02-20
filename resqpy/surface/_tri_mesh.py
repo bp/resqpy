@@ -85,6 +85,7 @@ class TriMesh(rqs.Mesh):
                     o_a[2] = 0.0
                 assert not np.any(np.isnan(o_a))
                 xyz += np.expand_dims(np.expand_dims(o_a, axis = 0), axis = 0)
+                o_a[2] = 0.0  # origin z included in explicit values and moved to zero
             super().__init__(parent_model,
                              mesh_flavour = 'explicit',
                              xyz_values = xyz,
@@ -111,7 +112,8 @@ class TriMesh(rqs.Mesh):
             assert t_side is not None, 'triangle side length missing in TriMesh extra metadata'
             self.t_side = float(t_side)
             self.z_uom = self.extra_metadata.get('z uom')
-            origin = self.full_array_ref()[0, 0]
+            origin = np.zeros(3, dtype = float)
+            origin[:2] = self.full_array_ref()[0, 0, :2]
             if np.all(np.isclose(origin, 0.0)):
                 self.origin = None
             else:
