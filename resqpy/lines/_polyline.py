@@ -427,6 +427,10 @@ class Polyline(rql_c._BasePolyline):
         """
 
         assert 0.0 <= fraction <= 1.0
+        if maths.isclose(fraction, 0.0):
+            return self.coordinates[0]
+        if maths.isclose(fraction, 1.0):
+            return (self.coordinates[0] if self.isclosed else self.coordinates[-1])
         target = fraction * self.full_length(in_xy = in_xy)
         seg_index = 0
         while True:
