@@ -232,6 +232,32 @@ def test_point_is_inside_and_balanced_centre_and_segment_normal(example_model_an
     assert_array_almost_equal(line.segment_normal(4), (0.0, -1.0, 0.0))
 
 
+def test_from_trimmed_polyline(example_model_and_crs):
+    # Set up an original Polyline
+    title = 'sigma'
+    model, crs = example_model_and_crs
+    line = resqpy.lines.Polyline(parent_model = model,
+                                 title = title,
+                                 set_crs = crs.uuid,
+                                 is_closed = True,
+                                 set_coord = np.array([(0.0, 0.0, 10.0), (0.0, 3.0, 10.0), (4.0, 3.0, 10.0),
+                                                       (2.0, 1.5, 10.0), (4.0, 0.0, 10.0)]))
+    trimmed = resqpy.lines.Polyline.from_trimmed_polyline(line, 1, 2)
+    assert trimmed is not None
+    assert not trimmed.isclosed
+    assert len(trimmed.coordinates) == 3
+    assert_array_almost_equal(trimmed.coordinates, np.array([(0.0, 3.0, 10.0), (4.0, 3.0, 10.0), (2.0, 1.5, 10.0)]))
+    trimmed = resqpy.lines.Polyline.from_trimmed_polyline(line,
+                                                          1,
+                                                          2,
+                                                          start_xyz = (0.2, 3.3, 10.0),
+                                                          end_xyz = (1.8, 1.2, 10.0))
+    assert trimmed is not None
+    assert not trimmed.isclosed
+    assert len(trimmed.coordinates) == 3
+    assert_array_almost_equal(trimmed.coordinates, np.array([(0.2, 3.3, 10.0), (4.0, 3.0, 10.0), (1.8, 1.2, 10.0)]))
+
+
 def test_segment_methods(example_model_and_crs):
     # Set up an original Polyline
     model, crs = example_model_and_crs
