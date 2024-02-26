@@ -117,3 +117,66 @@ def test_stencil_for_linear_normalized_flat():
                                                   (12, 6, 6, 6, 12, np.nan, np.nan),
                                                   (12, 12, 12, 12, np.nan, np.nan, np.nan)],
                                                  dtype = float)))
+
+
+def test_stencil_for_linear_normalized_non_flat():
+    stencil = rqs.TriMeshStencil.for_linear_normalized(4, normalize_mode_flat = False)
+    assert stencil.n == 4
+    assert_array_almost_equal(stencil.pattern, 2.0 / np.array((5, 40, 120, 360), dtype = float))
+    assert np.all(stencil.start_ip == (-3, -3, -2, -2))
+    assert np.all(stencil.row_length == (7, 6, 5, 4))
+    assert_array_almost_equal(
+        stencil.half_hex, 2.0 / np.array([(360, 120, 40, 5, 40, 120, 360), (360, 120, 40, 40, 120, 360, np.nan),
+                                          (360, 120, 120, 120, 360, np.nan, np.nan),
+                                          (360, 360, 360, 360, np.nan, np.nan, np.nan)],
+                                         dtype = float))
+
+
+def test_stancil_for_gaussian_unnormalized():
+    stencil = rqs.TriMeshStencil.for_gaussian_unnormalized(5, 10.0, sigma = 3.0)
+    assert stencil.n == 5
+    assert np.all(stencil.start_ip == (-4, -4, -3, -3, -2))
+    assert np.all(stencil.row_length == (9, 8, 7, 6, 5))
+    assert_array_almost_equal(stencil.pattern,
+                              np.array((10.0, 7.54839602, 3.24652467, 0.79559509, 0.11108997), dtype = float))
+    assert_array_almost_equal(
+        stencil.half_hex,
+        np.array(
+            [(0.11108997, 0.79559509, 3.24652467, 7.54839602, 10.0, 7.54839602, 3.24652467, 0.79559509, 0.11108997),
+             (0.11108997, 0.79559509, 3.24652467, 7.54839602, 7.54839602, 3.24652467, 0.79559509, 0.11108997, np.nan),
+             (0.11108997, 0.79559509, 3.24652467, 3.24652467, 3.24652467, 0.79559509, 0.11108997, np.nan, np.nan),
+             (0.11108997, 0.79559509, 0.79559509, 0.79559509, 0.79559509, 0.11108997, np.nan, np.nan, np.nan),
+             (0.11108997, 0.11108997, 0.11108997, 0.11108997, 0.11108997, np.nan, np.nan, np.nan, np.nan)],
+            dtype = float))
+
+
+def test_stancil_for_gaussian_normalized_flat():
+    stencil = rqs.TriMeshStencil.for_gaussian_normalized(4, sigma = 2.3, normalize_mode_flat = True)
+    assert stencil.n == 4
+    assert np.all(stencil.start_ip == (-3, -3, -2, -2))
+    assert np.all(stencil.row_length == (7, 6, 5, 4))
+    assert_array_almost_equal(stencil.pattern, np.array((0.09565697, 0.07129881, 0.02952428, 0.00679216),
+                                                        dtype = float))
+    assert_array_almost_equal(
+        stencil.half_hex,
+        np.array([(0.00679216, 0.02952428, 0.07129881, 0.09565697, 0.07129881, 0.02952428, 0.00679216),
+                  (0.00679216, 0.02952428, 0.07129881, 0.07129881, 0.02952428, 0.00679216, np.nan),
+                  (0.00679216, 0.02952428, 0.02952428, 0.02952428, 0.00679216, np.nan, np.nan),
+                  (0.00679216, 0.00679216, 0.00679216, 0.00679216, np.nan, np.nan, np.nan)],
+                 dtype = float))
+
+
+def test_stancil_for_gaussian_normalized_non_flat():
+    stencil = rqs.TriMeshStencil.for_gaussian_normalized(4, sigma = 2.3, normalize_mode_flat = False)
+    assert stencil.n == 4
+    assert np.all(stencil.start_ip == (-3, -3, -2, -2))
+    assert np.all(stencil.row_length == (7, 6, 5, 4))
+    assert_array_almost_equal(stencil.pattern, np.array((0.47058555, 0.05845922, 0.01210375, 0.00185634),
+                                                        dtype = float))
+    assert_array_almost_equal(
+        stencil.half_hex,
+        np.array([(0.00185634, 0.01210375, 0.05845922, 0.47058555, 0.05845922, 0.01210375, 0.00185634),
+                  (0.00185634, 0.01210375, 0.05845922, 0.05845922, 0.01210375, 0.00185634, np.nan),
+                  (0.00185634, 0.01210375, 0.01210375, 0.01210375, 0.00185634, np.nan, np.nan),
+                  (0.00185634, 0.00185634, 0.00185634, 0.00185634, np.nan, np.nan, np.nan)],
+                 dtype = float))
