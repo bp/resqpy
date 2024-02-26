@@ -229,10 +229,9 @@ class TriMeshStencil:
             a new TriMesh in the same model as the input tri mesh, with the stencil having been applied to z values
 
         notes:
-
-            - this method does not write hdf5 nor create xml for the new tri mesh;
-            - if handle_nan is False and border_value is NaN, the result will have NaN values around the edge of
-              the tri mesh, to a depth equivalent to the pattern length
+            this method does not write hdf5 nor create xml for the new tri mesh;
+            if handle_nan is False and border_value is NaN, the result will have NaN values around the edge of
+            the tri mesh, to a depth equivalent to the pattern length
         """
 
         log.info(f'applying stencil to tri mesh: {tri_mesh.title}')
