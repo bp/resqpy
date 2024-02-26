@@ -14,19 +14,35 @@ root_3_by_2 = root_3 / 2.0
 
 
 class TriMeshStencil:
-    """Class holding a temporary regular hexagonal symmetrical stencil for use with TriMesh objects."""
+    """Class holding a temporary regular hexagonal symmetrical stencil for use with TriMesh objects.
 
-    def __init__(self, pattern, normalise = None):
+    note:
+       this class does not currently include store and load methods, as the stencil is regarded as a temporary
+       disposable object
+    """
+
+    # at present the internal representation holds a half hexagon; if there is need for non-symmetric stencils
+    # in future then this representation will change to a full hexagon
+
+    def __init__(self, pattern, normalize = None, normalize_mode_flat = True):
         """Initialises a TriMeshStencil object from xml, or from arguments.
 
         arguments:
             pattern (1D numpy float array): values for one radial arm of the stencil (first value is centre)
-            normalise (non zero float, optional): if present, pattern values are normalised to sum to this value,
-                then ring values (away from centre) are further decreased by a factor of the number of elements
-                in the ring; hence the full stencil values will sum to the normalise value
+            normalize (non zero float, optional): if present, stencil values are normalized to sum to this value;
+                if None, no normalization is applied; set to one for smoothing; see also normalize_mode_flat argument
+            normalize_mode_flat (bool, default True): if True (and normalize is not None), then ring values
+                in the stencil preserve relative weights of unnormalized pattern values; if False, weights of
+                ring values (away from centre) are decreased by a factor of the number of elements in the ring;
+                in either case, the final normalization is such that the sum of all stencil elements is the
+                value of the normalize argument
 
         returns:
-           the newly created TriMeshStencil object
+            the newly created TriMeshStencil object
+
+        note:
+            the area of inflence of the stencil is hexagonal in shape with a half-axis length equal to the t_side
+            length of a target tri mesh multiplied by (n - 1) where n is the length of the pattern
         """
 
         self.n = None  # length of pattern, including central element
@@ -43,13 +59,20 @@ class TriMeshStencil:
 
         self.n = len(pattern)
 
-        if normalise is not None:
-            assert not maths.isclose(normalise, 0.0), 'calling code must scale to stencil pattern to sum to zero'
-            t = np.sum(pattern)
-            assert not maths.isclose(t, 0.0), 'pattern sums to zero and cannot be normalised to another value'
-            pattern *= normalise / t
-            for i in range(1, self.n):
-                pattern[i] /= float(6 * i)
+        if normalize is not None:
+            assert not maths.isclose(normalize, 0.0), 'calling code must scale to stencil pattern to sum to zero'
+            if normalize_mode_flat:
+                t = pattern[0]
+                for i in range(1, self.n):
+                    t += 6 * i * pattern[i]
+                assert not maths.isclose(t, 0.0), 'hex pattern sums to zero and cannot be normalized to another value'
+                pattern *= normalize / t
+            else:
+                t = np.sum(pattern)
+                assert not maths.isclose(t, 0.0), 'pattern sums to zero and cannot be normalized to another value'
+                pattern *= normalize / t
+                for i in range(1, self.n):
+                    pattern[i] /= float(6 * i)
 
         self.pattern = pattern
 
@@ -75,29 +98,119 @@ class TriMeshStencil:
         for jp in range(self.n):
             self.half_hex[jp, :self.row_length[jp]] = half_hex[jp][2]
 
-    def log(self, log_level = logging.DEBUG):
-        """Log stencil."""
+    @classmethod
+    def for_constant_normalized(cls, n, normalize_mode_flat = True):
+        """Create a tri mesh stencil with a constant pattern, then normalized to sum to one.
 
-        half_lines = []
-        for jp in range(self.n):
-            padding = self.n + self.start_ip[jp]
-            line = ''
-            if jp % 2:
-                line += '    '
-            line += '   x   ' * padding
-            for v in self.half_hex[jp, :self.row_length[jp]]:
-                line += f' {v:6.3f}'
-            line += '   x   ' * padding
-            half_lines.append(line)
-        for i in range(1, self.n):
-            log.log(log_level, half_lines[-i])
-            log.log(log_level, '')
-        for i in range(self.n):
-            log.log(log_level, half_lines[i])
-            if i < self.n - 1:
-                log.log(log_level, '')
+        arguments:
+            n (int); the length of pattern (ie. half width of hexagon); must be at least 2
 
-    def apply(self, tri_mesh, handle_nan = True, title = None):
+        returns:
+           the newly created TriMeshStencil object
+        """
+
+        assert n > 1, 'tri mesh stancil pattern must contain at least two elements'
+        pattern = np.ones(n, dtype = float)
+        stencil = cls(pattern, normalize = 1.0, normalize_mode_flat = normalize_mode_flat)
+
+        return stencil
+
+    @classmethod
+    def for_constant_unnormalized(cls, n, c):
+        """Create a tri mesh stencil with a constant pattern, without normalization.
+
+        arguments:
+            n (int); the length of pattern (ie. half width of hexagon); must be at least 2
+            c (float): the value to use throughout the stencil
+
+        returns:
+           the newly created TriMeshStencil object
+        """
+
+        assert n > 1, 'tri mesh stancil pattern must contain at least two elements'
+        pattern = np.full(n, c, dtype = float)
+        stencil = cls(pattern, normalize = None)
+
+        return stencil
+
+    @classmethod
+    def for_linear_normalized(cls, n, normalize_mode_flat = True):
+        """Create a tri mesh stencil with a linearly decreasing pattern, then normalized to sum to one.
+
+        arguments:
+            n (int); the length of pattern (ie. half width of hexagon); must be at least 2
+
+        returns:
+           the newly created TriMeshStencil object
+        """
+
+        assert n > 1, 'tri mesh stancil pattern must contain at least two elements'
+        pattern = np.flip((np.arange(n, dtype = int) + 1).astype(float))
+        stencil = cls(pattern, normalize = 1.0, normalize_mode_flat = normalize_mode_flat)
+
+        return stencil
+
+    @classmethod
+    def for_linear_unnormalized(cls, n, centre, outer):
+        """Create a tri mesh stencil with a linearly decreasing pattern, without normalization.
+
+        arguments:
+            n (int); the length of pattern (ie. half width of hexagon); must be at least 2
+            centre (float): the value of the pattern at the centre of the stencil
+            outer (float): the value of the pattern in the outer ring of the stencil
+
+        returns:
+           the newly created TriMeshStencil object
+        """
+
+        assert n > 1, 'tri mesh stancil pattern must contain at least two elements'
+        pattern = np.flip(np.arange(n, dtype = int).astype(float) * (centre - outer) / float(n - 1) + outer)
+        stencil = cls(pattern, normalize = None)
+
+        return stencil
+
+    @classmethod
+    def for_gaussian_normalized(cls, n, sigma = 3.0, normalize_mode_flat = True):
+        """Create a tri mesh stencil with a gaussian pattern, then normalized to sum to one.
+
+        arguments:
+            n (int); the length of pattern (ie. half width of hexagon); must be at least 2
+            sigma (float, default 3.0): the number of standard deviations at the outermost ring of the stencil
+
+        returns:
+           the newly created TriMeshStencil object
+        """
+
+        assert n > 1, 'tri mesh stancil pattern must contain at least two elements'
+        assert sigma > 0.0, 'number of standard deviations in pattern must be positive'
+        pattern = _gaussian_pattern(n, sigma)
+        stencil = cls(pattern, normalize = 1.0, normalize_mode_flat = normalize_mode_flat)
+
+        return stencil
+
+    @classmethod
+    def for_gaussian_unnormalized(cls, n, centre, sigma = 3.0):
+        """Create a tri mesh stencil with a gaussian pattern, without normalization.
+
+        arguments:
+            n (int); the length of pattern (ie. half width of hexagon); must be at least 2
+            centre (float): the value at the centre of the stencil (peak amplitude)
+            sigma (float, default 3.0): the number of standard deviations at the outermost ring of the stencil
+
+        returns:
+           the newly created TriMeshStencil object
+        """
+
+        assert n > 1, 'tri mesh stancil pattern must contain at least two elements'
+        assert sigma > 0.0, 'number of standard deviations in pattern must be positive'
+        pattern = centre * _gaussian_pattern(n, sigma)
+        stencil = cls(pattern, normalize = None)
+
+        return stencil
+
+    # todo: class methods for mexican hat
+
+    def apply(self, tri_mesh, handle_nan = True, border_value = np.NaN, preserve_nan = False, title = None):
         """Return a new tri mesh with z values generated by applying the stencil to z values of an existing tri mesh.
 
         arguments:
@@ -105,14 +218,21 @@ class TriMeshStencil:
             handle_nan (bool, default True): if True, a smoothing style weighted average of non-NaN values is used;
                 if False, a simple convolution is applied and will yield NaN where any input within the stencil area
                 is NaN
+            border_value (float, default NaN): the pre-filled value for an extended bprder around the input tri mesh;
+                set to zero if partial convolution values are wanted at the edge of the tri mesh when handle_nan is False
+            preserve_nan (bool, default False): if True (and handle_nan is True) then where the input tri mesh has
+                a NaN z value, the output will also have NaN; if False, patches of NaNs smaller than the stencil
+                will get 'smoothed over', ie. filled in, if handle_nan is True
             title (str, optional): the title to use for the new tri mesh; if None, title is inherited from input
 
         returns:
             a new TriMesh in the same model as the input tri mesh, with the stencil having been applied to z values
 
-        note:
+        notes:
 
-            - this method does not write hdf5 nor create xml for the new tri mesh
+            - this method does not write hdf5 nor create xml for the new tri mesh;
+            - if handle_nan is False and border_value is NaN, the result will have NaN values around the edge of
+              the tri mesh, to a depth equivalent to the pattern length
         """
 
         log.info(f'applying stencil to tri mesh: {tri_mesh.title}')
@@ -123,16 +243,27 @@ class TriMeshStencil:
             border += 1
         e_nj = tri_mesh.nj + 2 * border
         e_ni = tri_mesh.ni + 2 * border
-        z_values = np.full((e_nj, e_ni), np.NaN if handle_nan else 0.0, dtype = float)
-        z_values[border:border + tri_mesh.nj, border:border + tri_mesh.ni] = tri_mesh.full_array_ref()[:, :, 2]
+        z_values = np.full((e_nj, e_ni), border_value, dtype = float)
+        tm_z = tri_mesh.full_array_ref()[:, :, 2]
+        nan_mask = None
+        if preserve_nan:
+            nan_mask = np.isnan(tm_z)
+            if not np.any(nan_mask):
+                nan_mask = None
+        z_values[border:border + tri_mesh.nj, border:border + tri_mesh.ni] = tm_z
         applied = np.full((e_nj, e_ni), np.NaN, dtype = float)
 
         if handle_nan:
-            apply_stencil_nanmean(self.n, self.start_ip, self.row_length, self.half_hex, z_values, applied, border,
-                                  tri_mesh.nj, tri_mesh.ni)
+            _apply_stencil_nanmean(self.n, self.start_ip, self.row_length, self.half_hex, z_values, applied, border,
+                                   tri_mesh.nj, tri_mesh.ni)
         else:
-            #TODO: a simple apply function that will result in NaN if any input value within stencil area is NaN
-            raise NotImplementedError('only smoothing style tri mesh stencil application currently available')
+            _apply_stencil_simple(self.n, self.start_ip, self.row_length, self.half_hex, z_values, applied, border,
+                                  tri_mesh.nj, tri_mesh.ni)
+
+        # restore NaN values where they were present in input, if requested
+        tm_z_applied = applied[border:border + tri_mesh.nj, border:border + tri_mesh.ni]
+        if nan_mask is not None:
+            tm_z_applied[nan_mask] = np.NaN
 
         # create a new tri mesh object using the values from the applied array for z
         tm = rqs.TriMesh(tri_mesh.model,
@@ -142,15 +273,67 @@ class TriMeshStencil:
                          origin = tri_mesh.origin,
                          z_uom = tri_mesh.z_uom,
                          title = title,
-                         z_values = applied[border:border + tri_mesh.nj, border:border + tri_mesh.ni],
+                         z_values = tm_z_applied,
                          surface_role = tri_mesh.surface_role,
                          crs_uuid = tri_mesh.crs_uuid)
 
         return tm
 
+    def log(self, log_level = logging.DEBUG):
+        """Outputs ascii representation of stencil to loggger.
+
+        arguments:
+            log_level (int, default DEBUG): the logging severity level to use
+        """
+
+        half_lines = []
+        for jp in range(self.n):
+            padding = self.n + self.start_ip[jp]
+            line = ''
+            if jp % 2:
+                line += '    '
+            line += '    x   ' * padding
+            for v in self.half_hex[jp, :self.row_length[jp]]:
+                line += f' {v:7.4f}'
+            line += '    x   ' * padding
+            half_lines.append(line)
+        for i in range(1, self.n):
+            log.log(log_level, half_lines[-i])
+            log.log(log_level, '')
+        for i in range(self.n):
+            log.log(log_level, half_lines[i])
+            if i < self.n - 1:
+                log.log(log_level, '')
+
 
 # todo: njit with parallel True
-def apply_stencil_nanmean(n, start_ip, row_length, half_hex, tm_z, applied, border, onj, oni):
+def _apply_stencil_simple(n, start_ip, row_length, half_hex, tm_z, applied, border, onj, oni):
+    """Apply the stencil to the tri mesh z values as a simple convolution."""
+
+    for j in range(border, border + onj):  # todo: change to numba prange()
+        j_odd = j % 2
+        for i in range(border, border + oni):
+            a = 0.0
+            for jp in range(n):
+                js_odd = (jp % 2) * j_odd
+                i_st = start_ip[jp]
+                j_sm = j - jp
+                j_sp = j + jp
+                for ip in range(row_length[jp]):
+                    i_s = i + i_st + ip + js_odd
+                    v = tm_z[j_sm, i_s]
+                    s = half_hex[jp, ip]
+                    # if not np.isnan(v):
+                    a += v * s
+                    if jp:
+                        v = tm_z[j_sp, i_s]
+                        # if not np.isnan(v):
+                        a += v * s
+            applied[j, i] = a
+
+
+# todo: njit with parallel True
+def _apply_stencil_nanmean(n, start_ip, row_length, half_hex, tm_z, applied, border, onj, oni):
     """Apply the stencil to the tri mesh z values with a weighted nanmean (typically for smoothing)."""
 
     for j in range(border, border + onj):  # todo: change to numba prange()
@@ -177,3 +360,9 @@ def apply_stencil_nanmean(n, start_ip, row_length, half_hex, tm_z, applied, bord
                             a += v * s
             if ws != 0.0:
                 applied[j, i] = a / ws
+
+
+def _gaussian_pattern(n, sigma):
+    x = np.arange(n, dtype = int)
+    c = float(n - 1) / sigma
+    return np.exp(-((x * x).astype(float) / (2.0 * c * c)))
