@@ -282,3 +282,16 @@ def test_nexus_units():
     assert wam.nexus_uom_for_quantity('METBAR', 'permeability rock') == 'mD'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'rock permeability') == 'mD'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'permeability rock') == 'mD'
+
+
+def test_rq_uom_list():
+    ul = wam.rq_uom_list(('m', 'metres', 'ft', 'feet', 'ftUS'))
+    assert tuple(ul) == ('m', 'm', 'ft', 'ft', 'ft[US]')
+
+
+def test_rq_time_unit():
+    assert wam.rq_time_unit('seconds') == 's'
+    assert wam.rq_time_unit('sec') == 's'
+    assert wam.rq_time_unit('year') == 'a'
+    assert wam.rq_time_unit('yr') == 'a'
+    assert wam.rq_time_unit('day') == 'd'
