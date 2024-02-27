@@ -61,7 +61,7 @@ def test_aliases_are_unique():
                                                      ('1E6 m3/day', '1E6 m3/d'), ('lb', 'lbm'), ('DEGREESC', 'degC'),
                                                      ('BTU', 'Btu[IT]'), ('SCF/LB', 'ft3/lbm'), ('(RM3/SM3)', 'm3/m3'),
                                                      ('(MMSTB)', '1E6 bbl'), ('LB/(cu.ft.)', 'lbm/ft3'),
-                                                     ('(KJ)            ', 'kJ')])
+                                                     ('(KJ)            ', 'kJ'), ('ftUS', 'ft[US]')])
 def test_uom_from_string(input_uom, expected_uom):
     validated_uom = wam.rq_uom(input_uom)
     assert expected_uom == validated_uom

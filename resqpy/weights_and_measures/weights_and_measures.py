@@ -30,6 +30,7 @@ UOM_ALIASES = {
     # Length
     'm': {'m', 'metre', 'metres', 'meter', 'meters'},
     'ft': {'ft', 'foot', 'feet'},
+    'ft[US]': {'ftUS'},
     'cm': {'centimetre', 'centimetres', 'centimeter', 'centimeters'},
 
     # Time
