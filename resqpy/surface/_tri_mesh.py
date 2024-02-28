@@ -7,8 +7,10 @@ log = logging.getLogger(__name__)
 import math as maths
 import numpy as np
 
+import resqpy.crs as rqc
 import resqpy.surface as rqs
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.uuid as bu
 
 root_3 = maths.sqrt(3.0)
 root_3_by_2 = root_3 / 2.0
@@ -555,3 +557,31 @@ class TriMesh(rqs.Mesh):
                 p = np.concatenate((p, w[crossing]))
 
         return p
+
+    def is_compatible_with(self, other_tri_mesh):
+        """Returns True if this tri mesh has the same xy points as the other."""
+
+        if other_tri_mesh is self:
+            return True
+        if other_tri_mesh is None or not isinstance(other_tri_mesh, TriMesh):
+            return False
+        if other_tri_mesh.nj != self.nj or other_tri_mesh.ni != self.ni:
+            return False
+        if not maths.isclose(other_tri_mesh.t_side, self.t_side):
+            return False
+        if (other_tri_mesh.origin is None and self.origin is not None):
+            if not (maths.isclose(self.origin[0], 0.0) and maths.isclose(self.origin[1], 0.0)):
+                return False
+        elif (other_tri_mesh.origin is not None and self.origin is None):
+            if not (maths.isclose(other_tri_mesh.origin[0], 0.0) and maths.isclose(other_tri_mesh.origin[1], 0.0)):
+                return False
+        elif self.origin is not None and not (maths.isclose(other_tri_mesh.origin[0], self.origin[0]) and
+                                              maths.isclose(other_tri_mesh.origin[1], self.origin[1])):
+            return False
+        if not bu.matching_uuids(self.crs_uuid, other_tri_mesh.crs_uuid):
+            crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+            other_crs = rqc.Crs(other_tri_mesh.model, uuid = other_tri_mesh.crs_uuid)
+            if other_crs != crs:
+                return False
+
+        return True

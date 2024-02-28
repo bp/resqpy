@@ -3,6 +3,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.model as rq
+import resqpy.crs as rqc
 import resqpy.surface as rqs
 
 
@@ -421,3 +422,88 @@ def test_tri_mesh_axial_edge_crossing(example_model_and_crs):
     assert_array_almost_equal(z_cross[yi[1:], 1] - z_cross[yi[:-1], 1], 50.0 * maths.sqrt(3.0) / 2.0)
     maths.isclose(z_cross[yi[0], 1], 0.0)
     assert_array_almost_equal(z_cross[:, 0], 125.0)
+
+
+def test_tri_mesh_compatible(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values_a = np.array([(-100.0, -100.0, -100.0, -100.0), (100.0, 100.0, 100.0, 100.0),
+                           (500.0, 500.0, 500.0, 500.0)],
+                          dtype = float)
+    z_values_b = z_values_a + 123.0
+    trim_a = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 3,
+                         ni = 4,
+                         z_values = z_values_a,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh a')
+    assert trim_a.is_compatible_with(trim_a)
+    trim_b = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 3,
+                         ni = 4,
+                         z_values = z_values_b,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh b')
+    assert trim_a.is_compatible_with(trim_b)
+    assert trim_b.is_compatible_with(trim_a)
+    trim_b = rqs.TriMesh(model,
+                         t_side = 101.0,
+                         nj = 3,
+                         ni = 4,
+                         z_values = z_values_b,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh b')
+    assert not trim_a.is_compatible_with(trim_b)
+    assert not trim_b.is_compatible_with(trim_a)
+    trim_b = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 4,
+                         ni = 3,
+                         z_values = z_values_b.T,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh b')
+    assert not trim_a.is_compatible_with(trim_b)
+    assert not trim_b.is_compatible_with(trim_a)
+    crs_b = rqc.Crs(model, xy_units = 'km')
+    crs_b.create_xml()
+    trim_b = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 3,
+                         ni = 4,
+                         z_values = z_values_b,
+                         crs_uuid = crs_b.uuid,
+                         title = 'test tri mesh b')
+    assert not trim_a.is_compatible_with(trim_b)
+    assert not trim_b.is_compatible_with(trim_a)
+    assert not trim_a.is_compatible_with(crs_b)
+    trim_b = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 3,
+                         ni = 4,
+                         origin = (1.0, 0.0, 0.0),
+                         z_values = z_values_b,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh b')
+    assert not trim_a.is_compatible_with(trim_b)
+    assert not trim_b.is_compatible_with(trim_a)
+    trim_b = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 3,
+                         ni = 4,
+                         origin = (0.0, 1.0, 0.0),
+                         z_values = z_values_b,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh b')
+    assert not trim_a.is_compatible_with(trim_b)
+    assert not trim_b.is_compatible_with(trim_a)
+    trim_b = rqs.TriMesh(model,
+                         t_side = 100.0,
+                         nj = 3,
+                         ni = 4,
+                         origin = (0.0, 0.0, -45.0),
+                         z_values = z_values_b,
+                         crs_uuid = crs.uuid,
+                         title = 'test tri mesh b')
+    assert trim_a.is_compatible_with(trim_b)
+    assert trim_b.is_compatible_with(trim_a)
