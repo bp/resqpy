@@ -61,7 +61,7 @@ def test_aliases_are_unique():
                                                      ('1E6 m3/day', '1E6 m3/d'), ('lb', 'lbm'), ('DEGREESC', 'degC'),
                                                      ('BTU', 'Btu[IT]'), ('SCF/LB', 'ft3/lbm'), ('(RM3/SM3)', 'm3/m3'),
                                                      ('(MMSTB)', '1E6 bbl'), ('LB/(cu.ft.)', 'lbm/ft3'),
-                                                     ('(KJ)            ', 'kJ')])
+                                                     ('(KJ)            ', 'kJ'), ('ftUS', 'ft[US]')])
 def test_uom_from_string(input_uom, expected_uom):
     validated_uom = wam.rq_uom(input_uom)
     assert expected_uom == validated_uom
@@ -282,3 +282,16 @@ def test_nexus_units():
     assert wam.nexus_uom_for_quantity('METBAR', 'permeability rock') == 'mD'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'rock permeability') == 'mD'
     assert wam.nexus_uom_for_quantity('ENGLISH', 'permeability rock') == 'mD'
+
+
+def test_rq_uom_list():
+    ul = wam.rq_uom_list(('m', 'metres', 'ft', 'feet', 'ftUS'))
+    assert tuple(ul) == ('m', 'm', 'ft', 'ft', 'ft[US]')
+
+
+def test_rq_time_unit():
+    assert wam.rq_time_unit('seconds') == 's'
+    assert wam.rq_time_unit('sec') == 's'
+    assert wam.rq_time_unit('year') == 'a'
+    assert wam.rq_time_unit('yr') == 'a'
+    assert wam.rq_time_unit('day') == 'd'
