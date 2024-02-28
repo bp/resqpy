@@ -1289,3 +1289,22 @@ def test_from_tri_mesh_excluding_nans(example_model_and_crs):
     assert np.isnan(z_sample[0])
     assert np.isnan(z_sample[2])
     assert 950.0 <= z_sample[1] <= 1050.0
+
+
+def test_set_to_split_surface(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.random.random((30, 20)) * 100.0 + 950.0
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 30,
+                       ni = 20,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'surface for split')
+    surf = rqs.Surface.from_tri_mesh(trim)
+    split_surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'split surface')
+    line = np.array([(-100.0, 150.0, 0.0), (2100.0, 2500.0, 0.0)], dtype = float)
+    delta_xyz = np.array([(50.0, -50.0, 50.0), (-30.0, 30.0, -30.0)], dtype = float)
+    split_surf.set_to_split_surface(surf, line, delta_xyz)
+    split_surf.write_hdf5()
+    split_surf.create_xml()
