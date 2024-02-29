@@ -122,7 +122,13 @@ class TriMesh(rqs.Mesh):
                 self.origin = origin
 
     @classmethod
-    def from_tri_mesh_and_z_values(cls, tri_mesh, z_values, z_uom = None, title = None, surface_role = 'map'):
+    def from_tri_mesh_and_z_values(cls,
+                                   tri_mesh,
+                                   z_values,
+                                   z_uom = None,
+                                   title = None,
+                                   surface_role = 'map',
+                                   extra_metadata = None):
         """Create a new tri mesh with the same xy pattern as an existing one, updating z."""
         assert z_values.shape == (tri_mesh.nj, tri_mesh.ni)
         if not z_uom:
@@ -139,7 +145,8 @@ class TriMesh(rqs.Mesh):
                  z_uom = z_uom,
                  surface_role = surface_role,
                  crs_uuid = tri_mesh.crs_uuid,
-                 title = title)
+                 title = title,
+                 extra_metadata = extra_metadata)
         return tm
 
     def tji_for_xy(self, xy):

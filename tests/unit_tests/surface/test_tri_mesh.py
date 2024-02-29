@@ -5,6 +5,7 @@ from numpy.testing import assert_array_almost_equal
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.surface as rqs
+import resqpy.olio.uuid as bu
 
 
 def test_tri_mesh_create_save_reload(example_model_and_crs):
@@ -91,6 +92,39 @@ def test_tri_mesh_create_save_reload_with_z_and_origin(example_model_and_crs):
     assert_array_almost_equal(trim_reloaded.origin, (100.0, 200.0, 0.0))
     p = trim_reloaded.full_array_ref()
     assert_array_almost_equal(p[..., 2], z_values + 2000.0)
+
+
+def test_from_tri_mesh_and_z_values(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(200.0, 250.0, -123.4, 300.0), (400.0, 450.0, 0.0, 500.0), (300.0, 350.0, 1234.5, 400.0)],
+                        dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 10.0,
+                       nj = 3,
+                       ni = 4,
+                       origin = (100.0, 200.0, 2000.0),
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh')
+    trim.write_hdf5()
+    trim.create_xml()
+    z_values_2 = z_values * 2.0
+    trim_2 = rqs.TriMesh.from_tri_mesh_and_z_values(trim,
+                                                    z_values_2,
+                                                    z_uom = None,
+                                                    title = 'secondary',
+                                                    extra_metadata = {'source': 'derived from trim'})
+    assert trim_2 is not None
+    trim_2.write_hdf5()
+    trim_2.create_xml()
+    model.store_epc()
+    assert not bu.matching_uuids(trim_2.uuid, trim.uuid)
+    trim_2_reload = rqs.TriMesh(model, uuid = trim_2.uuid)
+    assert trim_2_reload is not None
+    assert trim_2_reload.title == 'secondary'
+    assert trim_2_reload.extra_metadata is not None
+    assert trim_2_reload.extra_metadata.get('source') == 'derived from trim'
+    assert_array_almost_equal(trim_2_reload.full_array_ref()[..., 2], z_values_2)
 
 
 def test_tri_mesh_tji_for_xy(example_model_and_crs):
