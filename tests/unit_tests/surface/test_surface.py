@@ -1308,3 +1308,16 @@ def test_set_to_split_surface(example_model_and_crs):
     split_surf.set_to_split_surface(surf, line, delta_xyz)
     split_surf.write_hdf5()
     split_surf.create_xml()
+
+
+def test_edge_lengths(example_model_and_crs):
+    model, crs = example_model_and_crs
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pair')
+    corners = np.array([(1.0, 1.0, 0.0), (1.0, 4.0, 0.0), (5.0, 1.0, 0.0), (5.0, 4.0, 0.0)], dtype = float)
+    surf.set_to_triangle_pair(corners)
+    surf.write_hdf5()
+    surf.create_xml()
+    lengths = surf.edge_lengths()
+    assert_array_almost_equal(lengths, np.array([(3.0, 4.0, 5.0), (5.0, 3.0, 4.0)], dtype = float))
+    lengths = surf.edge_lengths(required_uom = 'cm')
+    assert_array_almost_equal(lengths, np.array([(300.0, 400.0, 500.0), (500.0, 300.0, 400.0)], dtype = float))
