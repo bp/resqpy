@@ -492,6 +492,8 @@ class Surface(rqsb.BaseSurface):
         tri_patch.set_from_triangles_and_points(triangles, points)
         self.patch_list = [tri_patch]
         self.uuid = bu.new_uuid()
+        self.triangles = triangles.copy()
+        self.points = points.copy()
 
     def set_from_point_set(self,
                            point_set,
@@ -1075,7 +1077,7 @@ class Surface(rqsb.BaseSurface):
         # TODO: implement alternate solution using edge functions in olio triangulation to optimise
         points_unique, inverse = np.unique(allpoints, axis = 0, return_inverse = True)
         tris = np.array(tris)
-        tris_unique = np.empty(shape = tris.shape)
+        tris_unique = np.empty(shape = tris.shape, dtype = int)
         tris_unique[:, 0] = inverse[tris[:, 0]]
         tris_unique[:, 1] = inverse[tris[:, 1]]
         tris_unique[:, 2] = inverse[tris[:, 2]]
