@@ -461,6 +461,30 @@ class Surface(rqsb.BaseSurface):
         assert triangles is not None
         return triangulate.edges(triangles)
 
+    def edge_lengths(self, required_uom = None):
+        """Returns float array of shape (N, 3) being triangle edge lengths.
+
+        arguments:
+            required_uom (str, optional): the required length uom for the resulting edge lengths; default is crs xy units
+
+        returns:
+            numpy float array of shape (N, 3) where N is the number of triangles
+        """
+
+        t, p = self.triangles_and_points()
+        crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+        if required_uom is None:
+            required_uom = crs.xy_units
+        if crs.xy_units != required_uom or crs.z_units != required_uom:
+            p = p.copy()
+            wam.convert_lengths(p[:, :2], crs.xy_units, required_uom)
+            wam.convert_lengths(p[:, 2], crs.z_units, required_uom)
+        t_end = np.empty_like(t)
+        t_end[:, :2] = t[:, 1:]
+        t_end[:, 2] = t[:, 0]
+        edge_v = p[t_end, :] - p[t, :]
+        return vec.naive_lengths(edge_v)
+
     def set_from_triangles_and_points(self, triangles, points):
         """Populate this (empty) Surface object from an array of triangle corner indices and an array of points."""
 
