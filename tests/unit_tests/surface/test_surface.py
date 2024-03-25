@@ -1096,6 +1096,50 @@ def test_set_to_split_surface(example_model_and_crs):
     split_surf.create_xml()
 
 
+def test_set_to_triangle(example_model_and_crs):
+
+    def check_one(s):
+        assert s is not None
+        assert s.number_of_patches() == 1
+        t, p = s.triangles_and_points()
+        assert t.shape == (1, 3)
+        assert p.shape == (3, 3)
+        assert_array_almost_equal(s.edge_lengths(), np.array([(3.0, 5.0, 4.0)], dtype = float))
+
+    model, crs = example_model_and_crs
+    vertices = np.array([(1.0, 1.0, 1.0), (4.0, 1.0, 1.0), (1.0, 5.0, 1.0)], dtype = float)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pythagorean')
+    surf.set_to_triangle(vertices)
+    surf.write_hdf5()
+    surf.create_xml()
+    check_one(surf)
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    check_one(surf)
+
+
+def test_vertical_rescale_points(example_model_and_crs):
+    model, crs = example_model_and_crs
+    vertices = np.array([(1.0, 1.0, 1.0), (4.0, 1.0, 2.0), (1.0, 5.0, 3.0)], dtype = float)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pythagorean')
+    surf.set_to_triangle(vertices)
+    surf.vertical_rescale_points(ref_depth = 0.0, scaling_factor = 3.0)
+    surf.write_hdf5()
+    surf.create_xml()
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    t, p = surf.triangles_and_points()
+    assert np.all(t.flatten() == (0, 1, 2))
+    assert_array_almost_equal(p[:, 2], (3.0, 6.0, 9.0))
+    vertices = np.array([(1.0, 1.0, 1.0), (4.0, 1.0, 2.0), (1.0, 5.0, 3.0)], dtype = float)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pythagorean')
+    surf.set_to_triangle(vertices)
+    surf.vertical_rescale_points(ref_depth = -2.0, scaling_factor = 2.0)
+    surf.write_hdf5()
+    surf.create_xml()
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    t, p = surf.triangles_and_points()
+    assert_array_almost_equal(p[:, 2], (4.0, 6.0, 8.0))
+
+
 def test_edge_lengths(example_model_and_crs):
     model, crs = example_model_and_crs
     surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pair')

@@ -302,3 +302,35 @@ def test_patch_edges(triple_patch_model_crs_surface):
     surf = rqs.Surface(model, uuid = surf.uuid)
     assert surf is not None
     check_edges(surf)
+
+
+def test_patch_line_intersection(triple_patch_model_crs_surface):
+    model, crs, surf = triple_patch_model_crs_surface
+    xyz = surf.line_intersection((15.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = None)
+    assert xyz is None
+    xyz = surf.line_intersection((15.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = True, patch = None)
+    assert xyz is None
+    xyz = surf.line_intersection((5.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = None)
+    assert xyz is not None
+    assert_array_almost_equal(xyz, (5.0, 5.0, -0.15))
+    xyz = surf.line_intersection((5.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = True, patch = None)
+    assert xyz is None
+    xyz = surf.line_intersection((5.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 0)
+    assert xyz is None
+    xyz = surf.line_intersection((5.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 1)
+    assert xyz is not None
+    assert_array_almost_equal(xyz, (5.0, 5.0, -0.15))
+    xyz = surf.line_intersection((5.0, 5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 2)
+    assert xyz is None
+    # try a line at the join of two patches; might be prone to fail due to precision
+    xyz = surf.line_intersection((5.0, -5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = None)
+    assert xyz is not None
+    assert_array_almost_equal(xyz, (5.0, -5.0, -0.15))  # z result arbitrarily from patch 0
+    xyz = surf.line_intersection((5.0, -5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 0)
+    assert xyz is not None
+    assert_array_almost_equal(xyz, (5.0, -5.0, -0.15))
+    xyz = surf.line_intersection((5.0, -5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 1)
+    assert xyz is not None
+    assert_array_almost_equal(xyz, (5.0, -5.0, -0.05))
+    xyz = surf.line_intersection((5.0, -5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 2)
+    assert xyz is None

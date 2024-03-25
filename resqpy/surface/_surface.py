@@ -987,10 +987,10 @@ class Surface(rqsb.BaseSurface):
         for patch in self.patch_list:
             patch.vertical_rescale_points(ref_depth, scaling_factor)
 
-    def line_intersection(self, line_p, line_v, line_segment = False):
+    def line_intersection(self, line_p, line_v, line_segment = False, patch = None):
         """Returns x,y,z of an intersection point of straight line with the surface, or None if no intersection found."""
 
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         tp = p[t]
         intersects = meet.line_triangles_intersects(line_p, line_v, tp, line_segment = line_segment)
         indices = meet.intersects_indices(intersects)
