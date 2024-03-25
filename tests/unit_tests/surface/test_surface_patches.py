@@ -269,3 +269,36 @@ def test_set_multi_patch_from_triangles_and_points(triple_patch_model_crs_surfac
     surf = rqs.Surface(model, uuid = surf.uuid)
     assert surf is not None
     check_surface(surf)
+
+
+def test_patch_edges(triple_patch_model_crs_surface):
+
+    def check_edges(surf):
+        expected_edges = np.array([(0, 1), (0, 3), (1, 2), (1, 3), (1, 4), (2, 4), (3, 4), (3, 5), (4, 5)], dtype = int)
+        expected_counts = np.array((1, 1, 1, 2, 2, 1, 2, 1, 1), dtype = int)
+        expected_lengths = np.full((4, 3), 10.0, dtype = float)
+        root_2 = maths.sqrt(2.0)
+        expected_lengths[0, 1] *= root_2
+        expected_lengths[1, 2] *= root_2
+        expected_lengths[2, 1] *= root_2
+        expected_lengths[3, 1] *= root_2
+        assert surf.number_of_patches() == 3
+        for patch in range(3):
+            edges = surf.distinct_edges(patch)
+            assert edges is not None
+            assert edges.shape == (9, 2)
+            assert np.all(edges == expected_edges)
+            edges, counts = surf.distinct_edges_and_counts(patch)
+            assert np.all(edges == expected_edges)
+            assert np.all(counts == expected_counts)
+            edge_lengths = surf.edge_lengths(patch = patch)
+            assert_array_almost_equal(edge_lengths, expected_lengths, decimal = 1)  # low tolerance due to z offsets
+            edge_lengths = surf.edge_lengths(required_uom = 'ft', patch = patch)
+            assert_array_almost_equal(edge_lengths, expected_lengths / 0.3048, decimal = 1)
+
+    model, crs, surf = triple_patch_model_crs_surface
+    check_edges(surf)
+    # reload and check again
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    assert surf is not None
+    check_edges(surf)
