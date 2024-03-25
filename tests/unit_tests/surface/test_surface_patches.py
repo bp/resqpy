@@ -20,7 +20,7 @@ def triple_patch_model_crs_surface(example_model_and_crs):
     p1 = -p0
     p2 = p0 + np.array((30.0, 0.0, 0.5), dtype = float)
     t = np.array([(0, 1, 3), (1, 4, 3), (1, 2, 4), (3, 4, 5)], dtype = int)
-    t_and_p_list = [(p0, t), (p1, t), (p2, t)]
+    t_and_p_list = [(t, p0), (t, p1), (t, p2)]
 
     model, crs = example_model_and_crs
     surf = rqs.Surface(model, title = 'triple patch', crs_uuid = crs.uuid)
@@ -243,3 +243,29 @@ def test_tripatch_set_cellface_corp_quadfalse(example_model_and_crs):
     assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
     assert_array_almost_equal(tripatch.triangles[0], np.array([0, 3, 1]))
     assert_array_almost_equal(tripatch.triangles[-1], np.array([7, 1, 3]))
+
+
+def test_set_multi_patch_from_triangles_and_points(triple_patch_model_crs_surface):
+
+    def check_surface(surf):
+        assert surf is not None
+        assert surf.number_of_patches() == 3
+        previous_t = None
+        for patch in range(3):
+            assert surf.triangle_count(patch) == 4
+            assert surf.node_count(patch) == 6
+            t, p = surf.triangles_and_points(patch)
+            assert t is not None and p is not None
+            assert t.shape == (4, 3)
+            assert p.shape == (6, 3)
+            if patch:
+                assert np.all(t == previous_t)
+            else:
+                previous_t = t
+
+    model, crs, surf = triple_patch_model_crs_surface
+    check_surface(surf)
+    # reload and check again
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    assert surf is not None
+    check_surface(surf)

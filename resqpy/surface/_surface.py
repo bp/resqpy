@@ -552,7 +552,7 @@ class Surface(rqsb.BaseSurface):
             triangles, points = entry
             tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = patch, crs_uuid = self.crs_uuid)
             tri_patch.set_from_triangles_and_points(triangles, points)
-            self.patch_lista.append(tri_patch)
+            self.patch_list.append(tri_patch)
         self.uuid = bu.new_uuid()
 
     def set_from_point_set(self,
