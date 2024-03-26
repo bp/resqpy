@@ -272,48 +272,86 @@ class Surface(rqsb.BaseSurface):
 
         self.model = parent_model
 
-    def triangles_and_points(self):
-        """Returns arrays representing combination of all the patches in the surface.
+    def number_of_patches(self):
+        """Returns the number of patches present in the surface."""
+
+        self.extract_patches(self.root)
+        return len(self.patch_list)
+
+    def triangles_and_points(self, patch = None):
+        """Returns arrays representing one patch or a combination of all the patches in the surface.
+
+        arguments:
+           patch (int, optional): patch index; if None, combined arrays for all patches are returned
 
         returns:
            tuple (triangles, points):
               triangles (int array of shape[:, 3]): integer indices into points array,
-                  being the nodes of the corners of the triangles;
+                 being the nodes of the corners of the triangles;
               points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
 
         :meta common:
         """
 
-        if self.triangles is not None:
+        self.extract_patches(self.root)
+        if patch is None:
+            if self.triangles is None:
+                points_offset = 0
+                for triangulated_patch in self.patch_list:
+                    (t, p) = triangulated_patch.triangles_and_points()
+                    if points_offset == 0:
+                        self.triangles = t.copy()
+                        self.points = p.copy()
+                    else:
+                        self.triangles = np.concatenate((self.triangles, t.copy() + points_offset))
+                        self.points = np.concatenate((self.points, p.copy()))
+                    points_offset += p.shape[0]
             return (self.triangles, self.points)
-        self.extract_patches(self.root)
-        points_offset = 0
-        for triangulated_patch in self.patch_list:
-            (t, p) = triangulated_patch.triangles_and_points()
-            if points_offset == 0:
-                self.triangles = t.copy()
-                self.points = p.copy()
-            else:
-                self.triangles = np.concatenate((self.triangles, t.copy() + points_offset))
-                self.points = np.concatenate((self.points, p.copy()))
-            points_offset += p.shape[0]
-        return (self.triangles, self.points)
+        assert 0 <= patch < len(self.patch_list),  \
+            ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches')
+        return self.patch_list[patch].triangles_and_points()
 
-    def triangle_count(self):
-        """Return the numner of triangles in this surface."""
+    def triangle_count(self, patch = None):
+        """Return the numner of triangles in this surface, or in one patch.
+
+        arguments:
+           patch (int, optional): patch index; if None, a combined triangle count for all patches is returned
+
+        returns:
+           int being the number of trianges in the patch (if specified) or in all the patches
+        """
 
         self.extract_patches(self.root)
-        if not self.patch_list:
-            return 0
-        return np.sum([tp.triangle_count for tp in self.patch_list])
+        if patch is None:
+            if not self.patch_list:
+                return 0
+            return np.sum([tp.triangle_count for tp in self.patch_list])
+        assert 0 <= patch < len(self.patch_list),  \
+            ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches in triangle_count')
+        return self.patch_list[patch].triangle_count
 
-    def node_count(self):
-        """Return the number of nodes (points) used in this surface."""
+    def node_count(self, patch = None):
+        """Return the number of nodes (points) used in this surface, or in one patch.
+
+        arguments:
+           patch (int, optional): patch index; if None, a combined node count for all patches is returned
+
+        returns:
+           int being the number of nodes in the patch (if specified) or in all the patches
+
+        note:
+           a multi patch surface might have more than one node colocated; this method will treat such coincident nodes
+           as separate nodes
+        """
 
         self.extract_patches(self.root)
-        if not self.patch_list:
-            return 0
-        return np.sum([tp.node_count for tp in self.patch_list])
+        if patch is None:
+            if not self.patch_list:
+                return 0
+            return np.sum([tp.node_count for tp in self.patch_list])
+        assert 0 <= patch < len(self.patch_list),  \
+            ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches in node_count')
+        return self.patch_list[patch].node_count
 
     def change_crs(self, required_crs):
         """Changes the crs of the surface, also sets a new uuid if crs changed.
@@ -381,7 +419,7 @@ class Surface(rqsb.BaseSurface):
         self.uuid = bu.new_uuid()
 
     def set_to_split_surface(self, large_surface, line, delta_xyz):
-        """Populate this (empty) surface with a version of a larger surface split by an xy line.
+        """Populate this (empty) surface with a version of a larger surface split by a straight xy line.
 
         arguments:
             large_surface (Surface): the larger surface, a copy of which is to be split
@@ -404,8 +442,8 @@ class Surface(rqsb.BaseSurface):
         tp[:, 1] = len(p) + 1
         tp[:, 2] = np.arange(len(p), dtype = int)
         cw = vec.clockwise_triangles(pp, tp)
-        pai = np.where(cw >= 0.0, True, False)  # bool mask over p
-        pbi = np.where(cw <= 0.0, True, False)  # bool mask over p
+        pai = (cw >= 0.0)  # bool mask over p
+        pbi = (cw <= 0.0)  # bool mask over p
         tap = pai[t]
         tbp = pbi[t]
         ta = np.any(tap, axis = 1)  # bool array over t
@@ -435,16 +473,23 @@ class Surface(rqsb.BaseSurface):
 
         self.set_from_triangles_and_points(t_combo, p_combo)
 
-    def distinct_edges(self):
-        """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
+    def distinct_edges(self, patch = None):
+        """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles.
 
-        triangles, _ = self.triangles_and_points()
+        arguments:
+           patch (int, optional): patch index; if None, a combination of edges for all patches is returned
+        """
+
+        triangles, _ = self.triangles_and_points(patch = patch)
         assert triangles is not None
         unique_edges, _ = triangulate.edges(triangles)
         return unique_edges
 
-    def distinct_edges_and_counts(self):
+    def distinct_edges_and_counts(self, patch = None):
         """Returns unique edges as pairs of point indices, and a count of uses of each edge.
+
+        arguments:
+           patch (int, optional): patch index; if None, combined results for all patches are returned
 
         returns:
             numpy int array of shape (N, 2), numpy int array of shape (N,)
@@ -453,25 +498,26 @@ class Surface(rqsb.BaseSurface):
 
         notes:
             first entry in each pair is always the lower of the two point indices;
-            for well formed surfaces, the count should everywhere be zero or one;
+            for well formed surfaces, the count should everywhere be one or two;
             the function does not attempt to detect coincident points
         """
 
-        triangles, _ = self.triangles_and_points()
+        triangles, _ = self.triangles_and_points(patch = patch)
         assert triangles is not None
         return triangulate.edges(triangles)
 
-    def edge_lengths(self, required_uom = None):
+    def edge_lengths(self, required_uom = None, patch = None):
         """Returns float array of shape (N, 3) being triangle edge lengths.
 
         arguments:
             required_uom (str, optional): the required length uom for the resulting edge lengths; default is crs xy units
+            patch (int, optional): patch index; if None, edge lengths for all patches are returned
 
         returns:
             numpy float array of shape (N, 3) where N is the number of triangles
         """
 
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         if required_uom is None:
             required_uom = crs.xy_units
@@ -494,6 +540,20 @@ class Surface(rqsb.BaseSurface):
         self.uuid = bu.new_uuid()
         self.triangles = triangles.copy()
         self.points = points.copy()
+
+    def set_multi_patch_from_triangles_and_points(self, triangles_and_points_list):
+        """Populate this (empty) Surface object from a list of paits: array of triangle corner indices, array of points."""
+
+        self.patch_list = []
+        self.trianges = None
+        self.points = None
+        for patch, entry in enumerate(triangles_and_points_list):
+            assert len(entry) == 2, 'expecting pair of arrays (triangles, points) for each patch'
+            triangles, points = entry
+            tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = patch, crs_uuid = self.crs_uuid)
+            tri_patch.set_from_triangles_and_points(triangles, points)
+            self.patch_list.append(tri_patch)
+        self.uuid = bu.new_uuid()
 
     def set_from_point_set(self,
                            point_set,
@@ -927,10 +987,10 @@ class Surface(rqsb.BaseSurface):
         for patch in self.patch_list:
             patch.vertical_rescale_points(ref_depth, scaling_factor)
 
-    def line_intersection(self, line_p, line_v, line_segment = False):
+    def line_intersection(self, line_p, line_v, line_segment = False, patch = None):
         """Returns x,y,z of an intersection point of straight line with the surface, or None if no intersection found."""
 
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         tp = p[t]
         intersects = meet.line_triangles_intersects(line_p, line_v, tp, line_segment = line_segment)
         indices = meet.intersects_indices(intersects)
@@ -938,21 +998,22 @@ class Surface(rqsb.BaseSurface):
             return None
         return intersects[indices[0]]
 
-    def sample_z_at_xy_points(self, points, multiple_handling = 'any'):
+    def sample_z_at_xy_points(self, points, multiple_handling = 'any', patch = None):
         """Returns interpolated z values for an array of xy values.
 
         arguments:
             points (numpy float array of shape (..., 2 or 3)): xy points to sample surface at (z values ignored)
             multiple_handling (str, default 'any'): one of 'any', 'minimum', 'maximum', 'exception'
+            patch (int, optional): patch index; if None, results are for the full surface
 
         returns:
             numpy float array of shape points.shape[:-1] being z values interpolated from the surface z values
 
         notes:
             points must be in the same crs as the surface;
-            NaN will be set for any points that do not intersect with the surface in the xy projection;
-            multiple_handling argument controls behaviour when one sample point intersects surface more than
-            once: 'any' a random one of the intersection z values is returned; 'minimum' or 'maximum': the
+            NaN will be set for any points that do not intersect with the patch or surface in the xy projection;
+            multiple_handling argument controls behaviour when one sample point intersects more than once:
+            'any' a random one of the intersection z values is returned; 'minimum' or 'maximum': the
             numerical min or max of the z values is returned; 'exception': a ValueError is raised
         """
 
@@ -964,7 +1025,7 @@ class Surface(rqsb.BaseSurface):
         else:
             sample_xy = np.zeros((points.size // 2, 3), dtype = float)
             sample_xy[:, :2] = points.reshape((-1, 2))
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         p_list = vec.points_in_triangles_njit(sample_xy, p[t], 1)
         vertical = np.array((0.0, 0.0, 1.0), dtype = float)
         z = np.full(sample_xy.shape[0], np.NaN, dtype = float)
@@ -983,17 +1044,18 @@ class Surface(rqsb.BaseSurface):
                 raise ValueError(f'multiple {self.title} surface intersections at xy: {sample_xy[p_index]}')
         return z.reshape(points.shape[:-1])
 
-    def normal_vectors(self, add_as_property: bool = False) -> np.ndarray:
-        """Returns the normal vectors for each triangle in the surface.
-        
+    def normal_vectors(self, add_as_property: bool = False, patch = None) -> np.ndarray:
+        """Returns the normal vectors for each triangle in the patch or surface.
+
         arguments:
-            add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model.
+            add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model
+            patch (int, optional): patch index; if None, normal vectors for triangles in all patches are returned
 
         returns:
-            normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface.
+            normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface
         """
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
-        triangles, points = self.triangles_and_points()
+        triangles, points = self.triangles_and_points(patch = patch)
         if crs.xy_units != crs.z_units:
             points = points.copy()
             wam.convert_lengths(points[:, 2], crs.z_units, crs.xy_units)
@@ -1053,13 +1115,13 @@ class Surface(rqsb.BaseSurface):
         return ep
 
     def resampled_surface(self, title = None):
-        """Creates a new triangulated set which is a resampled version of the current triangulated set. Each existing triangle in the tset is divided equally into 4 new triangles.
-           
+        """Creates a new surface which is a refined version of this surface; each triangle is divided equally into 4 new triangles.
+
         arguments:
-            title (str): a new title for the output triangulated set, if None the title will have the same title as the input triangulated set
-        
+            title (str): title for the output triangulated set, if None the title will be inherited from the input surface
+
         returns:
-            resqpy.surface.Surface object, with extra_metadata ('resampled from surface': <uuid>), where uuid is the origin surface uuid
+            resqpy.surface.Surface object, with extra_metadata ('resampled from surface': uuid), where uuid is for the original surface uuid
         """
         rt, rp = self.triangles_and_points()
         edge1 = np.mean(rp[rt[:]][:, ::2, :], axis = 1)
