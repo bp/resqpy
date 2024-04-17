@@ -34,7 +34,7 @@ class AnyTimeSeries(BaseResqpy):
             dt_text = rqet.find_tag_text(child, 'DateTime')
             assert dt_text, 'missing DateTime field in xml for time series'
             year_offset = rqet.find_tag_int(child, 'YearOffset')
-            if year_offset:
+            if isinstance(year_offset, int):
                 assert self.timeframe == 'geologic'
                 self.timestamps.append(year_offset)  # todo: trim and check timestamp
             else:
