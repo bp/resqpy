@@ -29,7 +29,7 @@ class GeologicTimeSeries(ats.AnyTimeSeries):
 
         note:
            if instantiating from an existing RESQML time series, its Time entries must all have YearOffset data
-           which should be large negative integers
+           which should be large negative integers (or zero if reaching the current era)
 
         :meta common:
         """
