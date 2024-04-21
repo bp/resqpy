@@ -115,6 +115,34 @@ def test_geologic_time_series(tmp_path):
                 (ts.timestamps[0] == -145000000 * 2 and ts.timestamps[-1] == -72100000 * 2))
 
 
+def test_geologic_time_series_with_zero(tmp_path):
+    epc = os.path.join(tmp_path, 'ts_geologic.epc')
+    model = rq.new_model(epc)
+    # Cretaceous Age start times, in Ma, with random use of sign to check it is ignored
+    ma_list = (145, 72.1, -83.6, 86.3, 89.8, 93.9, 100.5, -113, -125, 129.4, 132.9, 139.8)
+    ts_list = [int(round(ma * 1000000)) for ma in ma_list]
+    ts_list_2 = [int(round(ma * 2000000)) for ma in ma_list]
+    ts_list.append(0)
+    ts_list_2.append(0)
+    ts = rqts.time_series_from_list(ts_list, parent_model = model)
+    assert ts.number_of_timestamps() == 13
+    ts.create_xml()
+    ts_2 = rqts.GeologicTimeSeries.from_year_list(model, year_list = ts_list_2, title = 'using class method')
+    ts_2.create_xml()
+    model.store_epc()
+    model = rq.Model(epc)
+    ts_uuids = model.uuids(obj_type = 'TimeSeries')
+    assert ts_uuids is not None and len(ts_uuids) == 2
+    for ts_uuid in ts_uuids:
+        ts = rqts.any_time_series(model, uuid = ts_uuid)
+        assert isinstance(ts, rqts.GeologicTimeSeries)
+        assert ts.timeframe == 'geologic'
+        assert ts.number_of_timestamps() == 13
+        assert ((ts.timestamps[0] == -145000000 and ts.timestamps[-2] == -72100000) or
+                (ts.timestamps[0] == -145000000 * 2 and ts.timestamps[-2] == -72100000 * 2))
+        assert ts.timestamps[-1] == 0
+
+
 def test_geologic_time_str_fails_when_not_int():
     with pytest.raises(AssertionError):
         rqts.geologic_time_str('hello world')
@@ -123,7 +151,7 @@ def test_geologic_time_str_fails_when_not_int():
 @pytest.mark.parametrize('years_value, expected_result', [(10_000_000, '-10 Ma'), (1_000_000, '-1 Ma'),
                                                           (11_000_000, '-11 Ma'), (1, '-0.000 Ma'),
                                                           (1_500_000, '-1.500 Ma'), (15_060_000, '-16 Ma'),
-                                                          (15_040_000, '-16 Ma')])
+                                                          (15_040_000, '-16 Ma'), (0, '0 Ma')])
 def test_geologic_time_str(years_value, expected_result):
     # arrange
     test_years_value = years_value
