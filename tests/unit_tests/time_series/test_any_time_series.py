@@ -1,6 +1,12 @@
-from resqpy.time_series._any_time_series import AnyTimeSeries
 import uuid
 import pytest
+import logging
+
+import resqpy.model as rq
+from resqpy.time_series._any_time_series import AnyTimeSeries
+from resqpy.time_series._geologic_time_series import GeologicTimeSeries
+
+log = logging.getLogger('resqpy')
 
 
 def test_is_equivalent_other_ts_is_none(example_model_and_crs):
@@ -151,3 +157,25 @@ def test_index_timestamp_not_present(timestamps, example_model_and_crs):
     result = any_time_series.index_for_timestamp('2016-01-01T00:00:00.588Z')
     # assert
     assert result is None
+
+
+def test_warns_positive_year_offset(example_model_and_crs, caplog):
+    # arrange
+    log.setLevel('WARNING')
+    model, crs = example_model_and_crs
+    year_list = [-130_000_000, -57_000_000, 0, 55_000]
+    gts = GeologicTimeSeries.from_year_list(model, year_list, title = 'geo time series')
+    assert gts.timeframe == 'geologic'
+    gts.timestamps = year_list  # force original year offsets to keep a positive value
+    gts.create_xml()
+    gts_uuid = gts.uuid
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    gts = GeologicTimeSeries(model, uuid = gts_uuid)
+    assert gts is not None
+    assert gts.timeframe == 'geologic'
+    assert len(gts.timestamps) == 4
+    assert all([isinstance(t, int) for t in gts.timestamps])
+    assert gts.timestamps == year_list
+    assert len(caplog.records) > 0
+    assert caplog.records[-1].getMessage() == 'positive year offset in xml indicates future geological time: 55000'
