@@ -20,7 +20,7 @@ class ApsProperty:
     def __init__(self, aps, part):
         """Initialise a single property from a property set with attribute style read access to metadata items."""
         self.aps = aps
-        self.part = part
+        self._part = part
         self.key = aps._key(part)
 
     # NB. the following are read-only attributes
@@ -28,7 +28,11 @@ class ApsProperty:
     @property
     def part(self):
         """The part (string) identifier for this property."""
-        return self.part
+        return self._part
+
+    @part.setter
+    def part(self, value):
+        self._part = value
 
     @property
     def node(self):
@@ -131,12 +135,12 @@ class ApsProperty:
         return self.title
 
     @property
-    def xml_min_value(self):
+    def min_value(self):
         """The minimum value for this property, as stored in xml metadata."""
         return self.aps.minimum_value_for_part(self.part)
 
     @property
-    def xml_max_value(self):
+    def max_value(self):
         """The maximum value for this property, as stored in xml metadata."""
         return self.aps.maximum_value_for_part(self.part)
 
@@ -208,12 +212,28 @@ class AttributePropertySet(rqp.PropertyCollection):
         self.key_mode = key_mode
         self._make_attributes()
 
+    def keys(self):
+        """Iterator over property keys within the set."""
+        for p in self.parts():
+            yield self._key(p)
+
+    def properties(self):
+        """Iterator over ApsProperty members of the set."""
+        for k in self.keys():
+            yield getattr(self, k)
+
+    def items(self):
+        """Iterator over (key, ApsProperty) members of the set."""
+        for k in self.keys():
+            yield (k, getattr(self, k))
+
     def _key(self, part):
-        """Return the key (attribute name) for a given part."""
+        """Returns the key (attribute name) for a given part."""
         if self.key_mode == 'pk':
             key = self.property_kind_for_part(part)
         else:
             key = self.citation_title_for_part(part)
+        key = key.replace(' ', '_')
         ti = self.time_index_for_part(part)
         if ti is not None:
             key += f'_t{ti}'
@@ -228,3 +248,7 @@ class AttributePropertySet(rqp.PropertyCollection):
             key = self._key(part)
             aps_property = ApsProperty(self, part)
             setattr(self, key, aps_property)
+
+    def __len__(self):
+        """Returns the number of properties in the set."""
+        return self.number_of_parts()
