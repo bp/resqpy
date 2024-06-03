@@ -71,6 +71,8 @@ def test_load_attribute_property_collection_pk(example_model_with_prop_ts_rels):
     assert v.shape == (3, 5, 5)
     assert tuple(np.unique(v)) == (1, 2, 3)
     assert np.all(v == aps.zone.array_ref)
+    assert aps.zone.uuid is not None
+    assert aps.zone.node is not None
     # check net to gross ratio properties
     assert aps.net_to_gross_ratio_r0.property_kind == 'net to gross ratio'
     assert aps.net_to_gross_ratio_r0.facet_type is None
