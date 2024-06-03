@@ -23,7 +23,7 @@ import resqpy.olio.uuid as bu
 #from resqpy.property import property_kind_and_facet_from_keyword, guess_uom
 
 
-def test_load_attribute_property_collection(example_model_with_prop_ts_rels):
+def test_load_attribute_property_collection_pk(example_model_with_prop_ts_rels):
     # Arrange
     model = example_model_with_prop_ts_rels
     grid = model.grid()
@@ -33,10 +33,13 @@ def test_load_attribute_property_collection(example_model_with_prop_ts_rels):
 
     # Assert
     assert aps is not None
-    for k, e in aps.items():
-        print(k, e.uom)
-    print(f'len: {len(aps)}')
     assert len(aps) == 12
+    for k in aps.keys():
+        assert k is not None
+        assert isinstance(k, str)
+    for p in aps.properties():
+        assert p is not None
+        assert isinstance(p, rqp.ApsProperty)
     # check zone property
     assert aps.zone.property_kind == 'zone'
     assert aps.zone.facet_type is None
@@ -133,3 +136,117 @@ def test_load_attribute_property_collection(example_model_with_prop_ts_rels):
     assert np.isclose(np.min(v), 0.75)
     assert np.isclose(np.max(v), 1.0)
     assert np.all(v == aps.saturation_t2.array_ref)
+
+
+def test_load_attribute_property_collection_title(example_model_with_prop_ts_rels):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    grid = model.grid()
+
+    # Act
+    aps = rqp.AttributePropertySet(support = grid, key_mode = 'title')
+
+    # Assert
+    assert aps is not None
+    for k, e in aps.items():
+        assert k is not None
+        assert isinstance(k, str)
+        assert e is not None
+        assert isinstance(e, rqp.ApsProperty)
+    assert len(aps) == 12
+    # check zone property
+    assert aps.Zone.property_kind == 'zone'
+    assert aps.Zone.facet_type is None
+    assert aps.Zone.facet is None
+    assert aps.Zone.indexable == 'cells'
+    assert aps.Zone.indexable_element == 'cells'
+    assert aps.Zone.is_continuous is False
+    assert aps.Zone.is_discrete is True
+    assert aps.Zone.is_categorical is False
+    assert aps.Zone.is_points is False
+    assert aps.Zone.count == 1
+    assert aps.Zone.uom is None
+    assert aps.Zone.null_value == -1
+    assert aps.Zone.realization is None
+    assert aps.Zone.time_index is None
+    assert aps.Zone.title == 'Zone'
+    assert aps.Zone.citation_title == 'Zone'
+    assert aps.Zone.min_value == 1
+    assert aps.Zone.max_value == 3
+    assert aps.Zone.constant_value is None
+    assert aps.Zone.extra == {}
+    assert aps.Zone.extra_metadata == {}
+    assert bu.matching_uuids(aps.Zone.support_uuid, grid.uuid)
+    assert aps.Zone.string_lookup_uuid is None
+    assert aps.Zone.time_series_uuid is None
+    assert aps.Zone.local_property_kind_uuid is not None
+    v = aps.Zone.values
+    assert isinstance(v, np.ndarray)
+    assert v.shape == (3, 5, 5)
+    assert tuple(np.unique(v)) == (1, 2, 3)
+    assert np.all(v == aps.Zone.array_ref)
+    # check net to gross ratio properties
+    assert aps.NTG_r0.property_kind == 'net to gross ratio'
+    assert aps.NTG_r0.facet_type is None
+    assert aps.NTG_r0.facet is None
+    assert aps.NTG_r0.indexable == 'cells'
+    assert aps.NTG_r0.indexable_element == 'cells'
+    assert aps.NTG_r0.is_continuous is True
+    assert aps.NTG_r0.is_discrete is False
+    assert aps.NTG_r0.is_categorical is False
+    assert aps.NTG_r0.is_points is False
+    assert aps.NTG_r0.count == 1
+    assert aps.NTG_r0.uom == 'm3/m3'
+    assert np.isnan(aps.NTG_r0.null_value)
+    assert aps.NTG_r0.realization == 0
+    assert aps.NTG_r1.realization == 1
+    assert aps.NTG_r0.time_index is None
+    assert aps.NTG_r0.title == 'NTG'
+    assert aps.NTG_r0.citation_title == 'NTG'
+    assert maths.isclose(aps.NTG_r0.min_value, 0.0)
+    assert maths.isclose(aps.NTG_r0.max_value, 0.5)
+    assert aps.NTG_r0.constant_value is None
+    assert aps.NTG_r0.extra == {}
+    assert aps.NTG_r0.extra_metadata == {}
+    assert bu.matching_uuids(aps.NTG_r0.support_uuid, grid.uuid)
+    assert aps.NTG_r0.string_lookup_uuid is None
+    assert aps.NTG_r0.time_series_uuid is None
+    assert aps.NTG_r0.local_property_kind_uuid is None
+    v = aps.NTG_r0.values
+    assert isinstance(v, np.ndarray)
+    assert v.shape == (3, 5, 5)
+    assert np.isclose(np.min(v), 0.0)
+    assert np.isclose(np.max(v), 0.5)
+    assert np.all(v == aps.NTG_r0.array_ref)
+    # check a saturation property
+    assert aps.SW_t2.property_kind == 'saturation'
+    assert aps.SW_t2.facet_type == 'what'
+    assert aps.SW_t2.facet == 'water'
+    assert aps.SW_t2.indexable == 'cells'
+    assert aps.SW_t2.indexable_element == 'cells'
+    assert aps.SW_t2.is_continuous is True
+    assert aps.SW_t2.is_discrete is False
+    assert aps.SW_t2.is_categorical is False
+    assert aps.SW_t2.is_points is False
+    assert aps.SW_t2.count == 1
+    assert aps.SW_t2.uom == 'm3/m3'
+    assert np.isnan(aps.SW_t2.null_value)
+    assert aps.SW_t2.realization is None
+    assert aps.SW_t2.time_index == 2
+    assert aps.SW_t2.title == 'SW'
+    assert aps.SW_t2.citation_title == 'SW'
+    assert maths.isclose(aps.SW_t2.min_value, 0.75)
+    assert maths.isclose(aps.SW_t2.max_value, 1.0)
+    assert aps.SW_t2.constant_value is None
+    assert aps.SW_t2.extra == {}
+    assert aps.SW_t2.extra_metadata == {}
+    assert bu.matching_uuids(aps.SW_t2.support_uuid, grid.uuid)
+    assert aps.SW_t2.string_lookup_uuid is None
+    assert aps.SW_t2.time_series_uuid is not None
+    assert aps.SW_t2.local_property_kind_uuid is None
+    v = aps.SW_t2.values
+    assert isinstance(v, np.ndarray)
+    assert v.shape == (3, 5, 5)
+    assert np.isclose(np.min(v), 0.75)
+    assert np.isclose(np.max(v), 1.0)
+    assert np.all(v == aps.SW_t2.array_ref)
