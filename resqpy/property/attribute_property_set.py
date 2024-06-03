@@ -183,15 +183,16 @@ class ApsProperty:
 class AttributePropertySet(rqp.PropertyCollection):
     """Class for set of RESQML properties for any supporting representation, using attribute syntax."""
 
-    def __init__(self, support = None, property_set_root = None, realization = None, key_mode = 'pk'):
+    def __init__(self, model = None, support = None, property_set_uuid = None, realization = None, key_mode = 'pk'):
         """Initialise an empty property set, optionally populate properties from a supporting representation.
 
         arguments:
+           model (Model, optional): required if property_set_uuid is not None
            support (optional): a grid.Grid object, or a well.BlockedWell, or a well.WellboreFrame object which belongs to a
               resqpy.Model which includes associated properties; if this argument is given, and property_set_root is None,
               the properties in the support's parent model which are for this representation (ie. have this object as the
               supporting representation) are added to this collection as part of the initialisation
-           property_set_root (optional): if present, the collection is populated with the properties defined in the xml tree
+           property_set_uuid (optional): if present, the collection is populated with the properties defined in the xml tree
               of the property set
            realization (integer, optional): if present, the single realisation (within an ensemble) that this collection is for;
               if None, then the collection is either covering a whole ensemble (individual properties can each be flagged with a
@@ -207,6 +208,12 @@ class AttributePropertySet(rqp.PropertyCollection):
         """
 
         assert key_mode in ['pk', 'title']
+        assert property_set_uuid is None or model is not None
+        assert support is None or model is None or support.model is model
+        if property_set_uuid is None:
+            property_set_root = None
+        else:
+            property_set_root = model.root_for_uuid(property_set_uuid)
 
         super().__init__(support = support, property_set_root = property_set_root, realization = realization)
         self.key_mode = key_mode
@@ -231,6 +238,9 @@ class AttributePropertySet(rqp.PropertyCollection):
         """Returns the key (attribute name) for a given part."""
         if self.key_mode == 'pk':
             key = self.property_kind_for_part(part)
+            facet = self.facet_for_part(part)
+            if facet is not None:
+                key += f'_{facet}'
         else:
             key = self.citation_title_for_part(part)
         key = key.replace(' ', '_')

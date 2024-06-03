@@ -105,37 +105,37 @@ def test_load_attribute_property_collection_pk(example_model_with_prop_ts_rels):
     assert np.isclose(np.max(v), 0.5)
     assert np.all(v == aps.net_to_gross_ratio_r0.array_ref)
     # check a saturation property
-    assert aps.saturation_t2.property_kind == 'saturation'
-    assert aps.saturation_t2.facet_type == 'what'
-    assert aps.saturation_t2.facet == 'water'
-    assert aps.saturation_t2.indexable == 'cells'
-    assert aps.saturation_t2.indexable_element == 'cells'
-    assert aps.saturation_t2.is_continuous is True
-    assert aps.saturation_t2.is_discrete is False
-    assert aps.saturation_t2.is_categorical is False
-    assert aps.saturation_t2.is_points is False
-    assert aps.saturation_t2.count == 1
-    assert aps.saturation_t2.uom == 'm3/m3'
-    assert np.isnan(aps.saturation_t2.null_value)
-    assert aps.saturation_t2.realization is None
-    assert aps.saturation_t2.time_index == 2
-    assert aps.saturation_t2.title == 'SW'
-    assert aps.saturation_t2.citation_title == 'SW'
-    assert maths.isclose(aps.saturation_t2.min_value, 0.75)
-    assert maths.isclose(aps.saturation_t2.max_value, 1.0)
-    assert aps.saturation_t2.constant_value is None
-    assert aps.saturation_t2.extra == {}
-    assert aps.saturation_t2.extra_metadata == {}
-    assert bu.matching_uuids(aps.saturation_t2.support_uuid, grid.uuid)
-    assert aps.saturation_t2.string_lookup_uuid is None
-    assert aps.saturation_t2.time_series_uuid is not None
-    assert aps.saturation_t2.local_property_kind_uuid is None
-    v = aps.saturation_t2.values
+    assert aps.saturation_water_t2.property_kind == 'saturation'
+    assert aps.saturation_water_t2.facet_type == 'what'
+    assert aps.saturation_water_t2.facet == 'water'
+    assert aps.saturation_water_t2.indexable == 'cells'
+    assert aps.saturation_water_t2.indexable_element == 'cells'
+    assert aps.saturation_water_t2.is_continuous is True
+    assert aps.saturation_water_t2.is_discrete is False
+    assert aps.saturation_water_t2.is_categorical is False
+    assert aps.saturation_water_t2.is_points is False
+    assert aps.saturation_water_t2.count == 1
+    assert aps.saturation_water_t2.uom == 'm3/m3'
+    assert np.isnan(aps.saturation_water_t2.null_value)
+    assert aps.saturation_water_t2.realization is None
+    assert aps.saturation_water_t2.time_index == 2
+    assert aps.saturation_water_t2.title == 'SW'
+    assert aps.saturation_water_t2.citation_title == 'SW'
+    assert maths.isclose(aps.saturation_water_t2.min_value, 0.75)
+    assert maths.isclose(aps.saturation_water_t2.max_value, 1.0)
+    assert aps.saturation_water_t2.constant_value is None
+    assert aps.saturation_water_t2.extra == {}
+    assert aps.saturation_water_t2.extra_metadata == {}
+    assert bu.matching_uuids(aps.saturation_water_t2.support_uuid, grid.uuid)
+    assert aps.saturation_water_t2.string_lookup_uuid is None
+    assert aps.saturation_water_t2.time_series_uuid is not None
+    assert aps.saturation_water_t2.local_property_kind_uuid is None
+    v = aps.saturation_water_t2.values
     assert isinstance(v, np.ndarray)
     assert v.shape == (3, 5, 5)
     assert np.isclose(np.min(v), 0.75)
     assert np.isclose(np.max(v), 1.0)
-    assert np.all(v == aps.saturation_t2.array_ref)
+    assert np.all(v == aps.saturation_water_t2.array_ref)
 
 
 def test_load_attribute_property_collection_title(example_model_with_prop_ts_rels):
