@@ -236,21 +236,12 @@ class AttributePropertySet(rqp.PropertyCollection):
 
     def _key(self, part):
         """Returns the key (attribute name) for a given part."""
-        if self.key_mode == 'pk':
-            key = self.property_kind_for_part(part)
-            facet = self.facet_for_part(part)
-            if facet is not None:
-                key += f'_{facet}'
-        else:
-            key = self.citation_title_for_part(part)
-        key = key.replace(' ', '_')
-        ti = self.time_index_for_part(part)
-        if ti is not None:
-            key += f'_t{ti}'
-        r = self.realization_for_part(part)
-        if r is not None:
-            key += f'_r{r}'
-        return key
+        return make_aps_key(self.key_mode,
+                            property_kind = self.property_kind_for_part(part),
+                            title = self.citation_title_for_part(part),
+                            facet = self.facet_for_part(part),
+                            time_index = self.time_index_for_part(part),
+                            realization = self.realization_for_part(part))
 
     def _make_attributes(self):
         """Setup individual properties with attribute style read access to metadata."""
@@ -262,3 +253,21 @@ class AttributePropertySet(rqp.PropertyCollection):
     def __len__(self):
         """Returns the number of properties in the set."""
         return self.number_of_parts()
+
+
+def make_aps_key(key_mode, property_kind = None, title = None, facet = None, time_index = None, realization = None):
+    """Contructs the key (attribute name) for a property based on metadata items."""
+    if key_mode == 'pk':
+        assert property_kind is not None
+        key = property_kind
+        if facet is not None:
+            key += f'_{facet}'
+    else:
+        assert title is not None
+        key = title
+    key = key.replace(' ', '_')
+    if time_index is not None:
+        key += f'_t{time_index}'
+    if realization is not None:
+        key += f'_r{realization}'
+    return key
