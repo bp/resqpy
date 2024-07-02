@@ -425,8 +425,8 @@ def import_nexus(
                 log.error('failed to determine case number for tail: ' + str(tail))
                 continue
             for keyword in ensemble_property_dictionary.keys():
-                (filename, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value, p_discrete) =  \
-                    ensemble_property_dictionary[keyword]
+                (filename, p_property_kind, p_facet_type, p_facet, p_uom, p_time_index, p_null_value,
+                 p_discrete) = ensemble_property_dictionary[keyword]
                 p_filename = os.path.join(case_path, filename)
                 if not os.path.exists(p_filename):
                     log.error('missing property file: ' + p_filename)
