@@ -37,7 +37,6 @@ def import_vdb_all_grids(resqml_file_root,
     """Creates a RESQML dataset containing grids and grid properties, including LGRs, for a single realisation.
 
     arguments:
-
         - resqml_file_root (str): output path and file name without .epc or .h5 extension
         - extent_ijk (triple float, optional): ijk extents (fortran ordering)
         - vdb_file (str, optional): vdb input file, either this or corp_file should be not None;
@@ -76,7 +75,6 @@ def import_vdb_all_grids(resqml_file_root,
           vdb_recurrent_properties boolean arguments must also be set True for respective properties
           to be included; ignored if not importing from vdb
     """
-
     vdbase = vdb.VDB(vdb_file)
     case_list = vdbase.cases()
     assert len(case_list) > 0, 'no cases found in vdb'

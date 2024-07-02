@@ -69,12 +69,9 @@ def import_nexus(
         mode = 'w',
         progress_fn = None,
         vdb_property_list = None):
-    """Read a simulation grid geometry and optionally grid properties.
-
-    Input may be from nexus ascii input files, or nexus vdb output.
+    """Read a Nexus grid geometry (from ascii input or vdb) and optionally grid properties.
 
     arguments:
-
         - resqml_file_root (str): output path and file name without .epc or .h5 extension
         - extent_ijk (triple float, optional): ijk extents (fortran ordering)
         - vdb_file (str, optional): vdb input file, either this or corp_file should be not None;
@@ -105,7 +102,7 @@ def import_nexus(
         - shift_to_local (bool, default False): if True then a local origin will be used in the CRS
         - local_origin_place (str, default 'centre'): 'centre' or 'minimum'; if 'centre' the
           local origin is placed at the centre of the grid; ignored if shift_to_local is False
-        = max_z_void (float, default 0.1): maximum z gap between vertically neighbouring corner points;
+        - max_z_void (float, default 0.1): maximum z gap between vertically neighbouring corner points;
           vertical gaps greater than this will introduce k gaps into resqml grid; units are corp z units
         - split_pillars (bool, default True): if False an unfaulted grid will be generated
         - split_tolerance (float, default 0.01): maximum distance between neighbouring corner points
@@ -140,10 +137,8 @@ def import_nexus(
           to be included; ignored if not importing from vdb
 
     returns:
-
         - resqml model in memory & written to disc
     """
-
     if resqml_file_root.endswith('.epc'):
         resqml_file_root = resqml_file_root[:-4]
     assert mode in ['w', 'a']
