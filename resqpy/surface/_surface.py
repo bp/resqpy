@@ -122,6 +122,7 @@ class Surface(rqsb.BaseSurface):
             self.set_from_mesh_file(mesh_file, mesh_format, quad_triangles = quad_triangles)
         elif tsurf_file is not None:
             self.set_from_tsurf_file(tsurf_file)
+        self._load_normal_vector_from_extra_metadata()
 
     @classmethod
     def from_tri_mesh(cls, tri_mesh, exclude_nans = False):
@@ -1203,7 +1204,12 @@ class Surface(rqsb.BaseSurface):
         if not self.title:
             self.title = 'surface'
 
-        tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
+        em = None
+        if self.normal_vector is not None:
+            assert len(self.normal_vector) == 3
+            em = {'normal vector': f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}'}
+
+        tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator, extra_metadata = em)
 
         # todo: if crs_uuid is None, attempt to set to surface patch crs uuid (within patch loop, below)
         if crs_uuid is not None:
@@ -1308,6 +1314,16 @@ class Surface(rqsb.BaseSurface):
                                                           'externalPartProxyToMl')
 
         return tri_rep
+
+    def _load_normal_vector_from_extra_metadata(self):
+        if self.normal_vector is None and self.extra_metadata is not None:
+            nv_str = self.extra_metadata.get('normal vector')
+            if nv_str is not None:
+                nv_words = nv_str.split(',')
+                assert len(nv_words) == 3, f'failed to convert normal vector string into triplet: {nv_str}'
+                self.normal_vector = np.empty(3, dtype = float)
+                for i in range(3):
+                    self.normal_vector[i] = float(nv_words[i])
 
 
 def distill_triangle_points(t, p):
