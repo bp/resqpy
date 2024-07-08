@@ -59,6 +59,15 @@ def test_faces_for_surface(tmp_model):
     assert surf is not None
     assert surf.node_count() == 4
     assert surf.triangle_count() == 2
+    assert_array_almost_equal(surf.normal(), (-0.707107, 0.0, 0.707107))
+    surf.write_hdf5()
+    surf.create_xml()
+    surf = rqs.Surface(tmp_model, uuid = surf.uuid)
+    assert surf is not None
+    assert surf.node_count() == 4
+    assert surf.triangle_count() == 2
+    assert surf.normal_vector is not None
+    assert_array_almost_equal(surf.normal_vector, (-0.707107, 0.0, 0.707107))
     for mode in ['staffa', 'regular', 'auto']:
         gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
         assert gcs is not None

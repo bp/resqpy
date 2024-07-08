@@ -716,7 +716,7 @@ class Surface(rqsb.BaseSurface):
 
         _, p = self.triangles_and_points()
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
-        if crs.xy_units == self.z_units:
+        if crs.xy_units == crs.z_units:
             return p
         unit_adjusted_p = p.copy()
         wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
