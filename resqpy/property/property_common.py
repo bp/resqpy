@@ -12,18 +12,13 @@ import numpy as np
 import resqpy.property as rqp
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.weights_and_measures as bwam
+import resqpy.weights_and_measures as wam
 
 # the following resqml property kinds and facet types are 'known about' by this module in relation to nexus
 # other property kinds should be handled okay but without any special treatment
 # see property_kind_and_facet_from_keyword() for simulator keyword to property kind and facet mapping
 
-supported_property_kind_list = [
-    'continuous', 'discrete', 'categorical', 'code', 'index', 'depth', 'rock volume', 'pore volume', 'volume',
-    'thickness', 'length', 'cell length', 'area', 'net to gross ratio', 'porosity', 'permeability thickness',
-    'permeability length', 'permeability rock', 'rock permeability', 'fluid volume', 'transmissibility', 'pressure',
-    'saturation', 'solution gas-oil ratio', 'vapor oil-gas ratio', 'property multiplier', 'thermodynamic temperature'
-]
+supported_property_kind_list = list(wam.valid_property_kinds())
 
 supported_local_property_kind_list = [
     'active', 'transmissibility multiplier', 'fault transmissibility', 'mat transmissibility'
@@ -326,7 +321,7 @@ def infer_property_kind(name, unit):
 
     # Currently unit is ignored
 
-    valid_kinds = bwam.valid_property_kinds()
+    valid_kinds = wam.valid_property_kinds()
 
     if name in valid_kinds:
         kind = name
