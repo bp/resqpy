@@ -3074,3 +3074,10 @@ def test_no_pack_unpack_bits_ni_one(example_model_and_crs):
     b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
     assert b is not None and b.shape == shape
     assert np.all(b == brray)
+
+
+def test_specific_property_kinds():
+
+    assert 'density' in rqp.supported_property_kind_list
+    assert 'thermal conductivity' in rqp.supported_property_kind_list
+    assert 'fluid volume' in rqp.supported_property_kind_list
