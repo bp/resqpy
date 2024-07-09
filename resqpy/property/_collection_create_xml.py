@@ -66,7 +66,7 @@ def _create_xml_property_kind(collection, p_node, find_local_property_kinds, pro
         property_kind = 'rock permeability'
     p_kind_node = rqet.SubElement(p_node, ns['resqml2'] + 'PropertyKind')
     p_kind_node.text = rqet.null_xml_text
-    if find_local_property_kinds and property_kind not in rqp_c.supported_property_kind_list:
+    if find_local_property_kinds and property_kind not in wam.valid_property_kinds():
         property_kind_uuid = pcga._get_property_kind_uuid(collection, property_kind_uuid, property_kind, uom, discrete)
 
     if property_kind_uuid is None:
