@@ -18,7 +18,7 @@ import resqpy.weights_and_measures as wam
 # other property kinds should be handled okay but without any special treatment
 # see property_kind_and_facet_from_keyword() for simulator keyword to property kind and facet mapping
 
-supported_property_kind_list = wam.valid_property_kinds()
+supported_property_kind_list = list(wam.valid_property_kinds())
 
 supported_local_property_kind_list = [
     'active', 'transmissibility multiplier', 'fault transmissibility', 'mat transmissibility'
