@@ -120,9 +120,11 @@ def test_fault_connection_set(tmp_path):
     # model.store_epc()
 
     g2_fcs, g2_fa = rqtr.fault_connection_set(g2)
+    g2_fcs_again, _ = rqtr.fault_connection_set(g2)
 
     assert g2_fcs is not None
     assert g2_fa is not None
+    assert g2_fcs_again is not None
 
     # show_fa(g2, g2_fcs, g2_fa)
 
@@ -132,6 +134,8 @@ def test_fault_connection_set(tmp_path):
     # check grid faces property array generation
     g2_fcs.write_hdf5()
     g2_fcs.create_xml()
+    g2_fcs_again.write_hdf5()
+    g2_fcs_again.create_xml()
     gcs_p_a = np.array((37, 51), dtype = int)
     p = rqp.Property.from_array(model,
                                 gcs_p_a,
@@ -143,6 +147,7 @@ def test_fault_connection_set(tmp_path):
                                 discrete = True,
                                 null_value = -1)
     gcs_trm_a = np.array((0.1, 0.5), dtype = float)
+    gcs_trm_b = np.array((0.2, 0.4), dtype = float)
     trm_p = rqp.Property.from_array(model,
                                     gcs_trm_a,
                                     'test',
@@ -152,6 +157,15 @@ def test_fault_connection_set(tmp_path):
                                     indexable_element = 'faces',
                                     discrete = False,
                                     uom = 'Euc')
+    trm_again_p = rqp.Property.from_array(model,
+                                          gcs_trm_b,
+                                          'test',
+                                          'trmult',
+                                          g2_fcs_again.uuid,
+                                          property_kind = 'transmissibility multiplier',
+                                          indexable_element = 'faces',
+                                          discrete = False,
+                                          uom = 'Euc')
     for lazy in [True, False]:
         pk, pj, pi = g2_fcs.grid_face_arrays(property_uuid = p.uuid,
                                              default_value = p.null_value(),
@@ -163,46 +177,60 @@ def test_fault_connection_set(tmp_path):
         assert np.all(pi == -1)
         assert np.count_nonzero(pj > 0) == 2 if lazy else 4
         assert tuple(np.unique(pj)) == (-1, 37, 51)
-    for merge_mode in ['minimum', 'maximum', 'multiply']:
-        for sided in ([False] if merge_mode == 'multiply' else [False, True]):
-            c_trm_k,  c_trm_j,  c_trm_i =  \
-                rqf.combined_tr_mult_from_gcs_mults(model,
-                                                    [trm_p.uuid],
-                                                    merge_mode = merge_mode,
-                                                    sided = sided,
-                                                    fill_value = 1.0)
-            assert all([a is not None for a in (c_trm_k, c_trm_j, c_trm_i)])
-            assert c_trm_k.shape == (3, 2, 2) and c_trm_j.shape == (2, 3, 2) and c_trm_i.shape == (2, 2, 3)
-            assert_array_almost_equal(c_trm_k, 1.0)
-            assert_array_almost_equal(c_trm_i, 1.0)
-            assert np.count_nonzero(c_trm_j < 0.9) == 2 if lazy else 4
-            assert not np.any(np.isnan(c_trm_j))
-            g_trm_k_uuid,  g_trm_j_uuid,  g_trm_i_uuid =  \
-                g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = [g2_fcs.uuid],
-                                                              merge_mode = merge_mode,
-                                                              sided = sided,
-                                                              fill_value = 1.0,
-                                                              composite_property = False)
-            assert g_trm_k_uuid is not None and g_trm_j_uuid is not None and g_trm_i_uuid is not None
-            g_trm_k = rqp.Property(model, uuid = g_trm_k_uuid).array_ref()
-            g_trm_j = rqp.Property(model, uuid = g_trm_j_uuid).array_ref()
-            g_trm_i = rqp.Property(model, uuid = g_trm_i_uuid).array_ref()
-            assert g_trm_k is not None and g_trm_j is not None and g_trm_i is not None
-            assert np.all(g_trm_k == c_trm_k)
-            assert np.all(g_trm_j == c_trm_j)
-            assert np.all(g_trm_i == c_trm_i)
-            g_trm_list = g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = [g2_fcs.uuid],
-                                                                       merge_mode = merge_mode,
-                                                                       sided = sided,
-                                                                       fill_value = 1.0,
-                                                                       composite_property = True)
-            assert len(g_trm_list) == 1
-            g_trm = rqp.Property(model, uuid = g_trm_list[0]).array_ref()
-            assert g_trm.ndim == 1
-            assert g_trm.size == g_trm_k.size + g_trm_j.size + g_trm_i.size
-            assert np.all(g_trm[:g_trm_k.size] == g_trm_k.flat)
-            assert np.all(g_trm[g_trm_k.size:g_trm_k.size + g_trm_j.size] == g_trm_j.flat)
-            assert np.all(g_trm[g_trm_k.size + g_trm_j.size:] == g_trm_i.flat)
+    for pair, gcs_uuid_list, tr_uuid_list in [(False, [g2_fcs.uuid], [trm_p.uuid]),
+                                              (True, [g2_fcs.uuid, g2_fcs_again.uuid], [trm_p.uuid, trm_again_p.uuid])]:
+        for merge_mode in ['minimum', 'maximum', 'multiply']:
+            for sided in ([False] if merge_mode == 'multiply' else [False, True]):
+                c_trm_k,  c_trm_j,  c_trm_i =  \
+                    rqf.combined_tr_mult_from_gcs_mults(model,
+                                                        tr_uuid_list,
+                                                        merge_mode = merge_mode,
+                                                        sided = sided,
+                                                        fill_value = 1.0)
+                assert all([a is not None for a in (c_trm_k, c_trm_j, c_trm_i)])
+                assert c_trm_k.shape == (3, 2, 2) and c_trm_j.shape == (2, 3, 2) and c_trm_i.shape == (2, 2, 3)
+                assert_array_almost_equal(c_trm_k, 1.0)
+                assert_array_almost_equal(c_trm_i, 1.0)
+                assert np.count_nonzero(c_trm_j < 0.9) == 2 if lazy else 4
+                assert not np.any(np.isnan(c_trm_j))
+                unique_c_trm_j = np.unique(c_trm_j)
+                assert len(unique_c_trm_j) == 3
+                if merge_mode == 'minimum':
+                    assert np.isclose(np.min(c_trm_j), 0.1)
+                    assert np.isclose(unique_c_trm_j[1], 0.4 if pair else 0.5)
+                elif merge_mode == 'maximum':
+                    assert np.isclose(np.min(c_trm_j), 0.2 if pair else 0.1)
+                    assert np.isclose(unique_c_trm_j[1], 0.5)
+                else:  # multiply
+                    assert np.isclose(np.min(c_trm_j), 0.02 if pair else 0.1)
+                    assert np.isclose(unique_c_trm_j[1], 0.2 if pair else 0.5)
+                assert np.isclose(unique_c_trm_j[2], 1.0)
+                g_trm_k_uuid,  g_trm_j_uuid,  g_trm_i_uuid =  \
+                    g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = gcs_uuid_list,
+                                                                  merge_mode = merge_mode,
+                                                                  sided = sided,
+                                                                  fill_value = 1.0,
+                                                                  composite_property = False)
+                assert g_trm_k_uuid is not None and g_trm_j_uuid is not None and g_trm_i_uuid is not None
+                g_trm_k = rqp.Property(model, uuid = g_trm_k_uuid).array_ref()
+                g_trm_j = rqp.Property(model, uuid = g_trm_j_uuid).array_ref()
+                g_trm_i = rqp.Property(model, uuid = g_trm_i_uuid).array_ref()
+                assert g_trm_k is not None and g_trm_j is not None and g_trm_i is not None
+                assert np.all(g_trm_k == c_trm_k)
+                assert np.all(g_trm_j == c_trm_j)
+                assert np.all(g_trm_i == c_trm_i)
+                g_trm_list = g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = gcs_uuid_list,
+                                                                           merge_mode = merge_mode,
+                                                                           sided = sided,
+                                                                           fill_value = 1.0,
+                                                                           composite_property = True)
+                assert len(g_trm_list) == 1
+                g_trm = rqp.Property(model, uuid = g_trm_list[0]).array_ref()
+                assert g_trm.ndim == 1
+                assert g_trm.size == g_trm_k.size + g_trm_j.size + g_trm_i.size
+                assert np.all(g_trm[:g_trm_k.size] == g_trm_k.flat)
+                assert np.all(g_trm[g_trm_k.size:g_trm_k.size + g_trm_j.size] == g_trm_j.flat)
+                assert np.all(g_trm[g_trm_k.size + g_trm_j.size:] == g_trm_i.flat)
 
     # I face split with full juxtaposition of kji0 (1, *, 0) with (0, *, 1)
     # pattern 4, 4 (or 3, 3) diagram 1

@@ -2100,9 +2100,6 @@ class GridConnectionSet(BaseResqpy):
         ak = np.full((nk + 1, nj, ni), default_value, dtype = dtype)
         aj = np.full((nk, nj + 1, ni), default_value, dtype = dtype)
         ai = np.full((nk, nj, ni + 1), default_value, dtype = dtype)
-        # mk = np.zeros((nk + 1, nj, ni), dtype = bool)
-        # mj = np.zeros((nk, nj + 1, ni), dtype = bool)
-        # mi = np.zeros((nk, nj, ni + 1), dtype = bool)
 
         # populate arrays from faces of gcs, optionally filtered by feature index
         cip, fip = self.list_of_cell_face_pairs_for_feature_index(None)
@@ -2113,42 +2110,36 @@ class GridConnectionSet(BaseResqpy):
         else:
             indices = self.indices_for_feature_index(feature_index)
 
-        # opposing_count = 0
         side_list = ([0] if lazy else [0, 1])
-        for fi in indices:
-            # fi = int(i)
-            if active_mask is not None and not active_mask[fi]:
-                continue
-            value = gcs_prop_array[fi]
-            if baffle_mask is not None and baffle_mask[fi]:
-                value = 0  # will be cast to float (or bool) if needed when assigned below
-            for side in side_list:
-                cell_kji0 = cip[fi, side].copy()
-                # opposing = cell_kji0.copy()
-                axis, polarity = fip[fi, side]
-                assert 0 <= axis <= 2 and 0 <= polarity <= 1
-                cell_kji0[axis] += polarity
-                # opposing[axis] += (1 - polarity)
-                if axis == 0:
-                    ak[tuple(cell_kji0)] = value
-                    # mk[tuple(cell_kji0)] = True
-                    # if mk[tuple(opposing)]:
-                    #     opposing_count += 1
-                elif axis == 1:
-                    aj[tuple(cell_kji0)] = value
-                    # mj[tuple(cell_kji0)] = True
-                    # if mj[tuple(opposing)]:
-                    #     opposing_count += 1
-                else:
-                    ai[tuple(cell_kji0)] = value
-                    # mi[tuple(cell_kji0)] = True
-                    # if mi[tuple(opposing)]:
-                    #     opposing_count += 1
 
-        # if opposing_count:
-        #     log.warning(f'{opposing_count} suspicious opposing faces of {len(indices)} detected in gcs: {self.title}')
-        # else:
-        #     log.debug(f'no suspicious opposing faces detected in gcs: {self.title}')
+        value_array = gcs_prop_array.copy()
+        if baffle_mask is not None:
+            value_array[baffle_mask] = 0  # will be cast to float (or bool) if needed
+        if active_mask is not None:
+            cip = cip[active_mask, :, :]
+            value_array = value_array[active_mask]
+
+        for side in side_list:
+            cell_kji0 = cip[:, side].copy()  # shape (N, 3)
+            axis = fip[:, side, 0]  # shape (N,)
+            polarity = fip[:, side, 1]  # shape (N,)
+            assert 0 <= np.min(axis) and np.max(axis) <= 2
+            assert 0 <= np.min(polarity) and np.max(polarity) <= 1
+
+            axis_mask = (axis == 0).astype(bool)
+            ak_kji0 = cell_kji0[axis_mask, :]
+            ak_kji0[:, 0] += polarity[axis_mask]
+            ak[ak_kji0[:, 0], ak_kji0[:, 1], ak_kji0[:, 2]] = value_array[axis_mask]
+
+            axis_mask = (axis == 1).astype(bool)
+            aj_kji0 = cell_kji0[axis_mask, :]
+            aj_kji0[:, 1] += polarity[axis_mask]
+            aj[aj_kji0[:, 0], aj_kji0[:, 1], aj_kji0[:, 2]] = value_array[axis_mask]
+
+            axis_mask = (axis == 2).astype(bool)
+            ai_kji0 = cell_kji0[axis_mask, :]
+            ai_kji0[:, 2] += polarity[axis_mask]
+            ai[ai_kji0[:, 0], ai_kji0[:, 1], ai_kji0[:, 2]] = value_array[axis_mask]
 
         return (ak, aj, ai)
 

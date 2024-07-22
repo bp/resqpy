@@ -2255,9 +2255,9 @@ class Grid(BaseResqpy):
         pc = self.extract_property_collection()
 
         if baffle_triplet is not None:
-            trm_k[1:-1] = np.where(baffle_triplet[0], 0.0, trm_k[1:-1])
-            trm_j[:, 1:-1] = np.where(baffle_triplet[1], 0.0, trm_j[:, 1:-1])
-            trm_i[:, :, 1:-1] = np.where(baffle_triplet[2], 0.0, trm_i[:, :, 1:-1])
+            trm_k[1:-1][baffle_triplet[0]] = 0.0
+            trm_j[:, 1:-1][baffle_triplet[1]] = 0.0
+            trm_i[:, :, 1:-1][baffle_triplet[2]] = 0.0
 
         if composite_property:
             tr_composite = np.concatenate((trm_k.flat, trm_j.flat, trm_i.flat))
