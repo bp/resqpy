@@ -183,7 +183,8 @@ class ApsProperty:
 class AttributePropertySet(rqp.PropertyCollection):
     """Class for set of RESQML properties for any supporting representation, using attribute syntax."""
 
-    def __init__(self, model = None, support = None, property_set_uuid = None, realization = None, key_mode = 'pk'):
+    def __init__(self, model = None, support = None, property_set_uuid = None, realization = None,
+                 key_mode = 'pk', indexable = None, multiple_handling = 'warn'):
         """Initialise an empty property set, optionally populate properties from a supporting representation.
 
         arguments:
@@ -198,6 +199,11 @@ class AttributePropertySet(rqp.PropertyCollection):
               if None, then the collection is either covering a whole ensemble (individual properties can each be flagged with a
               realisation number), or is for properties that do not have multiple realizations
            key_mode (str, default 'pk'): either 'pk' (for property kind) or 'title', identifying the basis of property attribute keys
+           indexable (str, optional): if present and key_mode is 'pk', properties with indexable element other than this will
+              have their indexable element included in their key
+           multiple_handling (str, default 'warn'): either 'warn' or 'exception'; if warn, and properties exist that generate the
+              same key, then only the first is visible in the attribute property set (and a warning is given for each of the others);
+              if exception, a ValueError is raised if there are any duplicate keys
 
         note:
            at present, if the collection is being initialised from a property set, the support argument must also be specified;
@@ -214,9 +220,12 @@ class AttributePropertySet(rqp.PropertyCollection):
             property_set_root = None
         else:
             property_set_root = model.root_for_uuid(property_set_uuid)
+        assert multiple_handling in ['warn', 'exception']
 
         super().__init__(support = support, property_set_root = property_set_root, realization = realization)
         self.key_mode = key_mode
+        self.indexable_mode = indexable
+        self.multiple_handling = multiple_handling
         self._make_attributes()
 
     def keys(self):
@@ -241,12 +250,19 @@ class AttributePropertySet(rqp.PropertyCollection):
                             title = self.citation_title_for_part(part),
                             facet = self.facet_for_part(part),
                             time_index = self.time_index_for_part(part),
-                            realization = self.realization_for_part(part))
+                            realization = self.realization_for_part(part),
+                            indexable_mode = self.indexable_mode,
+                            indexable = self.indexable_for_part(part))
 
     def _make_attributes(self):
         """Setup individual properties with attribute style read access to metadata."""
         for part in self.parts():
             key = self._key(part)
+            if getattr(self, key, None) is not None:
+                if self.multiple_handling == 'warn':
+                    log.error(f'duplicate key in AttributePropertySet; only first instance included: {key}')
+                    continue
+                raise ValueError(f'duplicate key in attribute property set: {key}')
             aps_property = ApsProperty(self, part)
             setattr(self, key, aps_property)
 
@@ -255,11 +271,14 @@ class AttributePropertySet(rqp.PropertyCollection):
         return self.number_of_parts()
 
 
-def make_aps_key(key_mode, property_kind = None, title = None, facet = None, time_index = None, realization = None):
+def make_aps_key(key_mode, property_kind = None, title = None, facet = None, time_index = None,
+                 realization = None, indexable_mode = None, indexable = None):
     """Contructs the key (attribute name) for a property based on metadata items."""
     if key_mode == 'pk':
         assert property_kind is not None
         key = property_kind
+        if indexable_mode is not None and indexable is not None and indexable != indexable_mode:
+            key += f'_{indexable}'
         if facet is not None:
             key += f'_{facet}'
     else:
