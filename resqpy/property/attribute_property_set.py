@@ -209,7 +209,7 @@ class AttributePropertySet(rqp.PropertyCollection):
               have their indexable element included in their key
            multiple_handling (str, default 'warn'): either 'ignore', 'warn' ,or 'exception'; if 'warn' or 'ignore', and properties
               exist that generate the same key, then only the first is visible in the attribute property set (and a warning is given
-              for each of the others in the case of 'warn'); if 'exception', a ValueError is raised if there are any duplicate keys
+              for each of the others in the case of 'warn'); if 'exception', a KeyError is raised if there are any duplicate keys
 
         note:
            at present, if the collection is being initialised from a property set, the support argument must also be specified;
@@ -270,7 +270,7 @@ class AttributePropertySet(rqp.PropertyCollection):
                     continue
                 if self.multiple_handling == 'ignore':
                     continue
-                raise ValueError(f'duplicate key in attribute property set: {key}')
+                raise KeyError(f'duplicate key in attribute property set: {key}')
             aps_property = ApsProperty(self, part)
             setattr(self, key, aps_property)
 
