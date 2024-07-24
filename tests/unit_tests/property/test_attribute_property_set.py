@@ -140,6 +140,57 @@ def test_load_attribute_property_collection_pk(example_model_with_prop_ts_rels):
     assert np.all(v == aps.saturation_water_t2.array_ref)
 
 
+def test_load_attribute_property_collection_pk_duplicates(example_model_with_prop_ts_rels, capfd, caplog):
+    # Arrange
+    model = example_model_with_prop_ts_rels
+    grid = model.grid()
+    pc = grid.extract_property_collection()
+
+    # Act
+    aps = rqp.AttributePropertySet(support = grid)
+    facies_col = np.max(aps.facies.values, axis = 0)
+    pc.add_similar_to_imported_list(similar_uuid = aps.facies.uuid,
+                                    cached_array = facies_col,
+                                    indexable_element = 'columns')
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # check indexable used when needed in key
+    aps = rqp.AttributePropertySet(support = grid, indexable = 'cells')
+    assert aps is not None
+    assert len(aps) == 13
+    assert 'facies' in aps.keys()
+    assert 'facies_columns' in aps.keys()
+
+    # check duplicate ignored
+    aps = rqp.AttributePropertySet(support = grid, indexable = None, multiple_handling = 'ignore')
+    assert aps is not None
+    assert len(aps) == 13
+    key_list = list(aps.keys())
+    assert len(key_list) == 13  # all parts still exist in the PropertyCollection
+    assert len(
+        set(key_list)) == 12  # but two will have the same aps key (only the first is visible as AttributeProperty)
+    assert 'facies' in aps.keys()
+    assert 'facies_columns' not in aps.keys()
+
+    # check that multiple handling 'exception' raises key error
+    with pytest.raises(KeyError) as e_info:
+        aps = rqp.AttributePropertySet(support = grid, multiple_handling = 'exception')
+
+    # check that multiple handling 'warn' generates log warning
+    aps = rqp.AttributePropertySet(support = grid, multiple_handling = 'warn')
+    assert len(caplog.records) > 0
+    assert caplog.records[-1].getMessage().endswith(
+        "duplicate key in AttributePropertySet; only first instance included: facies")
+    assert aps is not None
+    assert len(aps) == 13
+    key_list = list(aps.keys())
+    assert len(key_list) == 13
+    assert len(set(key_list)) == 12
+    assert 'facies' in aps.keys()
+    assert 'facies_columns' not in aps.keys()
+
+
 def test_load_attribute_property_collection_title(example_model_with_prop_ts_rels):
     # Arrange
     model = example_model_with_prop_ts_rels
