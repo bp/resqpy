@@ -183,8 +183,14 @@ class ApsProperty:
 class AttributePropertySet(rqp.PropertyCollection):
     """Class for set of RESQML properties for any supporting representation, using attribute syntax."""
 
-    def __init__(self, model = None, support = None, property_set_uuid = None, realization = None,
-                 key_mode = 'pk', indexable = None, multiple_handling = 'warn'):
+    def __init__(self,
+                 model = None,
+                 support = None,
+                 property_set_uuid = None,
+                 realization = None,
+                 key_mode = 'pk',
+                 indexable = None,
+                 multiple_handling = 'warn'):
         """Initialise an empty property set, optionally populate properties from a supporting representation.
 
         arguments:
@@ -260,7 +266,7 @@ class AttributePropertySet(rqp.PropertyCollection):
             key = self._key(part)
             if getattr(self, key, None) is not None:
                 if self.multiple_handling == 'warn':
-                    log.error(f'duplicate key in AttributePropertySet; only first instance included: {key}')
+                    log.warning(f'duplicate key in AttributePropertySet; only first instance included: {key}')
                     continue
                 raise ValueError(f'duplicate key in attribute property set: {key}')
             aps_property = ApsProperty(self, part)
@@ -271,8 +277,14 @@ class AttributePropertySet(rqp.PropertyCollection):
         return self.number_of_parts()
 
 
-def make_aps_key(key_mode, property_kind = None, title = None, facet = None, time_index = None,
-                 realization = None, indexable_mode = None, indexable = None):
+def make_aps_key(key_mode,
+                 property_kind = None,
+                 title = None,
+                 facet = None,
+                 time_index = None,
+                 realization = None,
+                 indexable_mode = None,
+                 indexable = None):
     """Contructs the key (attribute name) for a property based on metadata items."""
     if key_mode == 'pk':
         assert property_kind is not None
