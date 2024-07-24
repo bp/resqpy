@@ -207,9 +207,9 @@ class AttributePropertySet(rqp.PropertyCollection):
            key_mode (str, default 'pk'): either 'pk' (for property kind) or 'title', identifying the basis of property attribute keys
            indexable (str, optional): if present and key_mode is 'pk', properties with indexable element other than this will
               have their indexable element included in their key
-           multiple_handling (str, default 'warn'): either 'warn' or 'exception'; if warn, and properties exist that generate the
-              same key, then only the first is visible in the attribute property set (and a warning is given for each of the others);
-              if exception, a ValueError is raised if there are any duplicate keys
+           multiple_handling (str, default 'warn'): either 'ignore', 'warn' ,or 'exception'; if 'warn' or 'ignore', and properties
+              exist that generate the same key, then only the first is visible in the attribute property set (and a warning is given
+              for each of the others in the case of 'warn'); if 'exception', a ValueError is raised if there are any duplicate keys
 
         note:
            at present, if the collection is being initialised from a property set, the support argument must also be specified;
@@ -226,7 +226,7 @@ class AttributePropertySet(rqp.PropertyCollection):
             property_set_root = None
         else:
             property_set_root = model.root_for_uuid(property_set_uuid)
-        assert multiple_handling in ['warn', 'exception']
+        assert multiple_handling in ['ignore', 'warn', 'exception']
 
         super().__init__(support = support, property_set_root = property_set_root, realization = realization)
         self.key_mode = key_mode
@@ -267,6 +267,8 @@ class AttributePropertySet(rqp.PropertyCollection):
             if getattr(self, key, None) is not None:
                 if self.multiple_handling == 'warn':
                     log.warning(f'duplicate key in AttributePropertySet; only first instance included: {key}')
+                    continue
+                if self.multiple_handling == 'ignore':
                     continue
                 raise ValueError(f'duplicate key in attribute property set: {key}')
             aps_property = ApsProperty(self, part)
