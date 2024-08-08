@@ -231,6 +231,10 @@ def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_propertie
     for prop, hdf5_path in zip(prop_list, path_list):
         root_node = prop.create_xml(find_local_property_kind = False)
         assert root_node is not None
+        source_em = rqet.find_metadata_item_node_in_xml(root_node, 'source')
+        assert source_em is not None
+        assert rqet.find_tag_text(source_em, 'Name') == 'source'
+        assert rqet.find_tag_text(source_em, 'Value') == 'test data'
         # override the hdf5 internal path in the xml tree
         path_node = rqet.find_nested_tags(root_node, ['PatchOfValues', 'Values', 'Values', 'PathInHdfFile'])
         assert path_node is not None
@@ -908,3 +912,21 @@ def test_untitled(tmp_path):
     assert rqet.find_nested_tags_text(crs.root, ['Citation', 'Title']) == 'untitled'
     mdd = rqw.MdDatum(model, uuid = mdd.uuid)
     assert rqet.find_nested_tags_text(mdd.root, ['LocalCrs', 'Title']) == 'untitled'
+
+
+def test_set_and_get_source_info(tmp_path):
+    epc = os.path.join(tmp_path, 'test_source.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    crs_part = crs.part
+    assert crs_part is not None
+    assert model.source_for_part(crs_part) is None
+    model.set_source_for_part(crs_part, 'resqpy unit tests')
+    assert model.source_for_part(crs_part) == 'resqpy unit tests'
+    model.set_modified()
+    model.store_epc()
+    model = rq.Model(epc)
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    crs_part = crs.part
+    assert model.source_for_part(crs_part) == 'resqpy unit tests'

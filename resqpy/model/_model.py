@@ -1134,6 +1134,7 @@ class Model():
         """
 
         m_x._create_source(source, root = m_c._root_for_part(self, part))
+        self.set_modified()
 
     def root_for_time_series(self, uuid = None):
         """Return root for time series part.
