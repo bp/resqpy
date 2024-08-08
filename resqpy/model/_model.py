@@ -1108,6 +1108,33 @@ class Model():
 
         return m_c._citation_title_for_part(self, part)
 
+    def source_for_part(self, part):
+        """Returns the source string from the part's extra metadata, if present, else None.
+
+        arguments:
+            part (str): the part for which the source information is required
+
+        returns:
+            str being the text of the source field in the xml extra metadata of the part, or None
+        """
+
+        return m_c._source_for_part(self, part)
+
+    def set_source_for_part(self, part, source):
+        """Sets the source string in the part's extra metadata.
+
+        arguments:
+            part (str): the part for which the source information is to be set
+            source (str): text for the extra metadata source item
+
+        notes:
+            this function adds the source item to the in-memory xml extra metadata;
+            any previous text for the source item (if present) will be replaced;
+            it will be included in the epc if store_epc() is subsequently called
+        """
+
+        m_x._create_source(source, root = m_c._root_for_part(self, part))
+
     def root_for_time_series(self, uuid = None):
         """Return root for time series part.
 

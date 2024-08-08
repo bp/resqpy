@@ -85,7 +85,7 @@ class PropertyCollection():
         self.realization = realization  # model realization number within an ensemble
         self.null_value = None
         self.imported_list = []
-        # above is list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
+        # above is list of (uuid, source, keyword, cached_name, discrete, uom, time_index, null_value,
         #                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                   indexable_element, count, local_property_kind_uuid, const_value, points,
         #                   time_series_uuid, string_lookup_uuid)
@@ -1299,6 +1299,12 @@ class PropertyCollection():
         """Returns a list of citation titles for the parts in the collection."""
 
         return [self.citation_title_for_part(p) for p in self.parts()]
+
+    def source_for_part(self, part):
+        """Returns the source string from the part's extra metadata, if present, else None."""
+
+        assert self.model is not None
+        return self.model.source_for_part(part)
 
     def time_series_uuid_for_part(self, part):
         """If the property has an associated time series (is not static), returns the uuid for the time series.
