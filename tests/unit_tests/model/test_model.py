@@ -914,7 +914,7 @@ def test_untitled(tmp_path):
     assert rqet.find_nested_tags_text(mdd.root, ['LocalCrs', 'Title']) == 'untitled'
 
 
-def test_set_and_get_source_info(tmp_path):
+def test_set_and_get_source_info_xml(tmp_path):
     epc = os.path.join(tmp_path, 'test_source.epc')
     model = rq.new_model(epc)
     crs = rqc.Crs(model)
@@ -930,3 +930,30 @@ def test_set_and_get_source_info(tmp_path):
     crs = rqc.Crs(model, uuid = crs.uuid)
     crs_part = crs.part
     assert model.source_for_part(crs_part) == 'resqpy unit tests'
+    model.set_source_for_part(crs_part, 'updated source info')
+    assert model.source_for_part(crs_part) == 'updated source info'
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert len(crs.extra_metadata) == 1
+    assert model.source_for_part(crs.part) == 'updated source info'
+
+
+def test_set_and_get_source_info_obj(tmp_path):
+    epc = os.path.join(tmp_path, 'test_source_obj.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    assert model.source_for_obj(crs) is None
+    model.set_source_for_obj(crs, 'resqpy source test')
+    assert model.source_for_part(crs.part) == 'resqpy source test'
+    assert model.source_for_obj(crs) == 'resqpy source test'
+    assert crs.extra_metadata['source'] == 'resqpy source test'
+    model.set_modified()
+    model.store_epc()
+    model = rq.Model(epc)
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert model.source_for_obj(crs) == 'resqpy source test'
+    model.set_source_for_obj(crs, 'updated source info')
+    assert model.source_for_obj(crs) == 'updated source info'
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert len(crs.extra_metadata) == 1
+    assert model.source_for_obj(crs) == 'updated source info'

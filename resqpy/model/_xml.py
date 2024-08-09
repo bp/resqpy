@@ -443,7 +443,7 @@ def _create_source(source, root = None):
 
         value_node = rqet.SubElement(emd_node, ns['resqml2'] + 'Value')
         value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-        value_node.text = source
+        value_node.text = str(source)
 
         if root is not None:
             root.append(emd_node)
@@ -452,7 +452,7 @@ def _create_source(source, root = None):
 
         value_node = rqet.find_tag(emd_node, 'Value')
         assert value_node is not None
-        value_node.text = source
+        value_node.text = str(source)
 
     return emd_node
 

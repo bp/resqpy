@@ -1136,6 +1136,38 @@ class Model():
         m_x._create_source(source, root = m_c._root_for_part(self, part))
         self.set_modified()
 
+    def source_for_obj(self, obj):
+        """Returns the source string from the object's extra metadata, if present, else None.
+
+        arguments:
+            obj (BaseResqpy): any high level resqpy object (eg. Surface)
+
+        returns:
+            str being the text of the source extra metadata item for the object, or None
+        """
+
+        return m_c._source_for_part(self, obj.part)
+
+    def set_source_for_obj(self, obj, source):
+        """Sets the source string in the object's extra metadata.
+
+        arguments:
+            part (str): the part for which the source information is to be set
+            source (str): text for the extra metadata source item
+
+        notes:
+            this function adds the source item to the in-memory xml extra metadata as well as
+            the object's extra_metadata dictionary
+            any previous text for the source item (if present) will be replaced;
+            it will be included in the epc if store_epc() is subsequently called
+        """
+
+        m_x._create_source(source, root = obj.root)
+        if not hasattr(obj, 'extra_metadata') or obj.extra_metadata is None:
+            obj.extra_metadata = {}
+        obj.extra_metadata['source'] = str(source)
+        self.set_modified()
+
     def root_for_time_series(self, uuid = None):
         """Return root for time series part.
 

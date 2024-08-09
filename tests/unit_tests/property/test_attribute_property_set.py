@@ -60,12 +60,13 @@ def test_load_attribute_property_collection_pk(example_model_with_prop_ts_rels):
     assert aps.zone.min_value == 1
     assert aps.zone.max_value == 3
     assert aps.zone.constant_value is None
-    assert aps.zone.extra == {}
-    assert aps.zone.extra_metadata == {}
+    assert len(aps.zone.extra) == 1
+    assert tuple(aps.zone.extra_metadata.keys()) == ('source',)
     assert bu.matching_uuids(aps.zone.support_uuid, grid.uuid)
     assert aps.zone.string_lookup_uuid is None
     assert aps.zone.time_series_uuid is None
     assert aps.zone.local_property_kind_uuid is not None
+    assert aps.zone.source == 'test model with time series'
     v = aps.zone.values
     assert isinstance(v, np.ndarray)
     assert v.shape == (3, 5, 5)
@@ -227,8 +228,8 @@ def test_load_attribute_property_collection_title(example_model_with_prop_ts_rel
     assert aps.Zone.min_value == 1
     assert aps.Zone.max_value == 3
     assert aps.Zone.constant_value is None
-    assert aps.Zone.extra == {}
-    assert aps.Zone.extra_metadata == {}
+    assert len(aps.Zone.extra) == 1
+    assert tuple(aps.Zone.extra_metadata.keys()) == ('source',)
     assert bu.matching_uuids(aps.Zone.support_uuid, grid.uuid)
     assert aps.Zone.string_lookup_uuid is None
     assert aps.Zone.time_series_uuid is None
