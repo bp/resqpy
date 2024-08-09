@@ -553,6 +553,15 @@ def _citation_title_for_part(model, part):  # duplicate functionality to title_f
     return title
 
 
+def _source_for_part(model, part):
+    """Returns the source string from the part's extra metadata, if present, else None."""
+
+    part_extra = rqet.load_metadata_from_xml(_root_for_part(model, part))
+    if not part_extra:
+        return None
+    return part_extra.get('source')
+
+
 def _root_for_time_series(model, uuid = None):
     """Return root for time series part."""
 

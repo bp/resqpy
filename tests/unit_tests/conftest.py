@@ -311,7 +311,7 @@ def model_with_prop_ts_rels(model_path):
                                                               [True, True, True, False],
                                                               [None, None, None, 'direction'], [None, None, None, 'J']):
         collection.add_cached_array_to_imported_list(cached_array = array,
-                                                     source_info = '',
+                                                     source_info = 'test model with time series',
                                                      keyword = name,
                                                      discrete = discrete,
                                                      uom = None,

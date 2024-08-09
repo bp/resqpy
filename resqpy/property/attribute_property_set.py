@@ -160,6 +160,11 @@ class ApsProperty:
         return self.extra
 
     @property
+    def source(self):
+        """The source extra metadata value for this property (or None)."""
+        return self.aps.source_for_part(self.part)
+
+    @property
     def support_uuid(self):
         """The uuid of the supporting representation for this property."""
         return self.aps.support_uuid_for_part(self.part)

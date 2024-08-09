@@ -420,22 +420,39 @@ def _create_supporting_representation(model,
 
 
 def _create_source(source, root = None):
-    """Create an extra meta data node holding information on the source of the data, optionally add to root."""
+    """Create an extra meta data node holding information on the source of the data, optionally add to root.
 
-    emd_node = rqet.Element(ns['resqml2'] + 'ExtraMetadata')
-    emd_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'NameValuePair')
-    emd_node.text = rqet.null_xml_text
+    note:
+        if the root already contains a 'source' extra metadata item, its text field is updated and the
+        existing extra metadata xml node is returned
+    """
 
-    name_node = rqet.SubElement(emd_node, ns['resqml2'] + 'Name')
-    name_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-    name_node.text = 'source'
-
-    value_node = rqet.SubElement(emd_node, ns['resqml2'] + 'Value')
-    value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
-    value_node.text = source
-
+    emd_node = None
     if root is not None:
-        root.append(emd_node)
+        emd_node = rqet.find_metadata_item_node_in_xml(root, 'source')
+
+    if emd_node is None:
+
+        emd_node = rqet.Element(ns['resqml2'] + 'ExtraMetadata')
+        emd_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'NameValuePair')
+        emd_node.text = rqet.null_xml_text
+
+        name_node = rqet.SubElement(emd_node, ns['resqml2'] + 'Name')
+        name_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
+        name_node.text = 'source'
+
+        value_node = rqet.SubElement(emd_node, ns['resqml2'] + 'Value')
+        value_node.set(ns['xsi'] + 'type', ns['xsd'] + 'string')
+        value_node.text = str(source)
+
+        if root is not None:
+            root.append(emd_node)
+
+    else:
+
+        value_node = rqet.find_tag(emd_node, 'Value')
+        assert value_node is not None
+        value_node.text = str(source)
 
     return emd_node
 
