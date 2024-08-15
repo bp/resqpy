@@ -419,8 +419,13 @@ class Trajectory(BaseResqpy):
             set_tangent_vectors = True):
         """Load MD and control points (xyz) data directly from numpy arrays."""
 
+        if isinstance(mds, list) or isinstance(mds, tuple):
+            mds = np.array(mds, dtype = float)
+        assert mds.ndim == 1
         self.knot_count = len(mds)
         assert self.knot_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
+        if isinstance(control_points, list) or isinstance(control_points, tuple):
+            control_points = np.array(control_points, dtype = float)
         assert control_points.shape == (self.knot_count, 3)
         self.line_kind_index = 5  # assume minimum curvature spline
         self.md_uom = wam.rq_length_unit(md_uom)
