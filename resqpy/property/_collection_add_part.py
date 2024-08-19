@@ -202,6 +202,9 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
      const_value, points, p_time_series_uuid, p_string_lookup_uuid) = attributes
 
     log.debug('processing imported property ' + str(p_keyword))
+    print(
+        f'**** keyword: {p_keyword}; const value: {const_value}; type: {type(const_value)}; is bool: {isinstance(const_value, bool)}'
+    )
     assert not points or not p_discrete
     if local_property_kind_uuid is None:
         local_property_kind_uuid = property_kind_uuid
@@ -214,7 +217,7 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                                                  p_keyword, p_discrete, string_lookup_uuid, points)
 
     p_array = _process_imported_property_get_p_array(collection, p_cached_name)
-    p_array_bool = None if p_array is None else p_array.dtype in [bool, np.int8]
+    p_array_bool = isinstance(const_value, bool) if p_array is None else p_array.dtype in [bool, np.int8]
 
     add_min_max = pcga._process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid,
                                                                   local_property_kind_uuid, p_array_bool)
