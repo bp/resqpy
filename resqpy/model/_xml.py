@@ -474,7 +474,9 @@ def _create_patch(model,
         assert ext_uuid is not None
     else:
         assert const_count is not None and const_count > 0
-        if hdf5_type.endswith('Hdf5Array'):
+        if isinstance(const_value, bool):
+            hdf5_type = 'BooleanConstantArray'  # not actually stored in hdf5
+        elif hdf5_type.endswith('Hdf5Array'):
             hdf5_type = hdf5_type[:-9] + 'ConstantArray'
 
     lxt = str(xsd_type).lower()
@@ -505,6 +507,7 @@ def _create_patch(model,
     outer_values_node.text = rqet.null_xml_text
 
     if discrete and const_value is None:
+
         if null_value is None:
             if str(xsd_type).startswith('u'):
                 null_value = 4294967295  # 2^32 - 1, used as default even for 64 bit data!
@@ -523,6 +526,11 @@ def _create_patch(model,
         _create_hdf5_dataset_ref(model, ext_uuid, p_uuid, f'{hdf_path_tail}{patch_index}', root = inner_values_node)
 
     else:
+
+        # TODO: handle bool const_value as special case
+        if isinstance(const_value, bool):
+            const_value = str(const_value).lower()
+            xsd_type = 'boolean'
 
         const_value_node = rqet.SubElement(outer_values_node, ns['resqml2'] + 'Value')
         const_value_node.set(ns['xsi'] + 'type', ns['xsd'] + xsd_type)

@@ -2281,7 +2281,7 @@ class PropertyCollection():
         if cached_array is not None:
             min_value, max_value = pcga._min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete)
         else:
-            if const_value == null_value or (not discrete and np.isnan(const_value)):
+            if const_value == null_value or isinstance(const_value, bool) or (not discrete and np.isnan(const_value)):
                 min_value = max_value = None
             else:
                 min_value = max_value = const_value
@@ -2658,7 +2658,7 @@ class PropertyCollection():
               must cycle fastest in the array, ie. be the last index
            points (bool, default False): if True, this is a points property
            extra_metadata (dictionary, optional): if present, adds extra metadata in the xml
-           const_value (float or int, optional): if present, create xml for a constant array filled with this value
+           const_value (float, int or bool, optional): if present, create xml for a constant array filled with this value
            expand_const_arrays (boolean, default False): if True, the hdf5 write must also have been called with the
               same argument and the xml will treat a constant array as a normal array
 

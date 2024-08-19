@@ -395,6 +395,138 @@ def test_add_grid_points_property(tmp_path):
     assert_array_almost_equal(diag, diagonal_array)
 
 
+def test_add_one_grid_property_array(tmp_path):
+    # create a new model with a grid
+    epc = os.path.join(tmp_path, 'cells_prop.epc')
+    model = rq.new_model(epc)
+    grid = grr.RegularGrid(model, extent_kji = (2, 3, 4))
+    grid.write_hdf5()
+    grid.create_xml()
+    model.store_epc()
+
+    # fabricate a property with indexable element cells
+    cells_array = np.zeros((grid.nk, grid.nj, grid.ni), dtype = float)
+    cells_array[:] = np.random.random(cells_array.shape)
+
+    # add the property
+    prop_uuid = rqdm.add_one_grid_property_array(epc,
+                                                 cells_array,
+                                                 property_kind = 'net to gross ratio',
+                                                 grid_uuid = grid.uuid,
+                                                 source_info = 'unit testing',
+                                                 title = 'test add one grid property array',
+                                                 discrete = False,
+                                                 uom = 'm3/m3',
+                                                 indexable_element = 'cells')
+    assert prop_uuid is not None
+
+    # re-open the model and inspect the property
+    model = rq.Model(epc)
+    assert len(model.parts(obj_type = 'ContinuousProperty')) > 0
+    cells_property = rqp.Property(model, uuid = prop_uuid)
+    assert cells_property is not None
+    p_array = cells_property.array_ref()
+    # RESQML holds array with last two dimensions flattened and reordered
+    assert p_array.shape == (grid.nk, grid.nj, grid.ni)
+    # restore logical resqpy order and shape
+    assert_array_almost_equal(p_array, cells_array)
+    assert cells_property.is_continuous()
+    assert not cells_property.is_categorical()
+    assert cells_property.indexable_element() == 'cells'
+    assert cells_property.uom() == 'm3/m3'
+    assert cells_property.property_kind() == 'net to gross ratio'
+    assert cells_property.facet() is None
+
+
+def test_add_one_grid_property_array_bool(tmp_path):
+    # create a new model with a grid
+    epc = os.path.join(tmp_path, 'cells_prop.epc')
+    model = rq.new_model(epc)
+    grid = grr.RegularGrid(model, extent_kji = (2, 3, 4))
+    grid.write_hdf5()
+    grid.create_xml()
+    model.store_epc()
+
+    # fabricate a property with indexable element cells
+    cells_array = np.zeros((grid.nk, grid.nj, grid.ni), dtype = bool)
+    cells_array[:] = (np.random.random(cells_array.shape) >= 0.5)
+
+    # add the bool property with a local (bespoke) property kind
+    prop_uuid = rqdm.add_one_grid_property_array(epc,
+                                                 cells_array,
+                                                 property_kind = 'logical song',
+                                                 grid_uuid = grid.uuid,
+                                                 source_info = 'unit testing',
+                                                 title = 'test add one grid property array bool',
+                                                 discrete = True,
+                                                 indexable_element = 'cells')
+    assert prop_uuid is not None
+
+    # re-open the model and inspect the property
+    model = rq.Model(epc)
+    assert len(model.parts(obj_type = 'DiscreteProperty')) > 0
+    cells_property = rqp.Property(model, uuid = prop_uuid)
+    assert cells_property is not None
+    p_array = cells_property.array_ref()
+    # RESQML holds array with last two dimensions flattened and reordered
+    assert p_array.shape == (grid.nk, grid.nj, grid.ni)
+    # restore logical resqpy order and shape
+    assert np.all(p_array == cells_array)
+    assert not cells_property.is_continuous()
+    assert not cells_property.is_categorical()
+    assert cells_property.indexable_element() == 'cells'
+    assert cells_property.property_kind() == 'logical song'
+    assert cells_property.facet() is None
+    pk_uuid = model.uuid(obj_type = 'PropertyKind', title = 'logical song')
+    assert pk_uuid is not None
+    p_rels_uuids = model.uuids(related_uuid = prop_uuid)
+    assert pk_uuid in p_rels_uuids
+
+
+def test_add_one_grid_property_array_bool_const(tmp_path):
+    # create a new model with a grid
+    epc = os.path.join(tmp_path, 'cells_prop.epc')
+    model = rq.new_model(epc)
+    grid = grr.RegularGrid(model, extent_kji = (2, 3, 4))
+    grid.write_hdf5()
+    grid.create_xml()
+    model.store_epc()
+
+    # add the const bool property
+    prop_uuid = rqdm.add_one_grid_property_array(epc,
+                                                 None,
+                                                 property_kind = 'logical song',
+                                                 grid_uuid = grid.uuid,
+                                                 source_info = 'unit testing',
+                                                 title = 'test add one grid property array bool',
+                                                 discrete = True,
+                                                 indexable_element = 'cells',
+                                                 const_value = True)
+    assert prop_uuid is not None
+
+    # re-open the model and inspect the property
+    model = rq.Model(epc)
+    assert len(model.parts(obj_type = 'DiscreteProperty')) > 0
+    cells_property = rqp.Property(model, uuid = prop_uuid)
+    assert cells_property is not None
+    p_array = cells_property.array_ref()
+    # RESQML holds array with last two dimensions flattened and reordered
+    assert p_array.shape == (grid.nk, grid.nj, grid.ni)
+    # restore logical resqpy order and shape
+    assert np.all(p_array)
+    assert not cells_property.is_continuous()
+    assert not cells_property.is_categorical()
+    assert cells_property.indexable_element() == 'cells'
+    assert cells_property.property_kind() == 'logical song'
+    assert cells_property.facet() is None
+    assert cells_property.constant_value() is not None
+    assert cells_property.constant_value()
+    pk_uuid = model.uuid(obj_type = 'PropertyKind', title = 'logical song')
+    assert pk_uuid is not None
+    p_rels_uuids = model.uuids(related_uuid = prop_uuid)
+    assert pk_uuid in p_rels_uuids
+
+
 def test_add_edges_per_column_property_array(tmp_path):
     # create a new model with a grid
     epc = os.path.join(tmp_path, 'edges_per_column.epc')
