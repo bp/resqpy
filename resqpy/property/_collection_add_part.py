@@ -202,9 +202,6 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
      const_value, points, p_time_series_uuid, p_string_lookup_uuid) = attributes
 
     log.debug('processing imported property ' + str(p_keyword))
-    print(
-        f'**** keyword: {p_keyword}; const value: {const_value}; type: {type(const_value)}; is bool: {isinstance(const_value, bool)}'
-    )
     assert not points or not p_discrete
     if local_property_kind_uuid is None:
         local_property_kind_uuid = property_kind_uuid
