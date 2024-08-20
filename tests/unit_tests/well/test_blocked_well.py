@@ -348,6 +348,20 @@ def test_set_for_column_and_other_things(example_model_and_crs):
     wbf_ii = bw_pc.cached_part_array_ref(wbf_ii_part)
     assert wbf_ii is not None and wbf_ii.shape == (bw.cell_count,)
     assert np.all(wbf_ii == (0, -1, 2, 2, -1)) or np.all(wbf_ii == (0, -1, 2, 3, -1))
+    # do some dataframe checks
+    df = bw.dataframe(extra_columns_list = ['KH', 'SKIN', 'STAT'],
+                      use_properties = True,
+                      property_time_index = 1,
+                      time_series_uuid = ts.uuid)
+    assert df is not None
+    assert 'KH' in df.columns
+    assert 'SKIN' in df.columns
+    assert 'STAT' in df.columns
+    assert_array_almost_equal(df['KH'], (1000.0, 0.0, 1200.0, 3800.0, 0.0))
+    assert_array_almost_equal(df['SKIN'], (3.5, np.NaN, -1.0, 0.5, np.NaN))
+    stat_col = list(df['STAT'])
+    assert len(stat_col) == 5
+    assert stat_col == ['ON', 'OFF', 'ON', 'ON', 'OFF']
 
 
 def test_derive_from_cell_list(example_model_and_crs):
