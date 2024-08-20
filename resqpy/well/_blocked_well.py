@@ -328,6 +328,7 @@ class BlockedWell(BaseResqpy):
 
     def __find_grid_node(self, node, unique_grid_indices):
         """Find the BlockedWell object's grid reference node(s)."""
+
         grid_node_list = rqet.list_of_tag(node, 'Grid')
         assert len(grid_node_list) > 0, 'blocked well grid reference(s) not found in xml'
         assert unique_grid_indices[0] >= -1 and unique_grid_indices[-1] < len(
@@ -344,6 +345,7 @@ class BlockedWell(BaseResqpy):
 
     def extract_property_collection(self, refresh = False):
         """Returns a property collection for the blocked well."""
+
         if self.property_collection is None or refresh:
             self.property_collection = rqp.PropertyCollection(support = self)
         return self.property_collection
@@ -407,6 +409,7 @@ class BlockedWell(BaseResqpy):
 
     def interval_for_cell(self, cell_index):
         """Returns the interval index for a given cell index (identical if there are no unblocked intervals)."""
+
         assert 0 <= cell_index < self.cell_count
         if self.node_count == self.cell_count + 1:
             return cell_index
@@ -424,11 +427,13 @@ class BlockedWell(BaseResqpy):
             (float, float) being the entry and exit measured depths for the cell, along the trajectory;
             uom is held in trajectory object
         """
+
         interval = self.interval_for_cell(cell_index)
         return (self.node_mds[interval], self.node_mds[interval + 1])
 
     def _set_cell_interval_map(self):
         """Sets up an index mapping from blocked cell index to interval index, accounting for unblocked intervals."""
+
         self.cell_interval_map = np.zeros(self.cell_count, dtype = int)
         ci = 0
         for ii in range(self.node_count - 1):
@@ -718,6 +723,7 @@ class BlockedWell(BaseResqpy):
 
     def __derive_from_wellspec_check_well_name(self, well_name):
         """Set the well name to be used in the wellspec file."""
+
         if well_name:
             self.well_name = well_name
         else:
@@ -1211,6 +1217,7 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __verify_header_lines_in_cellio_file(fp, well_name, cellio_file):
         """Find and verify the information in the header lines for the specified well in the RMS cellio file."""
+
         while True:
             kf.skip_blank_lines_and_comments(fp)
             line = fp.readline()  # file format version number?
@@ -1637,41 +1644,46 @@ class BlockedWell(BaseResqpy):
             if skip_interval_due_to_min_kh:
                 continue
 
-            length, radw_i, skin_i, radb, wi, wbc = BlockedWell.__get_pc_arrays_for_interval(pc = pc,
-                                                                                             pc_timeless = pc_timeless,
-                                                                                             pc_titles = pc_titles,
-                                                                                             ci = ci,
-                                                                                             length = length,
-                                                                                             radw = radw,
-                                                                                             skin = skin,
-                                                                                             length_uom = length_uom,
-                                                                                             grid = grid,
-                                                                                             traj_crs = traj_crs)
+            length, radw_i, skin_i, radb, wi, wbc, stat_i =  \
+                BlockedWell.__get_pc_arrays_for_interval(pc = pc,
+                                                         pc_timeless = pc_timeless,
+                                                         pc_titles = pc_titles,
+                                                         ci = ci,
+                                                         length = length,
+                                                         radw = radw,
+                                                         skin = skin,
+                                                         stat = stat,
+                                                         length_uom = length_uom,
+                                                         grid = grid,
+                                                         traj_crs = traj_crs)
             if skin_i is None:
                 skin_i = 0.0
             if radw_i is None:
                 radw_i = (0.33 if length_uom == 'ft' else 0.1)
+            if stat_i is None:
+                stat_i = stat
 
-            radb, wi, wbc = BlockedWell.__get_well_inflow_parameters_for_interval(do_well_inflow = do_well_inflow,
-                                                                                  isotropic_perm = isotropic_perm,
-                                                                                  ntg_is_one = ntg_is_one,
-                                                                                  k_i = k_i,
-                                                                                  k_j = k_j,
-                                                                                  k_k = k_k,
-                                                                                  sine_anglv = sine_anglv,
-                                                                                  cosine_anglv = cosine_anglv,
-                                                                                  sine_angla = sine_angla,
-                                                                                  cosine_angla = cosine_angla,
-                                                                                  grid = grid,
-                                                                                  cell_kji0 = cell_kji0,
-                                                                                  radw = radw_i,
-                                                                                  radb = radb,
-                                                                                  wi = wi,
-                                                                                  wbc = wbc,
-                                                                                  skin = skin_i,
-                                                                                  kh = kh,
-                                                                                  length_uom = length_uom,
-                                                                                  column_list = column_list)
+            radb, wi, wbc =  \
+                BlockedWell.__get_well_inflow_parameters_for_interval(do_well_inflow = do_well_inflow,
+                                                                      isotropic_perm = isotropic_perm,
+                                                                      ntg_is_one = ntg_is_one,
+                                                                      k_i = k_i,
+                                                                      k_j = k_j,
+                                                                      k_k = k_k,
+                                                                      sine_anglv = sine_anglv,
+                                                                      cosine_anglv = cosine_anglv,
+                                                                      sine_angla = sine_angla,
+                                                                      cosine_angla = cosine_angla,
+                                                                      grid = grid,
+                                                                      cell_kji0 = cell_kji0,
+                                                                      radw = radw_i,
+                                                                      radb = radb,
+                                                                      wi = wi,
+                                                                      wbc = wbc,
+                                                                      skin = skin_i,
+                                                                      kh = kh,
+                                                                      length_uom = length_uom,
+                                                                      column_list = column_list)
 
             xyz = self.__get_xyz_for_interval(doing_xyz = doing_xyz,
                                               length_mode = length_mode,
@@ -1703,7 +1715,7 @@ class BlockedWell(BaseResqpy):
                                                                  kh = kh,
                                                                  xyz = xyz,
                                                                  md = md,
-                                                                 stat = stat,
+                                                                 stat = stat_i,
                                                                  part_perf_fraction = part_perf_fraction,
                                                                  radb = radb,
                                                                  wi = wi,
@@ -1751,6 +1763,7 @@ class BlockedWell(BaseResqpy):
                                        fraction of wellbore frame interval in cell,
                                        fraction of cell's wellbore interval in wellbore frame interval)
         """
+
         return bwf.blocked_well_frame_contributions_list(self, wbf)
 
     def add_properties_from_wellbore_frame(self,
@@ -1965,8 +1978,10 @@ class BlockedWell(BaseResqpy):
             stat = str(stat).upper()
             if 'STAT' not in column_list:
                 column_list.append('STAT')
-        else:
-            stat = 'ON'
+
+
+#         else:
+#             stat = 'ON'
 
         if radw is not None and 'RADW' not in column_list:
             column_list.append('RADW')
@@ -2418,29 +2433,37 @@ class BlockedWell(BaseResqpy):
         return kh
 
     @staticmethod
-    def __get_pc_arrays_for_interval(pc, pc_timeless, pc_titles, ci, length, radw, skin, length_uom, grid, traj_crs):
+    def __get_pc_arrays_for_interval(pc, pc_timeless, pc_titles, ci, length, radw, skin, stat, length_uom, grid,
+                                     traj_crs):
         """Get the property collection arrays for the interval."""
 
         def get_item(v, title, pc_titles, pc, pc_timeless, ci, uom):
 
             def pk_for_title(title):
-                d = {'RADW': 'wellbore radius', 'RADB': 'block equivalent radius', 'SKIN': 'skin'}
+                d = {
+                    'RADW': 'wellbore radius',
+                    'RADB': 'block equivalent radius',
+                    'SKIN': 'skin',
+                    'STAT': 'well connection open'
+                }
                 return d.get(title)
 
+            p = None
+            pk = pk_for_title(title)
             pc_uom = None
-            if title in pc_titles:
-                p = pc.singleton(citation_title = title)
-                v = pc.cached_part_array_ref(p)[ci]
-                pc_uom = pc.uom_for_part(p)
-            elif pc_timeless is not None:
-                p = pc_timeless.singleton(citation_title = title)
-                if p is None:
-                    pk = pk_for_title(title)
-                    if pk is not None:
-                        p = pc_timeless.singleton(property_kind = pk)
+            for try_pc in [pc, pc_timeless]:
+                if try_pc is None:
+                    continue
+                if title in pc_titles:
+                    p = try_pc.singleton(citation_title = title)
+                if p is None and pk is not None:
+                    p = try_pc.singleton(property_kind = pk)
                 if p is not None:
-                    v = pc_timeless.cached_part_array_ref(p)[ci]
-                    pc_uom = pc.uom_for_part(p)
+                    v = try_pc.cached_part_array_ref(p)[ci]
+                    pc_uom = try_pc.uom_for_part(p)
+                    break
+            if (title == 'STAT' or pk == 'well connection open') and v is not None and not isinstance(v, str):
+                v = 'ON' if v else 'OFF'
             if pc_uom is not None and uom is not None and pc_uom != uom:
                 v = wam.convert_lengths(v, pc_uom, uom)
             return v
@@ -2453,6 +2476,7 @@ class BlockedWell(BaseResqpy):
             r_uom = length_uom
         length = get_item(length, 'LENGTH', pc_titles, pc, pc_timeless, ci, l_uom)
         radw = get_item(radw, 'RADW', pc_titles, pc, pc_timeless, ci, r_uom)
+        stat = get_item(stat, 'STAT', pc_titles, pc, pc_timeless, ci, None)
         assert radw is None or radw > 0.0  # todo: allow zero for inactive intervals?
         skin = get_item(skin, 'SKIN', pc_titles, pc, pc_timeless, ci, None)
         if skin is None:
@@ -2463,7 +2487,7 @@ class BlockedWell(BaseResqpy):
         wi = get_item(None, 'WI', pc_titles, pc, pc_timeless, ci, None)
         wbc = get_item(None, 'WBC', pc_titles, pc, pc_timeless, ci, None)
 
-        return length, radw, skin, radb, wi, wbc
+        return length, radw, skin, radb, wi, wbc, stat
 
     @staticmethod
     def __get_well_inflow_parameters_for_interval(do_well_inflow, isotropic_perm, ntg_is_one, k_i, k_j, k_k, sine_anglv,
@@ -2689,6 +2713,7 @@ class BlockedWell(BaseResqpy):
             this method currently only handles single grid situations;
             dataframe rows must be in the same order as the cells in the blocked well
         """
+
         # todo: enhance to handle multiple grids
         assert len(self.grid_list) == 1
         if columns is None or len(columns) == 0 or len(df) == 0:
@@ -2713,8 +2738,9 @@ class BlockedWell(BaseResqpy):
             # 'SKIN': use defaults for now; todo: create local property kind for skin
             if column == 'STAT':
                 col_as_list = list(df[column])
-                expanded = np.array([(0 if (str(st).upper() in ['OFF', '0']) else 1) for st in col_as_list],
-                                    dtype = int)
+                expanded = np.array([(0 if (str(st).upper() in ['OFF', '0', 'FALSE']) else 1) for st in col_as_list],
+                                    dtype = np.int8)
+                dtype = np.int8
             else:
                 expanded = df[column].to_numpy(dtype = dtype, copy = True, na_value = na_value)
             extra_pc.add_cached_array_to_imported_list(
@@ -2739,6 +2765,7 @@ class BlockedWell(BaseResqpy):
 
     def _get_uom_pk_discrete_for_df_properties(self, extra, length_uom, temperature_uom = None):
         """Set the property kind and unit of measure for all properties in the dataframe."""
+
         # todo: this is horribly inefficient, building a whole dictionary for every call but only using one entry
         if length_uom not in ['m', 'ft']:
             raise ValueError(f"The length_uom {length_uom} must be either 'm' or 'ft'.")
@@ -3297,6 +3324,7 @@ class BlockedWell(BaseResqpy):
     def __create_trajectory_xml_if_needed(self, create_for_trajectory_if_needed, add_as_part, add_relationships,
                                           originator, ext_uuid, title):
         """Create root node for associated Trajectory object if necessary."""
+
         if create_for_trajectory_if_needed and self.trajectory_to_be_written and self.trajectory.root is None:
             md_datum_root = self.trajectory.md_datum.create_xml(add_as_part = add_as_part,
                                                                 add_relationships = add_relationships,
@@ -3311,6 +3339,7 @@ class BlockedWell(BaseResqpy):
 
     def __create_bw_node_sub_elements(self, bw_node):
         """Append sub-elements to the BlockedWell object's root node."""
+
         nc_node = rqet.SubElement(bw_node, ns['resqml2'] + 'NodeCount')
         nc_node.set(ns['xsi'] + 'type', ns['xsd'] + 'positiveInteger')
         nc_node.text = str(self.node_count)
@@ -3369,7 +3398,8 @@ class BlockedWell(BaseResqpy):
         fis_values_node.set(ns['xsi'] + 'type', ns['eml'] + 'Hdf5Dataset')
         fis_values_node.text = rqet.null_xml_text
 
-        return nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node, gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node
+        return (nc_node, mds_node, mds_values_node, cc_node, cis_node, cnull_node, cis_values_node, gis_node,
+                gnull_node, gis_values_node, fis_node, fnull_node, fis_values_node)
 
     def __create_trajectory_grid_wellbore_interpretation_reference_nodes(self, bw_node):
         """Create nodes and add to BlockedWell object root node."""
