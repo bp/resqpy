@@ -1432,7 +1432,6 @@ class BlockedWell(BaseResqpy):
            - if add_as_properties is True, the blocked well must already have been added as a part to the model;
            - add_as_properties and use_properties cannot both be True;
            - add_as_properties and use_properties are only currently functional for single grid blocked wells;
-           - at present, unit conversion is not handled when using properties
 
         :meta common:
         """
