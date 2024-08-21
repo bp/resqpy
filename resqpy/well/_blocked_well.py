@@ -1417,20 +1417,22 @@ class BlockedWell(BaseResqpy):
            time_series_uuid (UUID, optional): the uuid of the time series for time dependent properties being added
 
         notes:
-           units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
-           the length_uom argument is used;
-           the constraints are applied independently for each row and a row is excluded if it fails any constraint;
-           the min_k0 and max_k0 arguments do not stop later rows within the layer range from being included;
-           the min_length and min_kh limits apply to individual cell intervals and thus depend on cell size;
-           the water and oil saturation limits are for saturations at a single time and affect whether the interval
-           is included in the dataframe – there is no functionality to support turning perforations off and on over time;
-           the saturation limits do not stop deeper intervals with qualifying saturations from being included;
-           the k0_list, perforation_list and region_list arguments should be set to None to disable the corresponding functionality,
-           if set to an empty list, no rows will be included in the dataframe;
-           if add_as_properties is True, the blocked well must already have been added as a part to the model;
-           add_as_properties and use_properties cannot both be True;
-           add_as_properties and use_properties are only currently functional for single grid blocked wells;
-           at present, unit conversion is not handled when using properties
+           - units of length along wellbore will be those of the trajectory's length_uom (also applies to K.H values) unless
+             the length_uom argument is used;
+           - the constraints are applied independently for each row and a row is excluded if it fails any constraint;
+           - the min_k0 and max_k0 arguments do not stop later rows within the layer range from being included;
+           - the min_length and min_kh limits apply to individual cell intervals and thus depend on cell size;
+           - the water and oil saturation limits are for saturations at a single time and affect whether the interval
+             is included in the dataframe
+           – to turn perforations off and on over time create a time series dependent bunch of boolean properties on
+             the blocked well, with title 'STAT' or local property kind 'well connection open';
+           - the saturation limits do not stop deeper intervals with qualifying saturations from being included;
+           - the k0_list, perforation_list and region_list arguments should be set to None to disable the
+             corresponding functionality, if set to an empty list, no rows will be included in the dataframe;
+           - if add_as_properties is True, the blocked well must already have been added as a part to the model;
+           - add_as_properties and use_properties cannot both be True;
+           - add_as_properties and use_properties are only currently functional for single grid blocked wells;
+           - at present, unit conversion is not handled when using properties
 
         :meta common:
         """
