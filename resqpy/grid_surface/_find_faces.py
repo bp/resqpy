@@ -495,19 +495,18 @@ def find_faces_to_represent_surface_regular(
     return gcs
 
 
-def find_faces_to_represent_surface_regular_optimised(
-    grid,
-    surface,
-    name,
-    title = None,
-    agitate = False,
-    random_agitation = False,
-    feature_type = "fault",
-    is_curtain = False,
-    progress_fn = None,
-    return_properties = None,
-    raw_bisector = False,
-):
+def find_faces_to_represent_surface_regular_optimised(grid,
+                                                      surface,
+                                                      name,
+                                                      title = None,
+                                                      agitate = False,
+                                                      random_agitation = False,
+                                                      feature_type = "fault",
+                                                      is_curtain = False,
+                                                      progress_fn = None,
+                                                      return_properties = None,
+                                                      raw_bisector = False,
+                                                      n_batches = 20):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     argumants:
@@ -539,6 +538,8 @@ def find_faces_to_represent_surface_regular_optimised(
            the returned dictionary has the passed strings as keys and numpy arrays as values
         raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
            form without assessing which side is shallower (True values indicate same side as origin cell)
+        n_batches (int, default 20): the number of batches of triangles to use at the low level (numba multi
+           threading allows some parallelism between the batches)
 
     returns:
         gcs  or  (gcs, gcs_props)
@@ -627,8 +628,9 @@ def find_faces_to_represent_surface_regular_optimised(
         p_xy = np.delete(points, 2, 1)
 
         k_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1],
-                                                           p_xy[triangles])
+                                                           p_xy[triangles], n_batches)
 
+        del p_xy
         axis = 2
         index1 = 1
         index2 = 2
@@ -650,7 +652,6 @@ def find_faces_to_represent_surface_regular_optimised(
             k_triangles,
         )
         del k_hits
-        del p_xy
         log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -670,8 +671,10 @@ def find_faces_to_represent_surface_regular_optimised(
         j_offsets = np.full((nk, grid.nj - 1, grid.ni), np.nan)
         p_xz = np.delete(points, 1, 1)
 
-        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
+        j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles],
+                                                           n_batches)
 
+        del p_xz
         axis = 1
         index1 = 0
         index2 = 2
@@ -693,7 +696,6 @@ def find_faces_to_represent_surface_regular_optimised(
             j_triangles,
         )
         del j_hits
-        del p_xz
         if is_curtain and grid.nk > 1:  # expand arrays to all layers
             j_faces = np.repeat(j_faces, grid.nk, axis = 0)
             j_triangles = np.repeat(j_triangles, grid.nk, axis = 0)
@@ -718,8 +720,10 @@ def find_faces_to_represent_surface_regular_optimised(
         i_offsets = np.full((nk, grid.nj, grid.ni - 1), np.nan)
         p_yz = np.delete(points, 0, 1)
 
-        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
+        i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles],
+                                                           n_batches)
 
+        del p_yz
         axis = 0
         index1 = 0
         index2 = 1
@@ -741,7 +745,6 @@ def find_faces_to_represent_surface_regular_optimised(
             i_triangles,
         )
         del i_hits
-        del p_yz
         if is_curtain and grid.nk > 1:  # expand arrays to all layers
             # log.debug('expanding curtain faces')
             i_faces = np.repeat(i_faces, grid.nk, axis = 0)

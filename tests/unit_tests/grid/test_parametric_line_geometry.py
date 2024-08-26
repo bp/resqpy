@@ -1,17 +1,18 @@
 import pytest
+import os
 import numpy as np
 
 import resqpy.model as rq
 import resqpy.grid as grr
 
 
-def test_parametric_line_geometry(basic_regular_grid):
+def test_parametric_line_geometry(tmp_path, basic_regular_grid):
     # finish converting the regular grid to irregular form
     old_model = basic_regular_grid.model
     basic_regular_grid.write_hdf5()
     basic_regular_grid.create_xml()
     basic_grid = grr.Grid(old_model, uuid = basic_regular_grid.uuid)
-    new_file = f'{old_model.epc_file[:-4]}_pl_basic.epc'
+    new_file = os.path.join(tmp_path, os.path.basename(f'{old_model.epc_file[:-4]}_pl_basic.epc'))
     new_model = rq.new_model(new_file)
     # copy crs
     new_model.copy_uuid_from_other_model(old_model, basic_grid.crs_uuid)
@@ -35,10 +36,10 @@ def test_parametric_line_geometry(basic_regular_grid):
     np.testing.assert_array_almost_equal(reload_grid.points_cached, basic_grid.points_cached)
 
 
-def test_parametric_line_geometry_faulted(faulted_grid):
+def test_parametric_line_geometry_faulted(tmp_path, faulted_grid):
     # Act
     old_model = faulted_grid.model
-    new_file = f'{old_model.epc_file[:-4]}_pl_faulted.epc'
+    new_file = os.path.join(tmp_path, os.path.basename(f'{old_model.epc_file[:-4]}_pl_faulted.epc'))
     new_model = rq.new_model(new_file)
     # copy crs
     new_model.copy_uuid_from_other_model(old_model, faulted_grid.crs_uuid)

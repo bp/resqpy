@@ -273,9 +273,11 @@ def test_points_in_triangles_aligned_optimised():
 
     # Act
     triangles_points = vec.points_in_triangles_aligned(nx, ny, dx, dy, triangles)
+    triangles_points_optimised_serial = vec.points_in_triangles_aligned_optimised_serial(nx, ny, dx, dy, triangles)
     triangles_points_optimised = vec.points_in_triangles_aligned_optimised(nx, ny, dx, dy, triangles)
 
     # Assert
+    np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised_serial))
     np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised))
 
 
@@ -564,3 +566,22 @@ def test_triangle_box():
     min_max = vec.triangle_box(triangle)
     assert len(min_max) == 4
     assert_array_almost_equal(min_max, (-2.6, 4.5, -3.1, 7.8))
+
+
+def test_vertical_intercept():
+    xv = np.array((2.0, 10.0), dtype = float)
+    yv = np.array((20.0, 30.0), dtype = float)
+    assert vec.vertical_intercept(-5.0, xv, yv) is None
+    assert np.isnan(vec.vertical_intercept_nan(-5.0, xv[0], xv[1], yv[0], yv[1]))
+    assert vec.vertical_intercept(1.0, xv, yv) is None
+    assert np.isnan(vec.vertical_intercept_nan(1.0, xv[0], xv[1], yv[0], yv[1]))
+    assert vec.vertical_intercept(11.0, xv, yv) is None
+    assert np.isnan(vec.vertical_intercept_nan(11.0, xv[0], xv[1], yv[0], yv[1]))
+    assert np.isclose(vec.vertical_intercept(2.0, xv, yv), 20.0)
+    assert np.isclose(vec.vertical_intercept_nan(2.0, xv[0], xv[1], yv[0], yv[1]), 20.0)
+    assert np.isclose(vec.vertical_intercept(10.0, xv, yv), 30.0)
+    assert np.isclose(vec.vertical_intercept_nan(10.0, xv[0], xv[1], yv[0], yv[1]), 30.0)
+    assert np.isclose(vec.vertical_intercept(4.0, xv, yv), 22.5)
+    assert np.isclose(vec.vertical_intercept_nan(4.0, xv[0], xv[1], yv[0], yv[1]), 22.5)
+    assert np.isclose(vec.vertical_intercept(6.0, xv, yv), 25.0)
+    assert np.isclose(vec.vertical_intercept_nan(6.0, xv[0], xv[1], yv[0], yv[1]), 25.0)
