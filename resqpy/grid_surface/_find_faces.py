@@ -629,6 +629,7 @@ def find_faces_to_represent_surface_regular_optimised(
         k_hits = vec.points_in_triangles_aligned_optimised(grid.ni, grid.nj, grid_dxyz[0], grid_dxyz[1],
                                                            p_xy[triangles])
 
+        del p_xy
         axis = 2
         index1 = 1
         index2 = 2
@@ -650,7 +651,6 @@ def find_faces_to_represent_surface_regular_optimised(
             k_triangles,
         )
         del k_hits
-        del p_xy
         log.debug(f"k face count: {np.count_nonzero(k_faces)}")
     else:
         k_faces = None
@@ -672,6 +672,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
         j_hits = vec.points_in_triangles_aligned_optimised(grid.ni, nk, grid_dxyz[0], grid_dxyz[2], p_xz[triangles])
 
+        del p_xz
         axis = 1
         index1 = 0
         index2 = 2
@@ -693,7 +694,6 @@ def find_faces_to_represent_surface_regular_optimised(
             j_triangles,
         )
         del j_hits
-        del p_xz
         if is_curtain and grid.nk > 1:  # expand arrays to all layers
             j_faces = np.repeat(j_faces, grid.nk, axis = 0)
             j_triangles = np.repeat(j_triangles, grid.nk, axis = 0)
@@ -720,6 +720,7 @@ def find_faces_to_represent_surface_regular_optimised(
 
         i_hits = vec.points_in_triangles_aligned_optimised(grid.nj, nk, grid_dxyz[1], grid_dxyz[2], p_yz[triangles])
 
+        del p_yz
         axis = 0
         index1 = 0
         index2 = 1
@@ -741,7 +742,6 @@ def find_faces_to_represent_surface_regular_optimised(
             i_triangles,
         )
         del i_hits
-        del p_yz
         if is_curtain and grid.nk > 1:  # expand arrays to all layers
             # log.debug('expanding curtain faces')
             i_faces = np.repeat(i_faces, grid.nk, axis = 0)
