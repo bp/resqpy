@@ -1081,8 +1081,7 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
     for triangle_num in range(len(triangles)):
         triangle = triangles[triangle_num]
         min_x, max_x, min_y, max_y = triangle_box(triangle)
-        x_values = grid_xi[max(maths.ceil(min_x), 0):min(maths.floor(max_x) + 1, nx)]
-        for xi in x_values:
+        for xi in range(max(maths.ceil(min_x), 0), min(maths.floor(max_x) + 1, nx)):
             x = float(xi)
             e0_y = vertical_intercept_nan(x, triangle[1, 0], triangle[2, 0], triangle[1, 1], triangle[2, 1])
             e1_y = vertical_intercept_nan(x, triangle[0, 0], triangle[1, 0], triangle[0, 1], triangle[1, 1])
