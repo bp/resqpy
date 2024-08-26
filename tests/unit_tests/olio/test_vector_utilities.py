@@ -273,9 +273,11 @@ def test_points_in_triangles_aligned_optimised():
 
     # Act
     triangles_points = vec.points_in_triangles_aligned(nx, ny, dx, dy, triangles)
+    triangles_points_optimised_serial = vec.points_in_triangles_aligned_optimised_serial(nx, ny, dx, dy, triangles)
     triangles_points_optimised = vec.points_in_triangles_aligned_optimised(nx, ny, dx, dy, triangles)
 
     # Assert
+    np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised_serial))
     np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised))
 
 
