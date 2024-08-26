@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 import math as maths
 import numpy as np
 import numba  # type: ignore
-from numba import njit  # type: ignore
+from numba import njit, prange  # type: ignore
 from typing import Tuple, Optional
 
 
@@ -1056,8 +1056,8 @@ def points_in_triangles_aligned_optimised_old(nx: int, ny: int, dx: float, dy: f
 
 
 @njit
-def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float,
-                                          triangles: np.ndarray) -> np.ndarray:  # pragma: no cover
+def points_in_triangles_aligned_optimised_serial(nx: int, ny: int, dx: float, dy: float,
+                                                 triangles: np.ndarray) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
     arguments:
@@ -1075,8 +1075,6 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
     triangles[..., 0] /= dx
     triangles[..., 1] /= dy
     triangles -= 0.5
-    grid_xi = np.arange(nx).astype(np.int32)
-    grid_yi = np.arange(ny).astype(np.int32)
     triangles_points_list = []
     for triangle_num in range(len(triangles)):
         triangle = triangles[triangle_num]
@@ -1089,8 +1087,75 @@ def points_in_triangles_aligned_optimised(nx: int, ny: int, dx: float, dy: float
             ey_list = np.array([e0_y, e1_y, e2_y], dtype = np.float64)
             floor_y = np.nanmin(ey_list)
             ceil_y = np.nanmax(ey_list)
-            valid_y = grid_yi[max(maths.ceil(floor_y), 0):min(maths.floor(ceil_y) + 1, ny)]
-            triangles_points_list.extend([[triangle_num, y, xi] for y in valid_y])
+            triangles_points_list.extend(
+                [[triangle_num, y, xi] for y in range(max(maths.ceil(floor_y), 0), min(maths.floor(ceil_y) + 1, ny))])
+
+    if len(triangles_points_list) == 0:
+        triangles_points = np.empty((0, 3), dtype = np.int32)
+    else:
+        triangles_points = np.array(triangles_points_list, dtype = np.int32)
+
+    return triangles_points
+
+
+@njit(parallel = True)
+def points_in_triangles_aligned_optimised(nx: int,
+                                          ny: int,
+                                          dx: float,
+                                          dy: float,
+                                          triangles: np.ndarray,
+                                          n_batches: int = 20) -> np.ndarray:  # pragma: no cover
+    """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
+
+    arguments:
+        nx (int): number of points in x axis
+        ny (int): number of points in y axis
+        dx (float): spacing of points in x axis (first point is at half dx)
+        dy (float): spacing of points in y axis (first point is at half dy)
+        triangles (np.ndarray): float array of each triangles' vertices in 2D, shape (N, 3, 2)
+        n_batches (int, default 20): number of parallel batches
+
+    returns:
+        triangles_points (np.ndarray): 2D array (list-like) containing only the points within each triangle,
+            with each row being the triangle number, points y index, and points x index
+    """
+    n_triangles = len(triangles)
+    if n_triangles == 0:
+        return np.empty((0, 3), dtype = np.int32)
+    triangles = triangles.copy()
+    triangles[..., 0] /= dx
+    triangles[..., 1] /= dy
+    triangles -= 0.5
+    n_batches = min(n_triangles, n_batches)
+    batch_size = (n_triangles - 1) // n_batches + 1
+    tp = [np.empty((0, 3), dtype = np.int32)] * n_batches
+    for batch in prange(n_batches):
+        base = batch * batch_size
+        tp[batch] = _points_in_triangles_aligned_optimised_batch(nx, ny, base, triangles[base:(batch + 1) * batch_size])
+    collated = np.empty((0, 3), dtype = np.int32)
+    for batch in range(n_batches):
+        collated = np.concatenate((collated, tp[batch]), axis = 0)
+    return collated
+
+
+@njit
+def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle: int,
+                                                 triangles: np.ndarray) -> np.ndarray:
+    triangles_points_list = []
+    for triangle_num in range(len(triangles)):
+        triangle = triangles[triangle_num]
+        min_x, max_x, min_y, max_y = triangle_box(triangle)
+        for xi in range(max(maths.ceil(min_x), 0), min(maths.floor(max_x) + 1, nx)):
+            x = float(xi)
+            e0_y = vertical_intercept_nan(x, triangle[1, 0], triangle[2, 0], triangle[1, 1], triangle[2, 1])
+            e1_y = vertical_intercept_nan(x, triangle[0, 0], triangle[1, 0], triangle[0, 1], triangle[1, 1])
+            e2_y = vertical_intercept_nan(x, triangle[0, 0], triangle[2, 0], triangle[0, 1], triangle[2, 1])
+            ey_list = np.array([e0_y, e1_y, e2_y], dtype = np.float64)
+            floor_y = np.nanmin(ey_list)
+            ceil_y = np.nanmax(ey_list)
+            triangles_points_list.extend([[triangle_num + base_triangle, y, xi]
+                                          for y in range(max(maths.ceil(floor_y), 0), min(maths.floor(ceil_y) + 1, ny))
+                                         ])
 
     if len(triangles_points_list) == 0:
         triangles_points = np.empty((0, 3), dtype = np.int32)
