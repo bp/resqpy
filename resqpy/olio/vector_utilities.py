@@ -1140,7 +1140,7 @@ def points_in_triangles_aligned_optimised(nx: int,
 
 @njit
 def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle: int,
-                                                 triangles: np.ndarray) -> np.ndarray:
+                                                 triangles: np.ndarray) -> np.ndarray:  # pragma: no cover
     triangles_points_list = []
     for triangle_num in range(len(triangles)):
         triangle = triangles[triangle_num]
