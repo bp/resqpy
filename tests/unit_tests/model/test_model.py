@@ -741,6 +741,31 @@ def test_h5_array_element(example_model_with_properties):
     assert zone == 2
 
 
+def test_h5_overwrite_array(example_model_with_properties):
+    model = example_model_with_properties
+    zone_root = model.root(obj_type = 'DiscreteProperty', title = 'Zone')
+    assert zone_root is not None
+    key_pair = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(zone_root, ['PatchOfValues', 'Values']))
+    assert key_pair is not None and all([x is not None for x in key_pair])
+    # check full array is expected size and shape
+    shape, dtype = model.h5_array_shape_and_type(key_pair)
+    assert shape == (3, 5, 5)
+    newzone = np.arange(3 * 5 * 5, dtype = int).reshape(shape)
+    model.h5_overwrite_array(key_pair, newzone)
+    model = rq.Model(model.epc_file)
+    zone_root = model.root(obj_type = 'DiscreteProperty', title = 'Zone')
+    assert zone_root is not None
+    key_pair = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(zone_root, ['PatchOfValues', 'Values']))
+    model.h5_array_element(key_pair, cache_array = True, object = model, array_attribute = 'zone_reload')
+    assert model.zone_reload.shape == (3, 5, 5)
+    assert np.all(model.zone_reload == np.arange(3 * 5 * 5, dtype = int).reshape(shape))
+    slice_tuple = (slice(1), slice(2, 5), slice(1, 3))
+    model.h5_overwrite_array_slice(key_pair, slice_tuple, 0)
+    model.h5_array_element(key_pair, cache_array = True, object = model, array_attribute = 'zone_reloaded_again')
+    assert np.count_nonzero(model.zone_reloaded_again == model.zone_reload) == 69
+    assert np.min(model.zone_reloaded_again) == 0
+
+
 def add_grids(model, crs, add_lengths):
     grid_a = grr.RegularGrid(model,
                              extent_kji = (2, 2, 2),

@@ -286,6 +286,14 @@ def _h5_overwrite_array_slice(model, h5_key_pair, slice_tuple, array_slice):
     dset[slice_tuple] = array_slice
 
 
+def _h5_overwrite_array(model, h5_key_pair, array):
+    """Overwrites (updates) the whole of an hdf5 array."""
+
+    h5_root = _h5_access(model, h5_key_pair[0], mode = 'a')
+    dset = h5_root[h5_key_pair[1]]
+    dset[...] = array
+
+
 def h5_clear_filename_cache(model):
     """Clears the cached filenames associated with all ext uuids."""
 

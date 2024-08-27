@@ -1475,6 +1475,21 @@ class Model():
 
         return m_h._h5_overwrite_array_slice(self, h5_key_pair, slice_tuple, array_slice)
 
+    def h5_overwrite_array(self, h5_key_pair, array):
+        """Overwrites (updates) the whole of an hdf5 array.
+
+        arguments:
+           h5_key_pair (uuid, string): the uuid of the hdf5 ext part and the hdf5 internal path to the
+              required hdf5 array
+           array (numpy array of shape to match existing hdf5 dataset): the data to write
+
+        notes:
+           this method naively updates an hdf5 array without using mpi to look after parallel updates;
+           metadata (such as uuid or property min, max values) is not modified in any way by the method
+        """
+
+        return m_h._h5_overwrite_array(self, h5_key_pair, array)
+
     def h5_clear_filename_cache(self):
         """Clears the cached filenames associated with all ext uuids."""
 
