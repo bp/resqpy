@@ -2089,6 +2089,7 @@ class GridConnectionSet(BaseResqpy):
         if default_value is None:
             default_value = -1 if dtype is int else np.NaN
         gcs_prop_array = gcs_prop.array_ref()
+        assert gcs_prop_array.shape == (self.count,)
         log.debug(f'preparing grid face arrays from gcs property: {gcs_prop.title}; from gcs:{self.title}')
 
         baffle_mask = None
@@ -2102,29 +2103,31 @@ class GridConnectionSet(BaseResqpy):
         ai = np.full((nk, nj, ni + 1), default_value, dtype = dtype)
 
         # populate arrays from faces of gcs, optionally filtered by feature index
-        cip, fip = self.list_of_cell_face_pairs_for_feature_index(None)
-        assert len(cip) == self.count and len(fip) == self.count
-        assert gcs_prop_array.shape == (self.count,)
-        if feature_index is None:
-            indices = np.arange(self.count, dtype = int)
-        else:
-            indices = self.indices_for_feature_index(feature_index)
-
-        side_list = ([0] if lazy else [0, 1])
+        cip, fip = self.list_of_cell_face_pairs_for_feature_index(feature_index)
 
         value_array = gcs_prop_array.copy()
+
         if baffle_mask is not None:
             value_array[baffle_mask] = 0  # will be cast to float (or bool) if needed
+
+        if feature_index is not None:
+            indices = self.indices_for_feature_index(feature_index)
+            value_array = value_array[indices]
+            if active_mask is not None:
+                active_mask = active_mask[indices]
+
         if active_mask is not None:
             cip = cip[active_mask, :, :]
             value_array = value_array[active_mask]
+
+        side_list = ([0] if lazy else [0, 1])
 
         for side in side_list:
             cell_kji0 = cip[:, side].copy()  # shape (N, 3)
             axis = fip[:, side, 0]  # shape (N,)
             polarity = fip[:, side, 1]  # shape (N,)
-            assert 0 <= np.min(axis) and np.max(axis) <= 2
-            assert 0 <= np.min(polarity) and np.max(polarity) <= 1
+            # assert 0 <= np.min(axis) and np.max(axis) <= 2
+            # assert 0 <= np.min(polarity) and np.max(polarity) <= 1
 
             axis_mask = (axis == 0).astype(bool)
             ak_kji0 = cell_kji0[axis_mask, :]
