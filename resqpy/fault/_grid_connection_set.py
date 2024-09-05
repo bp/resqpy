@@ -249,6 +249,7 @@ class GridConnectionSet(BaseResqpy):
         gcs.model = parent_model
         gcs.uuid = bu.new_uuid()  # not strictly necessary as append will cause a new uuid as well
         gcs.title = title
+        gcs.property_collection = None
         # append data from the remaining grid connection sets
         for another_uuid in gcs_uuid_list[1:]:
             another_gcs = GridConnectionSet(source_model, uuid = another_uuid)
