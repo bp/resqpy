@@ -1152,18 +1152,18 @@ def shadow_from_faces(extent_kji, k_faces):
         c = np.logical_and(shadow[:-1] == 0, shadow[1:] == 1)
         if np.count_nonzero(c) == 0:
             break
-        shadow[:-1] = np.where(c, 1, shadow[:-1])
+        shadow[:-1][c] = 1
     for _ in range(limit):
         c = np.logical_and(shadow[1:] == 0, shadow[:-1] == 2)
         if np.count_nonzero(c) == 0:
             break
-        shadow[1:] = np.where(c, 2, shadow[1:])
+        shadow[1:][c] = 2
     for _ in range(limit):
         c = np.logical_and(shadow[:-1] >= 2, shadow[1:] == 1)
         if np.count_nonzero(c) == 0:
             break
-        shadow[:-1] = np.where(c, 3, shadow[:-1])
-        shadow[1:] = np.where(c, 3, shadow[1:])
+        shadow[:-1][c] = 3
+        shadow[1:][c] = 3
     return shadow
 
 
