@@ -31,7 +31,7 @@ def make_wavy_tri_mesh(model,
     if add_dip:
         z_in[:] += np.expand_dims(np.arange(ni, dtype = int).astype(float), axis = 0)
     if make_hole:
-        z_in[nj // 2:2 * nj // 3, ni // 3:ni // 2] = np.NaN
+        z_in[nj // 2:2 * nj // 3, ni // 3:ni // 2] = np.nan
     tm_in = rqs.TriMesh(model,
                         crs_uuid = crs_uuid,
                         t_side = t_side,

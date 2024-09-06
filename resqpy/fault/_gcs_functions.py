@@ -423,15 +423,15 @@ def combined_tr_mult_from_gcs_mults(model,
 
         if grid is None:  # first gcs: grab grid and initialise combined tr mult arrays
             grid = gcs.grid_list[0]
-            combo_trm_k = np.full((grid.nk + 1, grid.nj, grid.ni), np.NaN, dtype = float)
-            combo_trm_j = np.full((grid.nk, grid.nj + 1, grid.ni), np.NaN, dtype = float)
-            combo_trm_i = np.full((grid.nk, grid.nj, grid.ni + 1), np.NaN, dtype = float)
+            combo_trm_k = np.full((grid.nk + 1, grid.nj, grid.ni), np.nan, dtype = float)
+            combo_trm_j = np.full((grid.nk, grid.nj + 1, grid.ni), np.nan, dtype = float)
+            combo_trm_i = np.full((grid.nk, grid.nj, grid.ni + 1), np.nan, dtype = float)
         else:  # check same grid is referenced by this gcs
             assert bu.matching_uuids(gcs.grid_list[0].uuid, grid.uuid)
 
         # get gcs tr mult data in form of triplet of grid faces arrays
         gcs_trm_k, gcs_trm_j, gcs_trm_i = gcs.grid_face_arrays(tr_mult_uuid,
-                                                               default_value = np.NaN,
+                                                               default_value = np.nan,
                                                                active_only = active_only,
                                                                lazy = not sided,
                                                                baffle_uuid = baffle_uuid)

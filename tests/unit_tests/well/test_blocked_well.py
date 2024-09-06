@@ -200,8 +200,8 @@ def test_set_for_column_and_other_things(example_model_and_crs):
                                                  time_index = ti,
                                                  time_series_uuid = ts.uuid,
                                                  indexable_element = 'intervals')
-    skin = np.array([(3.0, np.NaN, -1.0, 2.0, np.NaN), (3.5, np.NaN, -1.0, 2.0, np.NaN),
-                     (4.0, np.NaN, -1.0, -2.0, np.NaN)],
+    skin = np.array([(3.0, np.nan, -1.0, 2.0, np.nan), (3.5, np.nan, -1.0, 2.0, np.nan),
+                     (4.0, np.nan, -1.0, -2.0, np.nan)],
                     dtype = float)
     for ti in range(3):
         wbf_pc.add_cached_array_to_imported_list(skin[ti],
@@ -334,9 +334,9 @@ def test_set_for_column_and_other_things(example_model_and_crs):
     bw_skin = skin_pc.time_series_array_ref(fill_missing = False, indexable_element = 'cells')
     assert bw_skin.shape == (3, bw.cell_count)
     # yapf: disable
-    expect_skin = np.array([(3.0, np.NaN, -1, 0.5, np.NaN),
-                            (3.5, np.NaN, -1, 0.5, np.NaN),
-                            (4.0, np.NaN, -1, -1.5, np.NaN)], dtype = float)
+    expect_skin = np.array([(3.0, np.nan, -1, 0.5, np.nan),
+                            (3.5, np.nan, -1, 0.5, np.nan),
+                            (4.0, np.nan, -1, -1.5, np.nan)], dtype = float)
     # yapf: enable
     assert_array_almost_equal(bw_skin, expect_skin)
     # check wellbore frame interval blocked well property
@@ -358,7 +358,7 @@ def test_set_for_column_and_other_things(example_model_and_crs):
     assert 'SKIN' in df.columns
     assert 'STAT' in df.columns
     assert_array_almost_equal(df['KH'], (1000.0, 0.0, 1200.0, 3800.0, 0.0))
-    assert_array_almost_equal(df['SKIN'], (3.5, np.NaN, -1.0, 0.5, np.NaN))
+    assert_array_almost_equal(df['SKIN'], (3.5, np.nan, -1.0, 0.5, np.nan))
     stat_col = list(df['STAT'])
     assert len(stat_col) == 5
     assert stat_col == ['ON', 'OFF', 'ON', 'ON', 'OFF']

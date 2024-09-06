@@ -999,7 +999,7 @@ def vertical_intercept_nan(x: float, x_value_0: float, x_value_1: float, y_value
         y (float): y value of the straight line segment between point 1 and point 2,
             evaluated at x; if x is outside the x values range, y is NaN
     """
-    y = np.NaN
+    y = np.nan
     if x_value_1 < x_value_0:
         x_value_0, x_value_1 = x_value_1, x_value_0
         y_value_0, y_value_1 = y_value_1, y_value_0

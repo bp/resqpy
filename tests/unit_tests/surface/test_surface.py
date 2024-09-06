@@ -222,9 +222,9 @@ def test_surface_from_point_set_with_nan_removal(example_model_and_crs):
     p = np.stack((x, y, z), axis = -1)
 
     # set a few nans
-    p[5, 1] = np.NaN
-    p[7, :] = np.NaN
-    p[13, 0] = np.NaN
+    p[5, 1] = np.nan
+    p[7, :] = np.nan
+    p[13, 0] = np.nan
 
     # make a PointSet object
     ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
@@ -1059,8 +1059,8 @@ def test_from_downsampling_surface_different_model(example_model_and_crs):
 def test_from_tri_mesh_excluding_nans(example_model_and_crs):
     model, crs = example_model_and_crs
     z_values = np.random.random((4, 5)) * 100.0 + 950.0
-    z_values[0, 0] = np.NaN
-    z_values[2, 2] = np.NaN
+    z_values[0, 0] = np.nan
+    z_values[2, 2] = np.nan
     trim = rqs.TriMesh(model,
                        t_side = 100.0,
                        nj = 4,

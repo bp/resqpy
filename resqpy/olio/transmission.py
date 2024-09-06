@@ -260,10 +260,10 @@ def half_cell_t_irregular(grid,
             zero_length_mask = np.logical_or(np.any(np.isnan(half_axis_vectors), axis = -1),
                                              half_axis_length_sqr < tolerance_sqr)
             minus_face_t = np.where(
-                zero_length_mask, np.NaN,
+                zero_length_mask, np.nan,
                 perm_k * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
             plus_face_t = np.where(
-                zero_length_mask, np.NaN,
+                zero_length_mask, np.nan,
                 perm_k * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 
         elif axis == 1:  # j
@@ -303,10 +303,10 @@ def half_cell_t_irregular(grid,
             half_axis_length_sqr = np.sum(half_axis_vectors * half_axis_vectors, axis = -1)
             zero_length_mask = (half_axis_length_sqr < tolerance_sqr)
             minus_face_t = np.where(
-                zero_length_mask, np.NaN,
+                zero_length_mask, np.nan,
                 perm_j * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
             plus_face_t = np.where(
-                zero_length_mask, np.NaN,
+                zero_length_mask, np.nan,
                 perm_j * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 
         else:  # i
@@ -345,10 +345,10 @@ def half_cell_t_irregular(grid,
             half_axis_length_sqr = np.sum(half_axis_vectors * half_axis_vectors, axis = -1)
             zero_length_mask = (half_axis_length_sqr < tolerance_sqr)
             minus_face_t = np.where(
-                zero_length_mask, np.NaN,
+                zero_length_mask, np.nan,
                 perm_i * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
             plus_face_t = np.where(
-                zero_length_mask, np.NaN,
+                zero_length_mask, np.nan,
                 perm_i * np.sum(half_axis_vectors * plus_face_areas, axis = -1) / half_axis_length_sqr)
 
         if axis != 0 and ntg is not None:
@@ -417,14 +417,14 @@ def half_cell_t_vertical_prism(vpg,
     # compute transmissibilities
     tr = np.zeros((vpg.cell_count, 5), dtype = float)
     # vertical
-    tr[:, 0] = np.where(half_thickness < tolerance, np.NaN, (perm_k.reshape(
+    tr[:, 0] = np.where(half_thickness < tolerance, np.nan, (perm_k.reshape(
         (vpg.nk, -1)) * triangle_areas / half_thickness)).flatten()
     tr[:, 1] = tr[:, 0]
     # horizontal
     # TODO: compute dip adjustments for non-vertical transmissibilities
     dt_full = np.empty((vpg.nk, vpg.cell_count // vpg.nk, 3), dtype = float)
     dt_full[:] = d_t
-    tr[:, 2:] = np.where(dt_full < tolerance, np.NaN,
+    tr[:, 2:] = np.where(dt_full < tolerance, np.nan,
                          triple_perm_horizontal.reshape((vpg.nk, -1, 3)) * a_t.reshape((1, -1, 3)) / dt_full).reshape(
                              (-1, 3))
     if ntg is not None:

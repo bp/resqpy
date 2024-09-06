@@ -1029,7 +1029,7 @@ class Surface(rqsb.BaseSurface):
         t, p = self.triangles_and_points(patch = patch)
         p_list = vec.points_in_triangles_njit(sample_xy, p[t], 1)
         vertical = np.array((0.0, 0.0, 1.0), dtype = float)
-        z = np.full(sample_xy.shape[0], np.NaN, dtype = float)
+        z = np.full(sample_xy.shape[0], np.nan, dtype = float)
         for triangle_index, p_index, _ in p_list:
             # todo: replace following with cheaper trilinear interpolation, given vertical intersection line
             xyz = meet.line_triangle_intersect_numba(sample_xy[p_index], vertical, p[t[triangle_index]], t_tol = 0.05)

@@ -18,7 +18,7 @@ def add_grid_with_missing_points(model, crs, missing_pillar = False):
     grid.has_split_coordinate_lines = False
     # yapf: disable
     grid.points_cached = np.array(
-        [[[(100.0, 1000.0, 5000.0), (200.0, 1000.0, 5000.0), (np.NaN, np.NaN, np.NaN)],
+        [[[(100.0, 1000.0, 5000.0), (200.0, 1000.0, 5000.0), (np.nan, np.nan, np.nan)],
           [(100.0, 1200.0, 5000.0), (200.0, 1200.0, 5000.0), (300.0, 1200.0, 5000.0)],
           [(100.0, 1500.0, 5000.0), (200.0, 1500.0, 5000.0), (300.0, 1500.0, 5000.0)]],
          [[(110.0, 1005.0, 5020.0), (210.0, 1005.0, 5020.0), (310.0, 1005.0, 5020.0)],
@@ -26,7 +26,7 @@ def add_grid_with_missing_points(model, crs, missing_pillar = False):
           [(110.0, 1505.0, 5020.0), (210.0, 1505.0, 5020.0), (310.0, 1505.0, 5020.0)]],
          [[(120.0, 1010.0, 5040.0), (220.0, 1010.0, 5040.0), (320.0, 1010.0, 5040.0)],
           [(120.0, 1210.0, 5040.0), (220.0, 1210.0, 5040.0), (320.0, 1210.0, 5040.0)],
-          [(np.NaN, np.NaN, np.NaN), (220.0, 1510.0, 5040.0), (320.0, 1510.0, 5040.0)]]],
+          [(np.nan, np.nan, np.nan), (220.0, 1510.0, 5040.0), (320.0, 1510.0, 5040.0)]]],
         dtype = float)
     # yapf: enable
     assert grid.points_cached.shape == (3, 3, 3, 3)
@@ -34,7 +34,7 @@ def add_grid_with_missing_points(model, crs, missing_pillar = False):
     grid.array_cell_geometry_is_defined[1, 1, 0] = False
     grid.array_cell_geometry_is_defined[0, 0, 1] = False
     if missing_pillar:
-        grid.points_cached[:, 1, 0, :] = np.NaN
+        grid.points_cached[:, 1, 0, :] = np.nan
         grid.array_cell_geometry_is_defined[:, :, 0] = False
         grid.array_pillar_geometry_is_defined = np.ones((3, 3), dtype = bool)
         grid.array_pillar_geometry_is_defined[1, 0] = False
@@ -56,26 +56,26 @@ def add_grid_with_lots_of_missing_points(model, crs):
     grid.has_split_coordinate_lines = False
     # yapf: disable
     grid.points_cached = np.array(
-        [[[(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
-          [(np.NaN, np.NaN, np.NaN), (100.0, 1200.0, 5000.0), (200.0, 1200.0, 5000.0), (300.0, 1200.0, 5000.0)],
-          [(np.NaN, np.NaN, np.NaN), (100.0, 1400.0, 5000.0), (200.0, 1400.0, 5000.0), (300.0, 1400.0, 5000.0)],
-          [(np.NaN, np.NaN, np.NaN), (100.0, 1500.0, 5000.0), (200.0, 1500.0, 5000.0), (300.0, 1500.0, 5000.0)]],
-         [[(np.NaN, np.NaN, np.NaN), (110.0, 1005.0, 5020.0), (210.0, 1005.0, 5020.0), (310.0, 1005.0, 5020.0)],
-          [(np.NaN, np.NaN, np.NaN), (110.0, 1205.0, 5020.0), (210.0, 1205.0, 5020.0), (310.0, 1205.0, 5020.0)],
-          [(np.NaN, np.NaN, np.NaN), (110.0, 1405.0, 5020.0), (np.NaN, np.NaN, np.NaN), (310.0, 1405.0, 5020.0)],
-          [(np.NaN, np.NaN, np.NaN), (110.0, 1505.0, 5020.0), (210.0, 1505.0, 5020.0), (310.0, 1505.0, 5020.0)]],
-         [[(np.NaN, np.NaN, np.NaN), (110.0, 1005.0, 5030.0), (210.0, 1005.0, 5030.0), (310.0, 1005.0, 5030.0)],
-          [(np.NaN, np.NaN, np.NaN), (110.0, 1205.0, 5030.0), (210.0, 1205.0, 5030.0), (310.0, 1205.0, 5030.0)],
-          [(np.NaN, np.NaN, np.NaN), (110.0, 1405.0, 5030.0), (210.0, 1405.0, 5030.0), (310.0, 1405.0, 5030.0)],
-          [(np.NaN, np.NaN, np.NaN), (110.0, 1505.0, 5030.0), (210.0, 1505.0, 5030.0), (310.0, 1505.0, 5030.0)]],
-         [[(np.NaN, np.NaN, np.NaN), (120.0, 1010.0, 5040.0), (220.0, 1010.0, 5040.0), (320.0, 1010.0, 5040.0)],
-          [(np.NaN, np.NaN, np.NaN), (120.0, 1210.0, 5040.0), (220.0, 1210.0, 5040.0), (320.0, 1210.0, 5040.0)],
-          [(np.NaN, np.NaN, np.NaN), (120.0, 1410.0, 5040.0), (220.0, 1410.0, 5040.0), (320.0, 1410.0, 5040.0)],
-          [(np.NaN, np.NaN, np.NaN), (120.0, 1510.0, 5040.0), (220.0, 1510.0, 5040.0), (320.0, 1510.0, 5040.0)]],
-         [[(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
-          [(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
-          [(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)],
-          [(np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN), (np.NaN, np.NaN, np.NaN)]]],
+        [[[(np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan)],
+          [(np.nan, np.nan, np.nan), (100.0, 1200.0, 5000.0), (200.0, 1200.0, 5000.0), (300.0, 1200.0, 5000.0)],
+          [(np.nan, np.nan, np.nan), (100.0, 1400.0, 5000.0), (200.0, 1400.0, 5000.0), (300.0, 1400.0, 5000.0)],
+          [(np.nan, np.nan, np.nan), (100.0, 1500.0, 5000.0), (200.0, 1500.0, 5000.0), (300.0, 1500.0, 5000.0)]],
+         [[(np.nan, np.nan, np.nan), (110.0, 1005.0, 5020.0), (210.0, 1005.0, 5020.0), (310.0, 1005.0, 5020.0)],
+          [(np.nan, np.nan, np.nan), (110.0, 1205.0, 5020.0), (210.0, 1205.0, 5020.0), (310.0, 1205.0, 5020.0)],
+          [(np.nan, np.nan, np.nan), (110.0, 1405.0, 5020.0), (np.nan, np.nan, np.nan), (310.0, 1405.0, 5020.0)],
+          [(np.nan, np.nan, np.nan), (110.0, 1505.0, 5020.0), (210.0, 1505.0, 5020.0), (310.0, 1505.0, 5020.0)]],
+         [[(np.nan, np.nan, np.nan), (110.0, 1005.0, 5030.0), (210.0, 1005.0, 5030.0), (310.0, 1005.0, 5030.0)],
+          [(np.nan, np.nan, np.nan), (110.0, 1205.0, 5030.0), (210.0, 1205.0, 5030.0), (310.0, 1205.0, 5030.0)],
+          [(np.nan, np.nan, np.nan), (110.0, 1405.0, 5030.0), (210.0, 1405.0, 5030.0), (310.0, 1405.0, 5030.0)],
+          [(np.nan, np.nan, np.nan), (110.0, 1505.0, 5030.0), (210.0, 1505.0, 5030.0), (310.0, 1505.0, 5030.0)]],
+         [[(np.nan, np.nan, np.nan), (120.0, 1010.0, 5040.0), (220.0, 1010.0, 5040.0), (320.0, 1010.0, 5040.0)],
+          [(np.nan, np.nan, np.nan), (120.0, 1210.0, 5040.0), (220.0, 1210.0, 5040.0), (320.0, 1210.0, 5040.0)],
+          [(np.nan, np.nan, np.nan), (120.0, 1410.0, 5040.0), (220.0, 1410.0, 5040.0), (320.0, 1410.0, 5040.0)],
+          [(np.nan, np.nan, np.nan), (120.0, 1510.0, 5040.0), (220.0, 1510.0, 5040.0), (320.0, 1510.0, 5040.0)]],
+         [[(np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan)],
+          [(np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan)],
+          [(np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan)],
+          [(np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan), (np.nan, np.nan, np.nan)]]],
         dtype = float)
     # yapf: enable
     assert grid.points_cached.shape == (5, 4, 4, 3)

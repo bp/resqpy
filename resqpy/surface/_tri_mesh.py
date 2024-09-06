@@ -241,8 +241,8 @@ class TriMesh(rqs.Mesh):
         fy[am] = 1.0 - fy[am]
         j[mask] = -1
         i[mask] = -1
-        fx[mask] = np.NaN
-        fy[mask] = np.NaN
+        fx[mask] = np.nan
+        fy[mask] = np.nan
 
         return (np.stack((j, i), axis = -1), np.stack((1.0 - (fx + fy), fx, fy), axis = -1))
 

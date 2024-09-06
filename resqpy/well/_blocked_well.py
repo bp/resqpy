@@ -2579,7 +2579,7 @@ class BlockedWell(BaseResqpy):
                                entry_xyz, exit_xyz, ee_crs, pc, pc_titles, ci):
         """Get the x, y and z location of the midpoint of the interval."""
 
-        xyz = (np.NaN, np.NaN, np.NaN)
+        xyz = (np.nan, np.nan, np.nan)
         if doing_xyz:
             xyz = self.__get_xyz_if_doing_xyz(length_mode = length_mode,
                                               md = md,
@@ -2734,7 +2734,7 @@ class BlockedWell(BaseResqpy):
                 dtype = np.int32
             else:
                 null_value = None
-                na_value = np.NaN
+                na_value = np.nan
                 dtype = float
             # 'SKIN': use defaults for now; todo: create local property kind for skin
             if column == 'STAT':
