@@ -235,7 +235,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            property_kind = 'flange bool',
                                            find_local_property_kind = True,
                                            indexable_element = 'faces',
-                                           discrete = True)
+                                           discrete = True,
+                                           dtype = np.uint8)
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
