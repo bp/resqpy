@@ -994,6 +994,7 @@ def bisector_from_faces(  # type: ignore
     changing_array = np.zeros_like(bounding_array, dtype = np.bool_)
 
     # Repeatedly spreading True values to neighbouring cells that are not the other side of a face.
+    # yapf: disable
     open_k = np.logical_not(k_faces)[
         boundary["k_min"]:boundary["k_max"],
         boundary["j_min"]:boundary["j_max"] + 1,
@@ -1009,6 +1010,7 @@ def bisector_from_faces(  # type: ignore
         boundary["j_min"]:boundary["j_max"] + 1,
         boundary["i_min"]:boundary["i_max"],
     ]
+    # yapf: enable
     while True:
         changing_array[:] = False
 
@@ -1036,11 +1038,13 @@ def bisector_from_faces(  # type: ignore
 
     # Setting up the full bisectors array and assigning the bounding box values.
     array = np.zeros(grid_extent_kji, dtype = np.bool_)
+    # yapf: disable
     array[
         boundary["k_min"]:boundary["k_max"] + 1,
         boundary["j_min"]:boundary["j_max"] + 1,
         boundary["i_min"]:boundary["i_max"] + 1,
     ] = bounding_array
+    # yapf: enable
 
     # Setting values outside of the bounding box.
     if boundary["k_max"] != grid_extent_kji[0] - 1 and np.any(bounding_array[-1, :, :]):
