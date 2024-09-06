@@ -117,7 +117,7 @@ def example_model_with_logs(example_model_with_well):
 
     log_collection = frame.extract_log_collection()
     log_collection.add_log("GR", [1, 2, 1, 2], 'gAPI')
-    log_collection.add_log("NPHI", [0.1, 0.1, np.NaN, np.NaN], 'v/v')
+    log_collection.add_log("NPHI", [0.1, 0.1, np.nan, np.nan], 'v/v')
 
     return model, well_interp, datum, traj, frame, log_collection
 

@@ -790,7 +790,7 @@ def corner_points(grid, cell_kji0 = None, points_root = None, cache_resqml_array
     # note: this function returns a derived object rather than a native resqml object
 
     def one_cell_cp(grid, cell_kji0, points_root, cache_array):
-        cp = np.full((2, 2, 2, 3), np.NaN)
+        cp = np.full((2, 2, 2, 3), np.nan)
         if not grr_dg.geometry_defined_for_all_cells(grid):
             if not grr_dg.cell_geometry_is_defined(grid, cell_kji0 = cell_kji0, cache_array = cache_array):
                 return cp

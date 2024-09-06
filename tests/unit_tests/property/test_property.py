@@ -1155,7 +1155,7 @@ def test_norm_array_ref_log_mask(example_model_with_properties):
 
 
 def test_normalized_part_array_use_logarithm_all_nan():
-    a = np.full((4, 5, 6), np.NaN, dtype = float)
+    a = np.full((4, 5, 6), np.nan, dtype = float)
     b, min_value, max_value = pcga._normalized_part_array_use_logarithm(0.0, a, False)
     assert np.all(np.isnan(b))
     assert np.isnan(min_value) and np.isnan(max_value)
@@ -1170,7 +1170,7 @@ def test_normalized_part_array_use_logarithm_default_min():
 
 
 def test_normalized_part_array_use_logarithm_all_masked():
-    a = np.ma.masked_array(data = [(4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], mask = True, fill_value = np.NaN, dtype = float)
+    a = np.ma.masked_array(data = [(4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], mask = True, fill_value = np.nan, dtype = float)
     _, min_value, max_value = pcga._normalized_part_array_use_logarithm(4.0, a, True)
     assert np.isnan(min_value)
     assert np.isnan(max_value)
@@ -1222,7 +1222,7 @@ def test_create_xml_all_nan_minmax_none(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    array = np.full((3, 5, 5), np.nan, dtype = float)
     support_uuid = model.grid().uuid
     ext_uuid = model.h5_uuid()
 
@@ -1247,7 +1247,7 @@ def test_normalise_all_nan_minmax_none(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    array = np.full((3, 5, 5), np.nan, dtype = float)
     support_uuid = model.grid().uuid
     ext_uuid = model.h5_uuid()
 

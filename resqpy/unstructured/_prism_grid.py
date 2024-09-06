@@ -335,7 +335,7 @@ class VerticalPrismGrid(PrismGrid):
             if surf == 0:
                 # allow NaN entries to handle unused distant circumcentres in Voronoi graph data
                 # assert not np.any(nan_lines), 'top surface does not cover all column points'
-                single_intersects[nan_lines] = np.NaN
+                single_intersects[nan_lines] = np.nan
             else:
                 single_intersects[nan_lines] = points[surf - 1][nan_lines]
             # populate z values for layer of points

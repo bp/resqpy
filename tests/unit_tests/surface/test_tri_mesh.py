@@ -319,7 +319,7 @@ def test_tri_mesh_z_interpolation_array(example_model_and_crs):
                    (25.0, 50.0)],
                   dtype = float)
     z = trim.interpolated_z_array(xy)
-    ez = np.array([850.0 / 3.0, 400.0, 375.0, 375.0, 400.0, 450.0, np.NaN], dtype = float)
+    ez = np.array([850.0 / 3.0, 400.0, 375.0, 375.0, 400.0, 450.0, np.nan], dtype = float)
     assert_array_almost_equal(z, ez)
 
 

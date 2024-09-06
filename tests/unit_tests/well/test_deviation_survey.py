@@ -46,7 +46,7 @@ def test_DeviationSurvey(example_model_with_well, tmp_path):
     for col, key in zip(('MD', 'AZIM_GN', 'INCL'), ('measured_depths', 'azimuths', 'inclinations')):
         df[col] = array_data[key]
     for axis, col in enumerate(('X', 'Y', 'Z')):
-        df[col] = np.NaN
+        df[col] = np.nan
         df.loc[0, col] = array_data['first_station'][axis]
 
     survey_b = resqpy.well.DeviationSurvey.from_data_frame(parent_model = model,

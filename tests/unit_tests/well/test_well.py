@@ -58,7 +58,7 @@ def test_logs(example_model_with_logs):
 
     # TODO: get more units working
     # assert nphi.uom == "v/v"
-    assert_array_almost_equal(nphi.values(), [0.1, 0.1, np.NaN, np.NaN])
+    assert_array_almost_equal(nphi.values(), [0.1, 0.1, np.nan, np.nan])
 
 
 def test_logs_conversion(example_model_with_logs):
@@ -67,7 +67,7 @@ def test_logs_conversion(example_model_with_logs):
 
     # Pandas
     df = log_collection.to_df()
-    df_expected = pd.DataFrame(data = {"GR": [1, 2, 1, 2], "NPHI": [0.1, 0.1, np.NaN, np.NaN]}, index = [1, 2, 3, 4])
+    df_expected = pd.DataFrame(data = {"GR": [1, 2, 1, 2], "NPHI": [0.1, 0.1, np.nan, np.nan]}, index = [1, 2, 3, 4])
     assert_frame_equal(df_expected, df, check_dtype = False)
 
     # LAS
@@ -80,4 +80,4 @@ def test_logs_conversion(example_model_with_logs):
 
     nphi = las.get_curve("NPHI")
     # assert nphi.unit == "GAPI"
-    assert_array_almost_equal(nphi.data, [0.1, 0.1, np.NaN, np.NaN])
+    assert_array_almost_equal(nphi.data, [0.1, 0.1, np.nan, np.nan])

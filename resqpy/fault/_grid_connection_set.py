@@ -1558,7 +1558,7 @@ class GridConnectionSet(BaseResqpy):
                 log.info(
                     f'Property name {property_name} not found in extra_metadata for {self.model.citation_title_for_part(self.model.part_for_uuid(feature_uuid))}'
                 )
-                value_list.append(np.NaN)
+                value_list.append(np.nan)
             else:
                 value_list.append(float(feat.extra_metadata[property_name]))
         return value_list
@@ -2050,7 +2050,7 @@ class GridConnectionSet(BaseResqpy):
             property_uuid (UUID): the uuid of the gcs property
             default_value (float or int, optional): the value to use in the grid property
                 on faces that do not appear in the grid connection set; will default to
-                np.NaN for continuous properties, -1 for categorical or discrete
+                np.nan for continuous properties, -1 for categorical or discrete
             feature_index (int, optional): if present, only faces for this feature are used
             active_only (bool, default True): if True and an active property exists for the
                 grid connection set, then only active faces are used when populating the
@@ -2088,7 +2088,7 @@ class GridConnectionSet(BaseResqpy):
         assert not gcs_prop.is_points()
         dtype = float if gcs_prop.is_continuous() else int
         if default_value is None:
-            default_value = -1 if dtype is int else np.NaN
+            default_value = -1 if dtype is int else np.nan
         gcs_prop_array = gcs_prop.array_ref()
         assert gcs_prop_array.shape == (self.count,)
         log.debug(f'preparing grid face arrays from gcs property: {gcs_prop.title}; from gcs:{self.title}')

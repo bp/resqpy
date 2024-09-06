@@ -1085,17 +1085,17 @@ class PropertyCollection():
         return meta
 
     def null_value_for_part(self, part):
-        """Returns the null value for the (discrete) property part; np.NaN for continuous parts.
+        """Returns the null value for the (discrete) property part; np.nan for continuous parts.
 
         arguments:
            part (string): the part name for which the null value is required
 
         returns:
-           int or np.NaN
+           int or np.nan
         """
 
         if self.continuous_for_part(part):
-            return np.NaN
+            return np.nan
         return self.element_for_part(part, 19)
 
     def continuous_for_part(self, part):
@@ -1683,7 +1683,7 @@ class PropertyCollection():
            exclude_inactive (boolean, default True): elements which are flagged as inactive in the supporting representation
               are masked out if this argument is True
            exclude_value (float or int, optional): if present, elements which match this value are masked out; if not None
-              then usually set to np.NaN for continuous data or null_value_for_part() for discrete data
+              then usually set to np.nan for continuous data or null_value_for_part() for discrete data
            points (boolean, default False): if True, the simple array is expected to have an extra dimension of extent 3,
               relative to the inactive attribute of the support
 
@@ -1771,7 +1771,7 @@ class PropertyCollection():
            representation object with the attribute name 'inactive', to multiple properties (this will only work
            if the indexable element is set to the typical value for the class of supporting representation, eg.
            'cells' for grid objects); if exclude_null is set True then null value elements will also be masked out
-           (as long as masked is True); however, it is recommended simply to use np.NaN values in floating point
+           (as long as masked is True); however, it is recommended simply to use np.nan values in floating point
            property arrays if the commonality is not needed;
            set use_pack True if the hdf5 data may have been written with a similar setting
 
@@ -1948,7 +1948,7 @@ class PropertyCollection():
               the maximum realization number present and slices for any missing realizations will be filled with fill_value;
               if False, the extent of the first axis will only cpver the number pf realizations actually present (see also notes)
            fill_value (int or float, optional): the value to use for missing realization slices; if None, will default to
-              np.NaN if data is continuous, -1 otherwise; irrelevant if fill_missing is False
+              np.nan if data is continuous, -1 otherwise; irrelevant if fill_missing is False
            indexable_element (string, optional): the indexable element for the properties in the collection; if None, will
               be determined from the data
 
@@ -1968,7 +1968,7 @@ class PropertyCollection():
         r_list, continuous = pcga._realizations_array_ref_initial_checks(self)
 
         if fill_value is None:
-            fill_value = np.NaN if continuous else -1
+            fill_value = np.nan if continuous else -1
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])
 
@@ -1997,7 +1997,7 @@ class PropertyCollection():
               the maximum time index present and slices for any missing indices will be filled with fill_value; if False,
               the extent of the first axis will only cpver the number pf time indices actually present (see also notes)
            fill_value (int or float, optional): the value to use for missing time index slices; if None, will default to
-              np.NaN if data is continuous, -1 otherwise; irrelevant if fill_missing is False
+              np.nan if data is continuous, -1 otherwise; irrelevant if fill_missing is False
            indexable_element (string, optional): the indexable element for the properties in the collection; if None, will
               be determined from the data
 
@@ -2018,7 +2018,7 @@ class PropertyCollection():
         ti_list, continuous = pcga._time_array_ref_initial_checks(self)
 
         if fill_value is None:
-            fill_value = np.NaN if continuous else -1
+            fill_value = np.nan if continuous else -1
 
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])

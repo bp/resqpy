@@ -824,7 +824,7 @@ def _coarsening_sum(coarsening, a, axis = None):
     return a_coarsened
 
 
-def _coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, zero_weight_result = np.NaN):
+def _coarsening_weighted_mean(coarsening, a, fine_weight, coarse_weight = None, zero_weight_result = np.nan):
     a_coarsened = np.empty(tuple(coarsening.coarse_extent_kji))
     assert a.shape == tuple(coarsening.fine_extent_kji)
     assert fine_weight.shape == a.shape

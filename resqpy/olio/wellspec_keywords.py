@@ -482,11 +482,11 @@ def get_well_data(
                     if column_list[col_index].upper() == "GRID":
                         data[col].append("ROOT")
                     else:
-                        data[col].append(np.NaN)
+                        data[col].append(np.nan)
                 else:
                     value = words[column_map[col_index]]
                     if value == "NA":
-                        data[col].append(np.NaN)
+                        data[col].append(np.nan)
                     elif value == "#":
                         data[col].append(value)
                     elif value:
@@ -496,7 +496,7 @@ def get_well_data(
         else:
             for col, value in zip(columns_present, words[:len(columns_present)]):
                 if value == "NA":
-                    data[col].append(np.NaN)
+                    data[col].append(np.nan)
                 elif value == "#":
                     data[col].append(value)
                 elif value:

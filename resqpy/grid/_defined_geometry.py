@@ -293,7 +293,7 @@ def set_geometry_is_defined(grid,
 
     assert not np.all(nan_mask), 'grid does not have any geometry defined'
 
-    points[np.where(np.repeat(np.expand_dims(nan_mask, axis = nan_mask.ndim), 3, axis = -1))] = np.NaN
+    points[np.where(np.repeat(np.expand_dims(nan_mask, axis = nan_mask.ndim), 3, axis = -1))] = np.nan
 
     surround_z = grid.xyz_box(lazy = False)[1 if grid.z_inc_down() else 0, 2]
 
@@ -335,7 +335,7 @@ def set_geometry_is_defined(grid,
     if nullify_partial_pillars:
         partial_pillar_mask = np.logical_and(pillar_defined_mask, np.any(nan_mask, axis = 0).flatten())
         if np.any(partial_pillar_mask):
-            points.reshape((grid.nk_plus_k_gaps + 1, -1, 3))[:, partial_pillar_mask, :] = np.NaN
+            points.reshape((grid.nk_plus_k_gaps + 1, -1, 3))[:, partial_pillar_mask, :] = np.nan
             grid.geometry_defined_for_all_pillars_cached = False
             cells_update_needed = True
     elif complete_partial_pillars:
@@ -416,7 +416,7 @@ def __handle_areal_dots(areal_dots, grid, nan_mask):
         primaries = (grid.nj + 1) * (grid.ni + 1)
         nan_mask[:, :primaries] = np.logical_or(nan_mask[:, :primaries], dot_mask.reshape((-1, primaries)))
     else:
-        nan_mask = np.where(dot_mask, np.NaN, nan_mask)
+        nan_mask = np.where(dot_mask, np.nan, nan_mask)
     return nan_mask
 
 
