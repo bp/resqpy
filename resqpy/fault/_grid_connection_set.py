@@ -2043,7 +2043,8 @@ class GridConnectionSet(BaseResqpy):
                          feature_index = None,
                          active_only = True,
                          lazy = False,
-                         baffle_uuid = None):
+                         baffle_uuid = None,
+                         dtype = None):
         """Creates a triplet of grid face numpy arrays populated from a property for this gcs.
 
         arguments:
@@ -2061,6 +2062,8 @@ class GridConnectionSet(BaseResqpy):
             baffle_uuid (uuid, optional): if present, the uuid of a discrete (bool) property
                 of the gcs holding baffle flags; where True the output face value is set
                 to zero regardless of the main property value
+            dtype (type or str, optional): the element type for the returned arrays; defaults
+                to float for continuous properties or int for discrete properties; see notes
 
         returns:
             triple numpy arrays: identifying the K, J & I direction grid face property values;
@@ -2070,7 +2073,9 @@ class GridConnectionSet(BaseResqpy):
             can only be used on single grid gcs; gcs property must have indexable of faces;
             at present generates grid properties with indexable 'faces' not 'faces per cell',
             which might not be appropriate for grids with split pillars (structural faults);
-            points properties not currently supported; count must be 1
+            points properties not currently supported; count must be 1;
+            if the property is a boolean array and may have been written to hdf5 using packing,
+            then the dtype argument must be set to bool or np.uint8 to ensure unpacking
         """
 
         assert self.number_of_grids() == 1
@@ -2078,7 +2083,7 @@ class GridConnectionSet(BaseResqpy):
         active_mask = None
         if active_only:
             pc = self.extract_property_collection()
-            active_mask = pc.single_array_ref(property_kind = 'active')
+            active_mask = pc.single_array_ref(property_kind = 'active', dtype = bool)
             if active_mask is not None:
                 assert active_mask.shape == (self.count,)
         gcs_prop = rqp.Property(self.model, uuid = property_uuid)
@@ -2086,10 +2091,11 @@ class GridConnectionSet(BaseResqpy):
         assert bu.matching_uuids(gcs_prop.collection.support_uuid, self.uuid)
         assert gcs_prop.count() == 1
         assert not gcs_prop.is_points()
-        dtype = float if gcs_prop.is_continuous() else int
+        if dtype is None:
+            dtype = float if gcs_prop.is_continuous() else int
         if default_value is None:
             default_value = -1 if dtype is int else np.nan
-        gcs_prop_array = gcs_prop.array_ref()
+        gcs_prop_array = gcs_prop.array_ref(dtype = dtype)
         assert gcs_prop_array.shape == (self.count,)
         log.debug(f'preparing grid face arrays from gcs property: {gcs_prop.title}; from gcs:{self.title}')
 
