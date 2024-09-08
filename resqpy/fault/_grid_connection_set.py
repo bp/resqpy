@@ -2125,6 +2125,7 @@ class GridConnectionSet(BaseResqpy):
 
         if active_mask is not None:
             cip = cip[active_mask, :, :]
+            fip = fip[active_mask, :, :]
             value_array = value_array[active_mask]
 
         side_list = ([0] if lazy else [0, 1])
