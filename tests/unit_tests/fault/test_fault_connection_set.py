@@ -138,6 +138,15 @@ def test_fault_connection_set(tmp_path):
     g2_fcs.create_xml()
     g2_fcs_again.write_hdf5()
     g2_fcs_again.create_xml()
+    g2_fcs_pc = g2_fcs.extract_property_collection()
+    g2_fcs_pc.add_cached_array_to_imported_list(np.array([True, True], dtype = bool),
+                                                'unit test active',
+                                                'ACTIVE',
+                                                property_kind = 'active',
+                                                discrete = True,
+                                                indexable_element = 'faces')
+    g2_fcs_pc.write_hdf5_for_imported_list()
+    g2_fcs_pc.create_xml_for_imported_list_and_add_parts_to_model()
     gcs_p_a = np.array((37, 51), dtype = int)
     p = rqp.Property.from_array(model,
                                 gcs_p_a,
