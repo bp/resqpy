@@ -599,6 +599,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         grid.block_dxyz_dkji[0, 2],
     )
     triangles, points = surface.triangles_and_points()
+    t_dtype = np.int32 if len(triangles) < 2_000_000_000 else np.int64
     assert (triangles is not None and points is not None), f"surface {surface.title} is empty"
     if agitate:
         if random_agitation:
@@ -622,7 +623,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if nk > 1:
         # log.debug("searching for k faces")
         k_faces = np.zeros((nk - 1, grid.nj, grid.ni), dtype = bool)
-        k_triangles = np.full((nk - 1, grid.nj, grid.ni), -1, dtype = int)
+        k_triangles = np.full((nk - 1, grid.nj, grid.ni), -1, dtype = t_dtype)
         k_depths = np.full((nk - 1, grid.nj, grid.ni), np.nan)
         k_offsets = np.full((nk - 1, grid.nj, grid.ni), np.nan)
         p_xy = np.delete(points, 2, 1)
@@ -666,7 +667,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if grid.nj > 1:
         # log.debug("searching for j faces")
         j_faces = np.zeros((nk, grid.nj - 1, grid.ni), dtype = bool)
-        j_triangles = np.full((nk, grid.nj - 1, grid.ni), -1, dtype = int)
+        j_triangles = np.full((nk, grid.nj - 1, grid.ni), -1, dtype = t_dtype)
         j_depths = np.full((nk, grid.nj - 1, grid.ni), np.nan)
         j_offsets = np.full((nk, grid.nj - 1, grid.ni), np.nan)
         p_xz = np.delete(points, 1, 1)
@@ -715,7 +716,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if grid.ni > 1:
         # log.debug("searching for i faces")
         i_faces = np.zeros((nk, grid.nj, grid.ni - 1), dtype = bool)
-        i_triangles = np.full((nk, grid.nj, grid.ni - 1), -1, dtype = int)
+        i_triangles = np.full((nk, grid.nj, grid.ni - 1), -1, dtype = t_dtype)
         i_depths = np.full((nk, grid.nj, grid.ni - 1), np.nan)
         i_offsets = np.full((nk, grid.nj, grid.ni - 1), np.nan)
         p_yz = np.delete(points, 0, 1)
