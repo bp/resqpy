@@ -4,8 +4,6 @@ name: Publish release
 
 on:
   push:
-    branches:
-      - upgrade_dependencies
     tags:
       # Run when a tag is pushed with a valid semantic version number
       - 'v[0-9]+.[0-9]+.[0-9]+'
@@ -84,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://test.pypi.org/p/resqpy
+      url: https://pypi.org/p/resqpy
     permissions:
       id-token: write
     steps:
