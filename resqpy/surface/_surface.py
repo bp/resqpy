@@ -438,10 +438,11 @@ class Surface(rqsb.BaseSurface):
         t, p = large_surface.triangles_and_points()
         assert p.ndim == 2 and p.shape[1] == 3
         pp = np.concatenate((p, line), axis = 0)
-        tp = np.empty(p.shape, dtype = int)
+        t_type = np.int32 if len(pp) <= 2_147_483_647 else np.int64
+        tp = np.empty(p.shape, dtype = t_type)
         tp[:, 0] = len(p)
         tp[:, 1] = len(p) + 1
-        tp[:, 2] = np.arange(len(p), dtype = int)
+        tp[:, 2] = np.arange(len(p), dtype = t_type)
         cw = vec.clockwise_triangles(pp, tp)
         pai = (cw >= 0.0)  # bool mask over p
         pbi = (cw <= 0.0)  # bool mask over p
@@ -453,11 +454,11 @@ class Surface(rqsb.BaseSurface):
         # here we stick the two halves together into a single patch
         # todo: keep as two patches as required by RESQML business rules
         p_combo = np.empty((0, 3))
-        t_combo = np.empty((0, 3), dtype = int)
+        t_combo = np.empty((0, 3), dtype = t_type)
         for i, tab in enumerate((ta, tb)):
             p_keep = np.unique(t[tab])
             # note new point index for each old point that is being kept
-            p_map = np.full(len(p), -1, dtype = int)
+            p_map = np.full(len(p), -1, dtype = t_type)
             p_map[p_keep] = np.arange(len(p_keep))
             # copy those unique points into a trimmed points array
             points_trimmed = p[p_keep].copy()
@@ -950,7 +951,8 @@ class Surface(rqsb.BaseSurface):
                     triangles.append(line.rstrip().split(" ")[1:4])
         assert len(vertices) >= 3, 'vertices missing'
         assert len(triangles) > 0, 'triangles missing'
-        triangles = np.array(triangles, dtype = int) - index_offset
+        t_type = np.int32 if len(vertices) <= 2_147_483_647 else np.int64
+        triangles = np.array(triangles, dtype = t_type) - index_offset
         vertices = np.array(vertices, dtype = float)
         assert np.all(triangles >= 0) and np.all(triangles < len(vertices)), 'triangle vertex indices out of range'
         self.set_from_triangles_and_points(triangles = triangles, points = vertices)
@@ -1139,8 +1141,9 @@ class Surface(rqsb.BaseSurface):
 
         # TODO: implement alternate solution using edge functions in olio triangulation to optimise
         points_unique, inverse = np.unique(allpoints, axis = 0, return_inverse = True)
-        tris = np.array(tris)
-        tris_unique = np.empty(shape = tris.shape, dtype = int)
+        t_type = np.int32 if len(allpoints) <= 2_147_483_647 else np.int64
+        tris = np.array(tris, dtype = t_type)
+        tris_unique = np.empty(shape = tris.shape, dtype = t_type)
         tris_unique[:, 0] = inverse[tris[:, 0]]
         tris_unique[:, 1] = inverse[tris[:, 1]]
         tris_unique[:, 2] = inverse[tris[:, 2]]
@@ -1333,7 +1336,8 @@ def distill_triangle_points(t, p):
     # find unique points used by triangles
     p_keep = np.unique(t)
     # note new point index for each old point that is being kept
-    p_map = np.full(len(p), -1, dtype = int)
+    t_type = np.int32 if len(p) <= 2_147_483_647 else np.int64
+    p_map = np.full(len(p), -1, dtype = t_type)
     p_map[p_keep] = np.arange(len(p_keep))
     # copy those unique points into a trimmed points array
     points_distilled = p[p_keep]
@@ -1360,8 +1364,9 @@ def nan_removed_triangles_and_points(t, p):
     expanded_mask[:] = np.expand_dims(np.logical_not(t_nan_mask), axis = -1)
     t_filtered = t[expanded_mask].reshape((-1, 3))
     # modified the filtered t values to adjust for the compression of filtered p
-    p_map = np.full(len(p), -1, dtype = int)
-    p_map[p_non_nan_mask] = np.arange(len(p_filtered), dtype = int)
+    t_type = np.int32 if len(p) <= 2_147_483_647 else np.int64
+    p_map = np.full(len(p), -1, dtype = t_type)
+    p_map[p_non_nan_mask] = np.arange(len(p_filtered), dtype = t_type)
     t_filtered = p_map[t_filtered]
     assert t_filtered.ndim == 2 and t_filtered.shape[1] == 3
     assert not np.any(t_filtered < 0) and not np.any(t_filtered >= len(p_filtered))
