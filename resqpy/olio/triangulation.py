@@ -115,7 +115,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     if n_p < 3:
         return None, None  # not enough points
     elif n_p == 3:
-        return np.array([0, 1, 2], dtype = int).reshape((1, 3)), np.array([0, 1, 2], dtype = int)
+        return np.array([0, 1, 2], dtype = np.int32).reshape((1, 3)), np.array([0, 1, 2], dtype = np.int32)
 
     if progress_fn is not None:
         progress_fn(0.0)
@@ -133,19 +133,20 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     p[-1] = (min_xy[0] + 0.5 * csf * dxy[0], max_xy[1] + 0.8 * csf * dxy[1])
 
     # triangle vertex indices
-    t = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle vertex indices
+    t_type = np.int32 if n_p < 2_147_483_648 else np.int64
+    t = np.empty((2 * n_p + 2, 3), dtype = t_type)  # empty space for triangle vertex indices
     t[0] = (n_p, n_p + 1, n_p + 2)  # initial set of one containing triangle
     nt = 1  # number of triangles so far populated
 
     # edges: list of indices of triangles and edge within triangle; -1 indicates no triangle using edge
-    e = np.full((3 * n_p + 6, 2, 2), fill_value = -1, dtype = int)
+    e = np.full((3 * n_p + 6, 2, 2), fill_value = -1, dtype = t_type)
     e[:3, 0, 0] = 0
     for edge in range(3):
         e[edge, 0, 1] = edge
     ne = 3  # number of edges so far in use
 
     # edge indices (in e) for each triangle, first axis indexed in sync with t
-    te = np.empty((2 * n_p + 2, 3), dtype = int)  # empty space for triangle edge indices
+    te = np.empty((2 * n_p + 2, 3), dtype = t_type)  # empty space for triangle edge indices
     te[0] = (0, 1, 2)
 
     # mask tracking which edges have been flipped
@@ -501,7 +502,7 @@ def voronoi(p, t, b, aoi: rql.Polyline):
         return trimmed_ci
 
     def __veroni_cells(aoi_count, aoi_intersect_segments, b, c, c_count, ca_count, cah_count, caho_count, cahon_count,
-                       hull_count, out_pair_intersect_segments, p, t, tc_outwith_aoi):
+                       hull_count, out_pair_intersect_segments, p, t, tc_outwith_aoi, t_type):
         # list of voronoi cells (each a numpy list of node indices into c extended with aoi points etc)
         v = []
         # for each seed point build the voronoi cell
@@ -550,7 +551,7 @@ def voronoi(p, t, b, aoi: rql.Polyline):
                                                   ci_for_p, out_pair_intersect_segments)
 
             #  remove circumcircle centres that are outwith area of interest
-            ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = int)
+            ci_for_p = np.array([ti for ti in ci_for_p if ti >= c_count or ti not in tc_outwith_aoi], dtype = t_type)
 
             # find azimuths of vectors from seed point to circumcircle centres and aoi boundary points
             azi = [vec.azimuth(centre - p[p_i, :2]) for centre in c[ci_for_p, :2]]
@@ -612,11 +613,12 @@ def voronoi(p, t, b, aoi: rql.Polyline):
     caho_count = cah_count + 2 * o_count
     cahon_count = caho_count + hull_count
     assert cahon_count + hull_count == len(c)
+    t_type = np.int32 if len(c) < 2_147_483_648 else np.int64
 
     #  compute intersection points between hull edge normals and aoi polyline
     # also extended virtual centres for hull edges
     extension_scaling = 1000.0 * np.sum((np.max(aoi.coordinates, axis = 0) - np.min(aoi.coordinates, axis = 0))[:2])
-    aoi_intersect_segments = np.empty((hull_count,), dtype = int)
+    aoi_intersect_segments = np.empty((hull_count,), dtype = t_type)
     for ei in range(hull_count):
         # use segment midpoint and normal methods of hull to project out
         m = hull.segment_midpoint(ei)[:2]  # midpoint
@@ -638,8 +640,8 @@ def voronoi(p, t, b, aoi: rql.Polyline):
         c[cahon_count + ei] = hull.coordinates[ei, :2] + extension_scaling * vector
 
     # where cicrumcircle centres are outwith aoi, compute intersections of normals of wing edges with aoi
-    out_pair_intersect_segments = np.empty((o_count, 2), dtype = int)
-    wing_hull_segments = np.empty((o_count, 2), dtype = int)
+    out_pair_intersect_segments = np.empty((o_count, 2), dtype = t_type)
+    wing_hull_segments = np.empty((o_count, 2), dtype = t_type)
     for oi, ti in enumerate(tc_outwith_aoi):
         tpi = __shorter_sides_p_i(p[t[ti]])
         for wing in range(2):
@@ -658,7 +660,7 @@ def voronoi(p, t, b, aoi: rql.Polyline):
             tpi = (tpi + 1) % 3
 
     v = __veroni_cells(aoi_count, aoi_intersect_segments, b, c, c_count, ca_count, cah_count, caho_count, cahon_count,
-                       hull_count, out_pair_intersect_segments, p, t, tc_outwith_aoi)
+                       hull_count, out_pair_intersect_segments, p, t, tc_outwith_aoi, t_type)
 
     return c[:caho_count], v
 
@@ -703,7 +705,8 @@ def triangulated_polygons(p, v, centres = None):
         points[len(p):] = centres
 
     t_count = sum([len(x) for x in v])
-    triangles = np.empty((t_count, 3), dtype = int)
+    t_type = np.int32 if len(points) < 2_147_483_648 else np.int64
+    triangles = np.empty((t_count, 3), dtype = t_type)
     t_index = 0
 
     for cell, poly_vertices in enumerate(v):
@@ -711,7 +714,7 @@ def triangulated_polygons(p, v, centres = None):
         centre_i = len(p) + cell
         if centres is None:
             polygon = rql.Polyline(model,
-                                   set_coord = p[np.array(poly_vertices, dtype = int)],
+                                   set_coord = p[np.array(poly_vertices, dtype = t_type)],
                                    is_closed = True,
                                    set_crs = crs.uuid,
                                    title = 'v cell')
@@ -917,7 +920,7 @@ def edges(t):
     """
 
     assert t.ndim == 2 and t.shape[1] == 3
-    all_edges = np.empty((len(t), 3, 2), dtype = int)
+    all_edges = np.empty((len(t), 3, 2), dtype = t.dtype)
     all_edges[:, :, 0] = t
     all_edges[:, :2, 1] = t[:, 1:]
     all_edges[:, 2, 1] = t[:, 0]
@@ -946,6 +949,7 @@ def triangles_using_edges(t, edges):
     """Returns int array of shape (len(edges), 2) with indices of upto 2 triangles using each edge (-1 for unused)."""
 
     assert t.ndim == 2 and t.shape[1] == 3 and edges.ndim == 2 and edges.shape[1] == 2
+    t_type = np.int32 if len(t) < 2_147_483_648 else np.int64
     ti = np.full((len(edges), 2), -1, dtype = int)
     for i in range(len(edges)):
         te = triangles_using_edge(t, edges[i, 0], edges[i, 1])
