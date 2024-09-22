@@ -182,3 +182,20 @@ def test_actual_pillar_shape_s_bend_grid(s_bend_grid):
 
     # Assert
     assert pillar_shape == 'straight'
+
+
+def test_is_big(tmp_path):
+    epc = os.path.join(tmp_path, 'monster.epc')
+
+    model = rq.new_model(epc)
+
+    # create a basic block grid
+    dxyz = (155.0, 165.0, 127.0)
+    grid = grr.RegularGrid(model, extent_kji = (4, 3, 2), title = 'tiny', origin = (0.0, 0.0, 1000.0), dxyz = dxyz)
+    assert not grid.is_big()
+    grid = grr.RegularGrid(model,
+                           extent_kji = (12345, 23456, 10),
+                           title = 'huge',
+                           origin = (0.0, 0.0, 1000.0),
+                           dxyz = dxyz)
+    assert grid.is_big()
