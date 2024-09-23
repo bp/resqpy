@@ -523,12 +523,16 @@ def get_well_data(
         else:
             return np.int8(0)
 
-    for col in df.columns:
-        if col in ["IW", "JW", "L", "LAYER"]:
-            df = df.astype({col: np.int32})
-
     if "STAT" in df.columns:
         df["STAT"] = df.apply(lambda row: stat_tranformation(row), axis = 1)
+
+    int_col_dict = {}
+    for col in ["IW", "JW", "L", "LAYER"]:
+        if col in df.columns:
+            int_col_dict[col] = np.int32
+    if "STAT" in df.columns:
+        int_col_dict["STAT"] = np.int8
+    df = df.astype(int_col_dict)
 
     return df
 

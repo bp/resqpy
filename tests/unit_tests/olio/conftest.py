@@ -278,6 +278,11 @@ def test_well_dataframe_duplicates_removed() -> pd.DataFrame:
             4: 9165.28,
             5: 9193.4
         },
+    }).astype({
+        "IW": np.int32,
+        "JW": np.int32,
+        "L": np.int32,
+        "STAT": np.int8
     })
 
 
@@ -389,6 +394,11 @@ def test_well_dataframe_duplicates_kept() -> pd.DataFrame:
             4: 9165.28,
             5: 9193.4,
         },
+    }).astype({
+        "IW": np.int32,
+        "JW": np.int32,
+        "L": np.int32,
+        "STAT": np.int8
     })
 
 
@@ -465,6 +475,11 @@ def test_well_dataframe_last_data_only() -> pd.DataFrame:
             0: 9165.28,
             1: 9165.28
         },
+    }).astype({
+        "IW": np.int32,
+        "JW": np.int32,
+        "L": np.int32,
+        "STAT": np.int8
     })
 
 
@@ -556,4 +571,9 @@ def test_well_dataframe_all_data() -> pd.DataFrame:
             2: "1994-03-12",
             3: "1994-03-12",
         },
+    }).astype({
+        "IW": np.int32,
+        "JW": np.int32,
+        "L": np.int32,
+        "STAT": np.int8
     })
