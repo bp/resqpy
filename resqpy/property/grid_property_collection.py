@@ -266,11 +266,11 @@ class GridPropertyCollection(rqp.PropertyCollection):
             dtype = None
             if keyword[0].upper() == 'I' or keyword in ['KID', 'UID', 'UNPACK', 'DAD']:
                 # coerce to integer values (vdb stores integer data as reals!)
-                dtype = 'int32'
+                dtype = np.int32
             elif keyword in ['DEADCELL', 'LIVECELL']:
-                dtype = 'bool'  # could use the default dtype of 64 bit integer
+                dtype = bool  # could use the default dtype of 64 bit integer
             else:
-                dtype = 'float'  # convert to 64 bit; could omit but RESQML states 64 bit
+                dtype = np.float32
                 discrete = False
             import_array = vdbase.grid_static_property(grid_name, keyword, dtype = dtype)
             assert import_array is not None
@@ -335,7 +335,7 @@ class GridPropertyCollection(rqp.PropertyCollection):
             time_index = timestep
         keyword = keyword.upper()
         try:
-            import_array = vdbase.grid_recurrent_property_for_timestep(grid_name, keyword, timestep, dtype = 'float')
+            import_array = vdbase.grid_recurrent_property_for_timestep(grid_name, keyword, timestep, dtype = np.float32)
             assert import_array is not None
         except Exception:
             # could raise an exception (as for static properties)
