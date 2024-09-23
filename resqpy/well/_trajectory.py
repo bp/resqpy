@@ -448,7 +448,7 @@ class Trajectory(BaseResqpy):
         """Loads the trajectory object based on the centre points of a list of cells."""
 
         assert grid is not None, 'grid argument missing for trajectory initislisation from cell list'
-        cell_kji0_list = np.array(cell_kji0_list, dtype = int)
+        cell_kji0_list = np.array(cell_kji0_list, dtype = np.int32)
         assert cell_kji0_list.ndim == 2 and cell_kji0_list.shape[1] == 3
         assert spline_mode in ['none', 'linear', 'square', 'cube']
 
@@ -483,7 +483,7 @@ class Trajectory(BaseResqpy):
         df = wellspec_dict[well_name]
         assert len(df) > 0, 'no rows of perforation data found in wellspec for well ' + well_name
 
-        cell_kji0_list = np.empty((len(df), 3), dtype = int)
+        cell_kji0_list = np.empty((len(df), 3), dtype = np.int32)
         cell_kji0_list[:, 0] = df['L']
         cell_kji0_list[:, 1] = df['JW']
         cell_kji0_list[:, 2] = df['IW']

@@ -179,12 +179,12 @@ def test_add_logs_from_cellio_file(example_model_and_crs):
 
     cellio_file = os.path.join(model.epc_directory, 'cellio.dat')
     source_df = pd.DataFrame(
-        [[1, 1, 1, 25, 25, 0, 26, 26, 1, 120, 0.12], [2, 2, 1, 26, -26, 126, 27, -27, 127, 117, 0.20],
-         [2, 3, 1, 27, -27, 127, 28, -28, 128, 135, 0.15]],
+        [[1, 1, 1, 25, 25, 0, 26, 26, 1, 120, 0.12, 1], [2, 2, 1, 26, -26, 126, 27, -27, 127, 117, 0.20, 2],
+         [2, 3, 1, 27, -27, 127, 28, -28, 128, 135, 0.15, 3]],
         columns = [
             'i_index unit1 scale1', 'j_index unit1 scale1', 'k_index unit1 scale1', 'x_in unit1 scale1',
             'y_in unit1 scale1', 'z_in unit1 scale1', 'x_out unit1 scale1', 'y_out unit1 scale1', 'z_out unit1 scale1',
-            'Perm unit1 scale1', 'Poro unit1 scale1'
+            'Perm unit1 scale1', 'Poro unit1 scale1', 'ZONES DISC scale1'
         ])
 
     with open(cellio_file, 'w') as fp:

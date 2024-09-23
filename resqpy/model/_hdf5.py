@@ -262,11 +262,11 @@ def _h5_array_element(model,
         if dtype is None:
             return result
         if result.size == 1:
-            if dtype is float or (isinstance(dtype, str) and dtype.startswith('float')):
+            if dtype is float or (isinstance(dtype, str) and ('float' in dtype)):
                 return float(result)
-            elif dtype is int or (isinstance(dtype, str) and dtype.startswith('int')):
+            elif dtype is int or (isinstance(dtype, str) and ('int' in dtype)):
                 return int(result)
-            elif dtype is bool or (isinstance(dtype, str) and dtype.startswith('bool')):
+            elif dtype is bool or (isinstance(dtype, str) and ('bool' in dtype)):
                 return bool(result)
         return np.array(result, dtype = dtype)
 

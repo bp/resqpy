@@ -225,11 +225,11 @@ def import_vdb_ensemble(
         vdb_file = ensemble_list[realisation]
         log.info('processing realisation ' + str(realisation) + ' from: ' + str(vdb_file))
         vdbase = vdb.VDB(vdb_file)
-        #      case_list = vdbase.cases()
-        #      assert len(case_list) > 0, 'no cases found in vdb: ' + str(vdb_file)
-        #      if len(case_list) > 1: log.warning('more than one case found in vdb (using first): ' + str(vdb_file))
-        #      vdb_case = case_list[0]
-        #      vdbase.set_use_case(vdb_case)
+        # case_list = vdbase.cases()
+        # assert len(case_list) > 0, 'no cases found in vdb: ' + str(vdb_file)
+        # if len(case_list) > 1: log.warning('more than one case found in vdb (using first): ' + str(vdb_file))
+        # vdb_case = case_list[0]
+        # vdbase.set_use_case(vdb_case)
         vdbase.set_extent_kji(grid.extent_kji)
 
         prop_import_collection = rp.GridPropertyCollection(realization = realisation)
@@ -243,9 +243,8 @@ def import_vdb_ensemble(
                     if keyword_list is not None and keyword not in keyword_list:
                         continue
                     prop_kind, facet_type, facet = rp.property_kind_and_facet_from_keyword(keyword)
-                    if property_kind_list is not None and prop_kind not in property_kind_list and prop_kind not in [
-                            'active', 'region initialization'
-                    ]:
+                    if property_kind_list is not None and prop_kind not in property_kind_list and  \
+                        prop_kind not in ['active', 'region initialization']:
                         continue
                     prop_import_collection.import_vdb_static_property_to_cache(vdbase,
                                                                                keyword,
@@ -312,9 +311,9 @@ def import_vdb_ensemble(
                     if decoarsen_array is not None:
                         step_import_collection.decoarsen_imported_list(decoarsen_array = decoarsen_array)
                     # extend hdf5 with cached arrays for this timestep
-                    #         log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) +
-                    #                  ' is: ' + str(step_import_collection.number_of_imports()))
-                    #         log.info('extending hdf5 file with recurrent properties for timestep: ' + str(timestep_number))
+                    # log.info('number of recurrent grid property arrays for timestep: ' + str(timestep_number) +
+                    #          ' is: ' + str(step_import_collection.number_of_imports()))
+                    # log.info('extending hdf5 file with recurrent properties for timestep: ' + str(timestep_number))
                     grid.write_hdf5_from_caches(hdf5_file,
                                                 mode = 'a',
                                                 geometry = False,
@@ -322,8 +321,8 @@ def import_vdb_ensemble(
                                                 write_active = False)
                     # add imported list for this timestep to full imported list
                     prop_import_collection.inherit_imported_list_from_other_collection(step_import_collection)
-                    #         log.debug('total number of property arrays after timestep: ' + str(timestep_number) +
-                    #                   ' is: ' + str(prop_import_collection.number_of_imports()))
+                    # log.debug('total number of property arrays after timestep: ' + str(timestep_number) +
+                    #           ' is: ' + str(prop_import_collection.number_of_imports()))
                     # remove cached copies of arrays
                     step_import_collection.remove_all_cached_arrays()
 

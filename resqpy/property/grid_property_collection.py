@@ -51,11 +51,11 @@ class GridPropertyCollection(rqp.PropertyCollection):
 
         # NB: RESQML documentation is not clear which order is correct; should be kept consistent with same data in fault.py
         # face_index_map maps from (axis, p01) to face index value in range 0..5
-        #     self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = int)
-        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = int)  # order: top, base, J-, I+, J+, I-
+        # self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = np.int8)
+        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = np.int8)  # order: top, base, J-, I+, J+, I-
         # and the inverse, maps from 0..5 to (axis, p01)
-        #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = int)
-        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = int)
+        # self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = np.int8)
+        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = np.int8)
 
     def _copy_support_to_grid_attributes(self):
         # following three pseudonyms are for backward compatibility
@@ -266,11 +266,11 @@ class GridPropertyCollection(rqp.PropertyCollection):
             dtype = None
             if keyword[0].upper() == 'I' or keyword in ['KID', 'UID', 'UNPACK', 'DAD']:
                 # coerce to integer values (vdb stores integer data as reals!)
-                dtype = 'int32'
+                dtype = np.int32
             elif keyword in ['DEADCELL', 'LIVECELL']:
-                dtype = 'bool'  # could use the default dtype of 64 bit integer
+                dtype = bool  # could use the default dtype of 64 bit integer
             else:
-                dtype = 'float'  # convert to 64 bit; could omit but RESQML states 64 bit
+                dtype = np.float32
                 discrete = False
             import_array = vdbase.grid_static_property(grid_name, keyword, dtype = dtype)
             assert import_array is not None
@@ -335,7 +335,7 @@ class GridPropertyCollection(rqp.PropertyCollection):
             time_index = timestep
         keyword = keyword.upper()
         try:
-            import_array = vdbase.grid_recurrent_property_for_timestep(grid_name, keyword, timestep, dtype = 'float')
+            import_array = vdbase.grid_recurrent_property_for_timestep(grid_name, keyword, timestep, dtype = np.float32)
             assert import_array is not None
         except Exception:
             # could raise an exception (as for static properties)
@@ -489,9 +489,9 @@ class GridPropertyCollection(rqp.PropertyCollection):
                 for k0 in range(self.grid.nk):
                     for j0 in range(self.grid.nj):
                         for i0 in range(self.grid.ni):
-                            #                     if decoarsen_array[k0, j0, i0] < 0:
+                            # if decoarsen_array[k0, j0, i0] < 0:
                             if kid[k0, j0, i0] == 0:
-                                #                        assert not kid_mask[k0, j0, i0]
+                                # assert not kid_mask[k0, j0, i0]
                                 ke = k0 + 1
                                 while ke < self.grid.nk and kid_mask[ke, j0, i0]:
                                     ke += 1

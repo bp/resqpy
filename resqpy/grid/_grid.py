@@ -265,6 +265,10 @@ class Grid(BaseResqpy):
             return np.count_nonzero(self.array_cell_geometry_is_defined)
         return None
 
+    def is_big(self):
+        """Returns True if number of cells exceeds 2^31 - 1, otherwise False."""
+        return (np.prod(self.extent_kji) >= 2_147_483_648)
+
     def natural_cell_index(self, cell_kji0):
         """Returns a single integer for the cell, being the index into a flattened array."""
 

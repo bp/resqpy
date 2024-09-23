@@ -136,6 +136,7 @@ class BlockedWell(BaseResqpy):
         self.wellbore_interpretation = None  #: associated wellbore interpretation object
         self.wellbore_feature = None  #: associated wellbore feature object
         self.well_name = None  #: name of well to import from ascii file formats
+        self.cell_index_dtype = np.int32  #: set to int64 if any grid has more than 2^31 - 1 cells, otherwise int32
 
         self.cell_interval_map = None  # maps from cell index to interval (ie. node) index; populated on demand
 
@@ -150,11 +151,11 @@ class BlockedWell(BaseResqpy):
         # this is the default as indicated on page 139 (but not p. 180) of the RESQML Usage Gude v2.0.1
         # also assumes K is generally increasing downwards
         # see DevOps backlog item 269001 discussion for more information
-        #     self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = int)
-        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = int)  # order: top, base, J-, I+, J+, I-
+        #     self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = np.int8)
+        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = np.int8)  # order: top, base, J-, I+, J+, I-
         # and the inverse, maps from 0..5 to (axis, p01)
-        #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = int)
-        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = int)
+        #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = np.int8)
+        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = np.int8)
         # note: the rework_face_pairs() method, below, overwrites the face indices based on I, J cell indices
 
         super().__init__(model = parent_model,
@@ -238,13 +239,13 @@ class BlockedWell(BaseResqpy):
 
         assert self.cell_count < self.node_count
 
-        self.__find_ci_node_and_load_hdf5_array(node = node)
-
-        self.__find_fi_node_and_load_hdf5_array(node)
-
         unique_grid_indices = self.__find_gi_node_and_load_hdf5_array(node = node)
 
         self.__find_grid_node(node = node, unique_grid_indices = unique_grid_indices)
+
+        self.__find_ci_node_and_load_hdf5_array(node = node)
+
+        self.__find_fi_node_and_load_hdf5_array(node)
 
         interp_uuid = rqet.find_nested_tags_text(node, ['RepresentedInterpretation', 'UUID'])
         if interp_uuid is None:
@@ -273,7 +274,7 @@ class BlockedWell(BaseResqpy):
 
         ci_node = rqet.find_tag(node, 'CellIndices')
         assert ci_node is not None, 'blocked well cell indices hdf5 reference not found in xml'
-        rqwu.load_hdf5_array(self, ci_node, 'cell_indices', dtype = int)
+        rqwu.load_hdf5_array(self, ci_node, 'cell_indices', dtype = self.cell_index_dtype)
         assert (self.cell_indices is not None and self.cell_indices.ndim == 1 and
                 self.cell_indices.size == self.cell_count), 'mismatch in number of cell indices for blocked well'
         self.cellind_null = rqet.find_tag_int(ci_node, 'NullValue')
@@ -285,7 +286,7 @@ class BlockedWell(BaseResqpy):
 
         fi_node = rqet.find_tag(node, 'LocalFacePairPerCellIndices')
         assert fi_node is not None, 'blocked well face indices hdf5 reference not found in xml'
-        rqwu.load_hdf5_array(self, fi_node, 'raw_face_indices', dtype = 'int')
+        rqwu.load_hdf5_array(self, fi_node, 'raw_face_indices', dtype = np.int8)
         assert self.raw_face_indices is not None, 'failed to load face indices for blocked well'
         assert self.raw_face_indices.size == 2 * self.cell_count, 'mismatch in number of cell faces for blocked well'
         if self.raw_face_indices.ndim > 1:
@@ -305,15 +306,14 @@ class BlockedWell(BaseResqpy):
 
         gi_node = rqet.find_tag(node, 'GridIndices')
         assert gi_node is not None, 'blocked well grid indices hdf5 reference not found in xml'
-        rqwu.load_hdf5_array(self, gi_node, 'grid_indices', dtype = 'int')
+        rqwu.load_hdf5_array(self, gi_node, 'grid_indices', dtype = np.int32)
         # assert self.grid_indices is not None and self.grid_indices.ndim == 1 and self.grid_indices.size == self.node_count - 1
         # temporary code to handle blocked wells with incorrectly shaped grid indices wrt. nodes
         assert self.grid_indices is not None and self.grid_indices.ndim == 1
         if self.grid_indices.size != self.node_count - 1:
             if self.grid_indices.size == self.cell_count and self.node_count == 2 * self.cell_count:
                 log.warning(f'handling node duplication or missing unblocked intervals in blocked well: {self.title}')
-
-                expanded_grid_indices = np.full(self.node_count - 1, -1, dtype = int)
+                expanded_grid_indices = np.full(self.node_count - 1, -1, dtype = np.int32)
                 expanded_grid_indices[::2] = self.grid_indices
                 self.grid_indices = expanded_grid_indices
             else:
@@ -342,6 +342,8 @@ class BlockedWell(BaseResqpy):
             grid_uuid = rqet.uuid_for_part_root(grid_node)
             grid_obj = self.model.grid(uuid = grid_uuid, find_properties = False)
             self.grid_list.append(grid_obj)
+            if grid_obj.is_big():
+                self.cell_index_dtype = np.int64
 
     def extract_property_collection(self, refresh = False):
         """Returns a property collection for the blocked well."""
@@ -434,7 +436,7 @@ class BlockedWell(BaseResqpy):
     def _set_cell_interval_map(self):
         """Sets up an index mapping from blocked cell index to interval index, accounting for unblocked intervals."""
 
-        self.cell_interval_map = np.zeros(self.cell_count, dtype = int)
+        self.cell_interval_map = np.zeros(self.cell_count, dtype = np.int32)
         ci = 0
         for ii in range(self.node_count - 1):
             if self.grid_indices[ii] < 0:
@@ -461,7 +463,7 @@ class BlockedWell(BaseResqpy):
         grid_for_cell_list = []
         grid_indices = self.compressed_grid_indices()
         assert len(grid_indices) == self.cell_count
-        cell_indices = np.empty((self.cell_count, 3), dtype = int)
+        cell_indices = np.empty((self.cell_count, 3), dtype = np.int32)
         for cell_number in range(self.cell_count):
             grid = self.grid_list[grid_indices[cell_number]]
             grid_for_cell_list.append(grid)
@@ -493,7 +495,7 @@ class BlockedWell(BaseResqpy):
 
         if cells_kji0 is None or len(cells_kji0) == 0:
             return None
-        well_box = np.empty((2, 3), dtype = int)
+        well_box = np.empty((2, 3), dtype = np.int32)
         well_box[0] = np.min(cells_kji0, axis = 0)
         well_box[1] = np.max(cells_kji0, axis = 0)
         return well_box
@@ -853,9 +855,9 @@ class BlockedWell(BaseResqpy):
         self.node_count = len(trajectory_mds)
         self.node_mds = np.array(trajectory_mds)
         self.cell_count = len(blocked_cells_kji0)
-        self.grid_indices = np.array(blocked_intervals, dtype = int)  # NB. only supporting one grid at the moment
-        self.cell_indices = grid.natural_cell_indices(np.array(blocked_cells_kji0))
-        self.face_pair_indices = np.array(blocked_face_pairs, dtype = int)
+        self.grid_indices = np.array(blocked_intervals, dtype = np.int32)  # NB. only supporting one grid at the moment
+        self.cell_indices = grid.natural_cell_indices(np.array(blocked_cells_kji0)).astype(self.cell_index_dtype)
+        self.face_pair_indices = np.array(blocked_face_pairs, dtype = np.int8)
         self.grid_list = [grid]
 
         trajectory_points, trajectory_mds = BlockedWell.__add_tail_to_trajectory_if_necessary(
@@ -877,7 +879,7 @@ class BlockedWell(BaseResqpy):
         row = df.iloc[df_row]
         if pd.isna(row[0]) or pd.isna(row[1]) or pd.isna(row[2]):
             return None
-        cell_kji0 = np.empty((3,), dtype = int)
+        cell_kji0 = np.empty((3,), dtype = np.int32)
         cell_kji0[:] = row[2], row[1], row[0]
         cell_kji0[:] -= 1
         return cell_kji0
@@ -1201,9 +1203,10 @@ class BlockedWell(BaseResqpy):
                 self.node_count = len(trajectory_mds)
                 self.node_mds = np.array(trajectory_mds)
                 self.cell_count = len(blocked_cells_kji0)
-                self.grid_indices = np.array(blocked_intervals,
-                                             dtype = int)  # NB. only supporting one grid at the moment
-                self.cell_indices = grid.natural_cell_indices(np.array(blocked_cells_kji0))
+                # NB. only supporting one grid at the moment
+                self.grid_indices = np.array(blocked_intervals, dtype = np.int32)
+                self.cell_indices = grid.natural_cell_indices(np.array(blocked_cells_kji0)).astype(
+                    self.cell_index_dtype)
                 self.face_pair_indices = np.array(blocked_face_pairs)
                 self.grid_list = [grid]
 
@@ -1240,7 +1243,7 @@ class BlockedWell(BaseResqpy):
         words = line.split()
         assert len(words) >= 9, 'not enough items on data line in cell I/O file, minimum 9 expected'
         i1, j1, k1 = int(words[0]), int(words[1]), int(words[2])
-        cell_kji0 = np.array((k1 - 1, j1 - 1, i1 - 1), dtype = int)
+        cell_kji0 = np.array((k1 - 1, j1 - 1, i1 - 1), dtype = np.int32)
         assert np.all(0 <= cell_kji0) and np.all(
             cell_kji0 < grid.extent_kji), 'cell I/O cell index not within grid extent'
         entry_xyz = np.array((float(words[3]), float(words[4]), float(words[5])))
@@ -1511,7 +1514,7 @@ class BlockedWell(BaseResqpy):
             for grid in self.grid_list:
                 grid.cache_all_geometry_arrays()
 
-        k_face_check = np.zeros((2, 2), dtype = int)
+        k_face_check = np.zeros((2, 2), dtype = np.int8)
         k_face_check[1, 1] = 1  # now represents entry, exit of K-, K+
         k_face_check_end = k_face_check.copy()
         k_face_check_end[1] = -1  # entry through K-, terminating (TD) within cell
