@@ -525,7 +525,7 @@ def get_well_data(
 
     for col in df.columns:
         if col in ["IW", "JW", "L", "LAYER"]:
-            df.astype({col: np.int32})
+            df = df.astype({col: np.int32})
 
     if "STAT" in df.columns:
         df["STAT"] = df.apply(lambda row: stat_tranformation(row), axis = 1)
