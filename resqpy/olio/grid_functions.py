@@ -310,12 +310,12 @@ def determine_corp_extent(corner_points, tolerance = 0.003):
                    tolerance):
         # allows for reversal of points (or not) in neighbouring cell
         if ((vec.manhatten_distance(corner_points[sextuple_cell_a_p1], corner_points[sextuple_cell_b_p1]) <= tolerance)
-                and (vec.manhatten_distance(corner_points[sextuple_cell_a_p2], corner_points[sextuple_cell_b_p2]) <=
-                     tolerance)):
+                and (vec.manhatten_distance(corner_points[sextuple_cell_a_p2], corner_points[sextuple_cell_b_p2])
+                     <= tolerance)):
             return True
         if ((vec.manhatten_distance(corner_points[sextuple_cell_a_p1], corner_points[sextuple_cell_b_p2]) <= tolerance)
-                and (vec.manhatten_distance(corner_points[sextuple_cell_a_p2], corner_points[sextuple_cell_b_p1]) <=
-                     tolerance)):
+                and (vec.manhatten_distance(corner_points[sextuple_cell_a_p2], corner_points[sextuple_cell_b_p1])
+                     <= tolerance)):
             return True
         return False
 

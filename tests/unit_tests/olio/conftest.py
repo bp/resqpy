@@ -147,15 +147,15 @@ IW    JW    L    KH    RADW    SKIN    RADB    WI    STAT    LENGTH    ANGLV    
 def test_well_dataframe() -> pd.DataFrame:
 
     return pd.DataFrame({
-        "IW": [18, 18, 18, 18],
-        "JW": [28, 28, 28, 28],
-        "L": [2, 3, 4, 5],
+        "IW": np.array([18, 18, 18, 18], dtype = np.int32),
+        "JW": np.array([28, 28, 28, 28], dtype = np.int32),
+        "L": np.array([2, 3, 4, 5], dtype = np.int32),
         "KH": [np.nan, np.nan, np.nan, np.nan],
         "RADW": [0.32, 0.32, 0.32, 0.32],
         "SKIN": [0.0, 0.0, 0.0, 0.0],
         "RADB": [np.nan, np.nan, np.nan, np.nan],
         "WI": [np.nan, np.nan, np.nan, np.nan],
-        "STAT": [1, 1, 1, 1],
+        "STAT": np.array([1, 1, 1, 1], dtype = np.int8),
         "LENGTH": [5.0, 5.0, 5.0, 5.0],
         "ANGLV": [88.08, 88.08, 88.08, 88.08],
         "ANGLA": [86.8, 86.8, 86.8, 86.8],
@@ -167,15 +167,15 @@ def test_well_dataframe() -> pd.DataFrame:
 def test_well2_dataframe() -> pd.DataFrame:
 
     return pd.DataFrame({
-        "IW": [23, 23, 23, 23],
-        "JW": [52, 52, 52, 52],
-        "L": [9, 10, 11, 12],
+        "IW": np.array([23, 23, 23, 23], dtype = np.int32),
+        "JW": np.array([52, 52, 52, 52], dtype = np.int32),
+        "L": np.array([9, 10, 11, 12], dtype = np.int32),
         "KH": [np.nan, np.nan, np.nan, np.nan],
         "RADW": [0.26, 0.26, 0.26, 0.26],
         "SKIN": [0.0, 0.0, 0.0, 0.0],
         "RADB": [np.nan, np.nan, np.nan, np.nan],
         "WI": [np.nan, np.nan, np.nan, np.nan],
-        "STAT": [1, 1, 1, 1],
+        "STAT": np.array([1, 1, 1, 1], dtype = np.int8),
         "LENGTH": [4.0, 4.0, 4.0, 4.0],
         "ANGLV": [89.24, 89.24, 89.24, 89.24],
         "ANGLA": [88.23, 88.23, 88.23, 88.23],
@@ -188,25 +188,25 @@ def test_well_dataframe_duplicates_removed() -> pd.DataFrame:
 
     return pd.DataFrame({
         "IW": {
-            0: 18,
-            2: 18,
-            3: 18,
-            4: 18,
-            5: 19,
+            0: np.int32(18),
+            2: np.int32(18),
+            3: np.int32(18),
+            4: np.int32(18),
+            5: np.int32(19)
         },
         "JW": {
-            0: 28,
-            2: 28,
-            3: 28,
-            4: 28,
-            5: 28
+            0: np.int32(28),
+            2: np.int32(28),
+            3: np.int32(28),
+            4: np.int32(28),
+            5: np.int32(28)
         },
         "L": {
-            0: 2,
-            2: 3,
-            3: 4,
-            4: 5,
-            5: 5
+            0: np.int32(2),
+            2: np.int32(3),
+            3: np.int32(4),
+            4: np.int32(5),
+            5: np.int32(5)
         },
         "KH": {
             0: np.nan,
@@ -244,11 +244,11 @@ def test_well_dataframe_duplicates_removed() -> pd.DataFrame:
             5: np.nan
         },
         "STAT": {
-            0: 1,
-            2: 0,
-            3: 1,
-            4: 0,
-            5: 1,
+            0: np.int8(1),
+            2: np.int8(0),
+            3: np.int8(1),
+            4: np.int8(0),
+            5: np.int8(1)
         },
         "LENGTH": {
             0: 5.0,
@@ -286,28 +286,28 @@ def test_well_dataframe_duplicates_kept() -> pd.DataFrame:
 
     return pd.DataFrame({
         "IW": {
-            0: 18,
-            1: 18,
-            2: 18,
-            3: 18,
-            4: 18,
-            5: 19
+            0: np.int32(18),
+            1: np.int32(18),
+            2: np.int32(18),
+            3: np.int32(18),
+            4: np.int32(18),
+            5: np.int32(19)
         },
         "JW": {
-            0: 28,
-            1: 28,
-            2: 28,
-            3: 28,
-            4: 28,
-            5: 28
+            0: np.int32(28),
+            1: np.int32(28),
+            2: np.int32(28),
+            3: np.int32(28),
+            4: np.int32(28),
+            5: np.int32(28)
         },
         "L": {
-            0: 2,
-            1: 3,
-            2: 3,
-            3: 4,
-            4: 5,
-            5: 5
+            0: np.int32(2),
+            1: np.int32(3),
+            2: np.int32(3),
+            3: np.int32(4),
+            4: np.int32(5),
+            5: np.int32(5)
         },
         "KH": {
             0: np.nan,
@@ -350,12 +350,12 @@ def test_well_dataframe_duplicates_kept() -> pd.DataFrame:
             5: np.nan
         },
         "STAT": {
-            0: 1,
-            1: 1,
-            2: 0,
-            3: 1,
-            4: 0,
-            5: 1,
+            0: np.int8(1),
+            1: np.int8(1),
+            2: np.int8(0),
+            3: np.int8(1),
+            4: np.int8(0),
+            5: np.int8(1)
         },
         "LENGTH": {
             0: 5.0,
@@ -396,12 +396,12 @@ def test_well_dataframe_duplicates_kept() -> pd.DataFrame:
 def test_well_dataframe_null_columns_dropped() -> pd.DataFrame:
 
     return pd.DataFrame({
-        "IW": [18, 18, 18, 18],
-        "JW": [28, 28, 28, 28],
-        "L": [2, 3, 4, 5],
+        "IW": np.array([18, 18, 18, 18], dtype = np.int32),
+        "JW": np.array([28, 28, 28, 28], dtype = np.int32),
+        "L": np.array([2, 3, 4, 5], dtype = np.int32),
         "RADW": [0.32, 0.32, 0.32, 0.32],
         "SKIN": [0.0, 0.0, 0.0, 0.0],
-        "STAT": [1, 1, 1, 1],
+        "STAT": np.array([1, 1, 1, 1], dtype = np.int8),
         "LENGTH": [5.0, 5.0, 5.0, 5.0],
         "ANGLV": [88.08, 88.08, 88.08, 88.08],
         "ANGLA": [86.8, 86.8, 86.8, 86.8],
@@ -414,16 +414,16 @@ def test_well_dataframe_last_data_only() -> pd.DataFrame:
 
     return pd.DataFrame({
         "IW": {
-            0: 18,
-            1: 18
+            0: np.int32(18),
+            1: np.int32(18)
         },
         "JW": {
-            0: 28,
-            1: 28
+            0: np.int32(28),
+            1: np.int32(28)
         },
         "L": {
-            0: 2,
-            1: 3
+            0: np.int32(2),
+            1: np.int32(3)
         },
         "KH": {
             0: np.nan,
@@ -446,8 +446,8 @@ def test_well_dataframe_last_data_only() -> pd.DataFrame:
             1: np.nan
         },
         "STAT": {
-            0: 1,
-            1: 1,
+            0: np.int8(1),
+            1: np.int8(1)
         },
         "LENGTH": {
             0: 5.0,
@@ -473,22 +473,22 @@ def test_well_dataframe_all_data() -> pd.DataFrame:
 
     return pd.DataFrame({
         "IW": {
-            0: 18,
-            1: 18,
-            2: 18,
-            3: 18
+            0: np.int32(18),
+            1: np.int32(18),
+            2: np.int32(18),
+            3: np.int32(18)
         },
         "JW": {
-            0: 28,
-            1: 28,
-            2: 28,
-            3: 28
+            0: np.int32(28),
+            1: np.int32(28),
+            2: np.int32(28),
+            3: np.int32(28)
         },
         "L": {
-            0: 2,
-            1: 3,
-            2: 2,
-            3: 3
+            0: np.int32(2),
+            1: np.int32(3),
+            2: np.int32(2),
+            3: np.int32(3)
         },
         "KH": {
             0: np.nan,
@@ -521,10 +521,10 @@ def test_well_dataframe_all_data() -> pd.DataFrame:
             3: np.nan
         },
         "STAT": {
-            0: 1,
-            1: 1,
-            2: 1,
-            3: 1,
+            0: np.int8(1),
+            1: np.int8(1),
+            2: np.int8(1),
+            3: np.int8(1)
         },
         "LENGTH": {
             0: 5.0,

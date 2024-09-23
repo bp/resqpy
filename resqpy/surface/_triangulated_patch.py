@@ -31,6 +31,7 @@ class TriangulatedPatch:
         self.ni = None  # used to convert a triangle index back into a (j, i) pair when freshly built from mesh
         self.points = None
         self.crs_uuid = crs_uuid
+        self.t_type = np.int32  # gets set to int64 if number of points requires it
         if patch_node is not None:
             xml_patch_index = rqet.find_tag_int(patch_node, 'PatchIndex')
             assert xml_patch_index is not None
@@ -87,6 +88,7 @@ class TriangulatedPatch:
         except Exception:
             log.error('hdf5 points failure for triangle patch ' + str(self.patch_index))
             raise
+        self._set_t_type()
         triangles_node = rqet.find_tag(self.node, 'Triangles')
         h5_key_pair = self.model.h5_uuid_and_path_for_node(triangles_node)
         if h5_key_pair is None:
@@ -97,7 +99,7 @@ class TriangulatedPatch:
                                         cache_array = True,
                                         object = self,
                                         array_attribute = 'triangles',
-                                        dtype = 'int')
+                                        dtype = self.t_type)
         except Exception:
             log.error('hdf5 triangles failure for triangle patch ' + str(self.patch_index))
             raise
@@ -147,7 +149,7 @@ class TriangulatedPatch:
         # find unique points used by those triangles
         p_keep = np.unique(large_t[t_in])
         # note new point index for each old point that is being kept
-        p_map = np.full(len(points_in), -1, dtype = int)
+        p_map = np.full(len(points_in), -1, dtype = large_t.dtype)
         p_map[p_keep] = np.arange(len(p_keep))
         # copy those unique points into a trimmed points array
         points_trimmed = large_p[p_keep]
@@ -190,10 +192,10 @@ class TriangulatedPatch:
         # create pair of triangles
         if quad_triangles:
             self.triangle_count = 4
-            self.triangles = np.array([[0, 2, 4], [2, 1, 4], [1, 3, 4], [3, 0, 4]], dtype = int)
+            self.triangles = np.array([[0, 2, 4], [2, 1, 4], [1, 3, 4], [3, 0, 4]], dtype = self.t_type)
         else:
             self.triangle_count = 2
-            self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = int)
+            self.triangles = np.array([[0, 1, 2], [0, 3, 1]], dtype = self.t_type)
 
     def set_to_triangle(self, corners):
         """Populate this (empty) patch with a single triangle."""
@@ -202,12 +204,12 @@ class TriangulatedPatch:
         self.node_count = 3
         self.points = corners.copy()
         self.triangle_count = 1
-        self.triangles = np.array([[0, 1, 2]], dtype = int)
+        self.triangles = np.array([[0, 1, 2]], dtype = self.t_type)
 
     def set_to_triangle_pair(self, corners):
         """Populate this (empty) patch with a pair of triangles."""
 
-        self.set_from_triangles_and_points(np.array([[0, 1, 3], [0, 3, 2]], dtype = int), corners)
+        self.set_from_triangles_and_points(np.array([[0, 1, 3], [0, 3, 2]], dtype = self.t_type), corners)
 
     def set_from_triangles_and_points(self, triangles, points):
         """Populate this (empty) patch from triangle node indices and points from elsewhere."""
@@ -240,7 +242,7 @@ class TriangulatedPatch:
         self.node_count = (n + 1) * (n + 2) // 2
         self.points = np.empty((self.node_count, 3))
         self.triangle_count = n * n
-        self.triangles = np.empty((self.triangle_count, 3), dtype = int)
+        self.triangles = np.empty((self.triangle_count, 3), dtype = self.t_type)
         self.points[0] = sail_point(centre, radius, azimuth, 0.0).copy()
         p = 0
         t = 0
@@ -282,11 +284,12 @@ class TriangulatedPatch:
             quad_centres[:, :] = 0.25 * (mesh_xyz[:-1, :-1, :] + mesh_xyz[:-1, 1:, :] + mesh_xyz[1:, :-1, :] +
                                          mesh_xyz[1:, 1:, :]).reshape((-1, 3))
             self.points = np.concatenate((mesh_xyz.copy().reshape((-1, 3)), quad_centres))
+            self._set_t_type()
             mesh_size = mesh_xyz.size // 3
             self.node_count = self.points.size // 3
             self.triangle_count = 4 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1)
             self.quad_triangles = True
-            triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 4, 3), dtype = int)  # flatten later
+            triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 4, 3), dtype = self.t_type)  # flatten later
             nic = ni - 1
             for j in range(mesh_shape[0] - 1):
                 for i in range(nic):
@@ -298,10 +301,11 @@ class TriangulatedPatch:
                     triangles[j, i, 3, 2] = j * ni + i
         else:
             self.points = mesh_xyz.copy().reshape((-1, 3))
+            self._set_t_type()
             self.node_count = mesh_shape[0] * mesh_shape[1]
             self.triangle_count = 2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1)
             self.quad_triangles = False
-            triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 2, 3), dtype = int)  # flatten later
+            triangles = np.empty((mesh_shape[0] - 1, mesh_shape[1] - 1, 2, 3), dtype = self.t_type)  # flatten later
             for j in range(mesh_shape[0] - 1):
                 for i in range(mesh_shape[1] - 1):
                     triangles[j, i, 0, 0] = j * ni + i
@@ -321,7 +325,7 @@ class TriangulatedPatch:
 
         indices = self.get_indices_from_sparse_meshxyz(mesh_xyz)
 
-        triangles = np.zeros((2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1), 3), dtype = int)  # truncate later
+        triangles = np.zeros((2 * (mesh_shape[0] - 1) * (mesh_shape[1] - 1), 3), dtype = self.t_type)  # truncate later
         nt = 0
         for j in range(mesh_shape[0] - 1):
             for i in range(mesh_shape[1] - 1):
@@ -357,7 +361,7 @@ class TriangulatedPatch:
                 else:
                     raise Exception('code failure in sparse mesh processing')
         self.ni = None
-        self.triangles = triangles[:nt, :]
+        self.triangles = triangles[:nt, :].copy()
         self.triangle_count = nt
 
     def get_indices_from_sparse_meshxyz(self, mesh_xyz):
@@ -373,6 +377,7 @@ class TriangulatedPatch:
             points[i] = mesh_xyz[non_nans[0][i], non_nans[1][i]]
             indices[non_nans[0][i], non_nans[1][i]] = i
         self.points = points[:len(non_nans[0]), :]
+        self._set_t_type()
         self.node_count = len(non_nans[0])
 
         return indices
@@ -389,11 +394,12 @@ class TriangulatedPatch:
             quad_centres = np.empty((nj, ni, 3))
             quad_centres[:, :, :] = 0.25 * np.sum(mesh_xyz, axis = (2, 3))
             self.points = np.concatenate((mesh_xyz.copy().reshape((-1, 3)), quad_centres.reshape((-1, 3))))
+            self._set_t_type()
             mesh_size = mesh_xyz.size // 3
             self.node_count = 5 * nj * ni
             self.triangle_count = 4 * nj * ni
             self.quad_triangles = True
-            triangles = np.empty((nj, ni, 4, 3), dtype = int)  # flatten later
+            triangles = np.empty((nj, ni, 4, 3), dtype = self.t_type)  # flatten later
             for j in range(nj):
                 for i in range(ni):
                     base_p = 4 * (j * ni + i)
@@ -405,10 +411,11 @@ class TriangulatedPatch:
                     triangles[j, i, 3, 2] = base_p
         else:
             self.points = mesh_xyz.copy().reshape((-1, 3))
+            self._set_t_type()
             self.node_count = 4 * nj * ni
             self.triangle_count = 2 * nj * ni
             self.quad_triangles = False
-            triangles = np.empty((nj, ni, 2, 3), dtype = int)  # flatten later
+            triangles = np.empty((nj, ni, 2, 3), dtype = self.t_type)  # flatten later
             for j in range(nj):
                 for i in range(ni):
                     base_p = 4 * (j * ni + i)
@@ -469,7 +476,8 @@ class TriangulatedPatch:
         self.triangle_count = 12
         self.node_count = 8
         self.points = cp.copy().reshape((-1, 3))
-        triangles = np.empty((3, 2, 2, 3), dtype = int)  # flatten later
+        self._set_t_type()
+        triangles = np.empty((3, 2, 2, 3), dtype = self.t_type)  # flatten later
         for axis in range(3):
             if axis == 0:
                 ip1, ip2 = 2, 1
@@ -500,7 +508,8 @@ class TriangulatedPatch:
         quad_centres[2, 1, :] = 0.25 * np.sum(cp[:, :, 1, :], axis = (0, 1))  # I+
         self.node_count = 14
         self.points = np.concatenate((cp.copy().reshape((-1, 3)), quad_centres.reshape((-1, 3))))
-        triangles = np.empty((3, 2, 4, 3), dtype = int)  # flatten later
+        self._set_t_type()
+        triangles = np.empty((3, 2, 4, 3), dtype = self.t_type)  # flatten later
         for axis in range(3):
             if axis == 0:
                 ip1, ip2 = 2, 1
@@ -544,3 +553,6 @@ class TriangulatedPatch:
         _, _ = self.triangles_and_points()  # ensure points are loaded
         z_values = self.points[:, 2].copy()
         self.points[:, 2] = ref_depth + scaling_factor * (z_values - ref_depth)
+
+    def _set_t_type(self):
+        self.t_type = np.int64 if len(self.points) > 2_147_483_648 else np.int32

@@ -115,9 +115,9 @@ class _GridFromCp:
     def __get_dot_mask_dots(self):
         # for speed, only check primary diagonal of cells
         log.debug('geometry for cells with no length to primary cell diagonal being set to NaN')
-        self.__dot_mask = np.all(
-            np.abs(self.__cp_array[:, :, :, 1, 1, 1] - self.__cp_array[:, :, :, 0, 0, 0]) < self.__dot_tolerance,
-            axis = -1)
+        self.__dot_mask = np.all(np.abs(self.__cp_array[:, :, :, 1, 1, 1] - self.__cp_array[:, :, :, 0, 0, 0])
+                                 < self.__dot_tolerance,
+                                 axis = -1)
 
     def __get_dot_mask_ijdots_or_morse(self):
         # check one diagonal of each I & J face
@@ -511,8 +511,8 @@ class _GridFromCp:
                 assert len(where_defined) == 3 and len(where_defined[0]) > 0, 'no extant cell geometries'
                 sample_kji0 = (where_defined[0][0], where_defined[1][0], where_defined[2][0])
             sample_cp = self.__cp_array[sample_kji0]
-            self.__cell_ijk_lefthanded = (vec.clockwise(sample_cp[0, 0, 0], sample_cp[0, 1, 0], sample_cp[0, 0, 1]) >=
-                                          0.0)
+            self.__cell_ijk_lefthanded = (vec.clockwise(sample_cp[0, 0, 0], sample_cp[0, 1, 0], sample_cp[0, 0, 1])
+                                          >= 0.0)
             if not self.grid.k_direction_is_down:
                 self.__cell_ijk_lefthanded = not self.__cell_ijk_lefthanded
             if self.__crs.is_right_handed_xyz():

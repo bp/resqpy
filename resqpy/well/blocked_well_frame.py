@@ -191,7 +191,7 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
         wb_a = np.zeros(bw.cell_count, dtype = bool)
         length = np.zeros(bw.cell_count, dtype = float)
         pperf = np.zeros(bw.cell_count, dtype = float)
-        dominant_wbf_interval = np.full(bw.cell_count, -1, dtype = int)
+        dominant_wbf_interval = np.full(bw.cell_count, -1, dtype = np.int32)
         ci = 0
         for wb_ii in range(bw.node_count - 1):
             if bw.grid_indices[wb_ii] < 0:

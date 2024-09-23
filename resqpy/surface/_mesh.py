@@ -207,6 +207,10 @@ class Mesh(rqsb.BaseSurface):
                    extra_metadata = em)
         return mesh
 
+    def is_big(self):
+        """Returns True if the number of nodes exceeds 2^31 - 1, False otherwise."""
+        return (self.ni * self.nj >= 2_147_483_648)
+
     def set_represented_interpretation_root(self, interp_root):
         """Makes a note of the xml root of the represented interpretation."""
 
