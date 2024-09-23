@@ -117,7 +117,7 @@ class _GridFromCp:
         log.debug('geometry for cells with no length to primary cell diagonal being set to NaN')
         self.__dot_mask = np.all(
             np.abs(self.__cp_array[:, :, :, 1, 1, 1] - self.__cp_array[:, :, :, 0, 0, 0]) < self.__dot_tolerance,
-                   axis = -1)
+            axis = -1)
 
     def __get_dot_mask_ijdots_or_morse(self):
         # check one diagonal of each I & J face
