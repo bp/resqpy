@@ -257,8 +257,8 @@ def half_cell_t_irregular(grid,
                 minus_face_areas = face_areas[:-1]
                 plus_face_areas = face_areas[1:]
             half_axis_length_sqr = np.sum(half_axis_vectors * half_axis_vectors, axis = -1)  # shape (nk, nj, ni)
-            zero_length_mask = np.logical_or(np.any(np.isnan(half_axis_vectors), axis = -1), half_axis_length_sqr
-                                             < tolerance_sqr)
+            zero_length_mask = np.logical_or(np.any(np.isnan(half_axis_vectors), axis = -1),
+                                             half_axis_length_sqr < tolerance_sqr)
             minus_face_t = np.where(
                 zero_length_mask, np.nan,
                 perm_k * np.sum(half_axis_vectors * minus_face_areas, axis = -1) / half_axis_length_sqr)
