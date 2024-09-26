@@ -495,18 +495,18 @@ def find_faces_to_represent_surface_regular(
     return gcs
 
 
-def find_faces_to_represent_surface_regular_optimised(grid,
-                                                      surface,
-                                                      name,
-                                                      title = None,
-                                                      agitate = False,
-                                                      random_agitation = False,
-                                                      feature_type = "fault",
-                                                      is_curtain = False,
-                                                      progress_fn = None,
-                                                      return_properties = None,
-                                                      raw_bisector = False,
-                                                      n_batches = 20):
+def find_faces_to_represent_surface_regular_dense_optimised(grid,
+                                                            surface,
+                                                            name,
+                                                            title = None,
+                                                            agitate = False,
+                                                            random_agitation = False,
+                                                            feature_type = "fault",
+                                                            is_curtain = False,
+                                                            progress_fn = None,
+                                                            return_properties = None,
+                                                            raw_bisector = False,
+                                                            n_batches = 20):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     argumants:
@@ -553,7 +553,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         no trimming of the surface is carried out here: for computational efficiency, it is recommended
         to trim first;
         organisational objects for the feature are created if needed;
-        if the offset return property is requested, the implicit units will be the z units of the grid's crs
+        if the offset return property is requested, the implicit units will be the z units of the grid's crs;
+        this version of the function uses fully explicit boolean arrays to capture the faces before conversion
+        to a grid connection set; use the non-dense version of the function for a reduced memory footprint
     """
 
     assert isinstance(grid, grr.RegularGrid)
@@ -779,6 +781,362 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     )
     # log.debug('finished coversion to gcs')
 
+    # NB. following assumes faces have been added to gcs in a particular order!
+    if return_triangles:
+        # log.debug('preparing triangles array')
+        k_tri_list = (np.empty((0,)) if k_triangles is None else k_triangles[_where_true(k_faces)])
+        j_tri_list = (np.empty((0,)) if j_triangles is None else j_triangles[_where_true(j_faces)])
+        i_tri_list = (np.empty((0,)) if i_triangles is None else i_triangles[_where_true(i_faces)])
+        all_tris = np.concatenate((k_tri_list, j_tri_list, i_tri_list), axis = 0)
+        # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
+        assert all_tris.shape == (gcs.count,)
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    if return_depths:
+        # log.debug('preparing depths array')
+        k_depths_list = (np.empty((0,)) if k_depths is None else k_depths[_where_true(k_faces)])
+        j_depths_list = (np.empty((0,)) if j_depths is None else j_depths[_where_true(j_faces)])
+        i_depths_list = (np.empty((0,)) if i_depths is None else i_depths[_where_true(i_faces)])
+        all_depths = np.concatenate((k_depths_list, j_depths_list, i_depths_list), axis = 0)
+        # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
+        assert all_depths.shape == (gcs.count,)
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    if return_offsets:
+        # log.debug('preparing offsets array')
+        k_offsets_list = (np.empty((0,)) if k_offsets is None else k_offsets[_where_true(k_faces)])
+        j_offsets_list = (np.empty((0,)) if j_offsets is None else j_offsets[_where_true(j_faces)])
+        i_offsets_list = (np.empty((0,)) if i_offsets is None else i_offsets[_where_true(i_faces)])
+        all_offsets = _all_offsets(grid.crs, k_offsets_list, j_offsets_list, i_offsets_list)
+        # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
+        assert all_offsets.shape == (gcs.count,)
+
+    if return_flange_bool:
+        # log.debug('preparing flange array')
+        flange_bool_uuid = surface.model.uuid(title = "flange bool",
+                                              obj_type = "DiscreteProperty",
+                                              related_uuid = surface.uuid)
+        assert (flange_bool_uuid is not None), f"No flange bool property found for surface: {surface.title}"
+        flange_bool = rqp.Property(surface.model, uuid = flange_bool_uuid)
+        flange_array = flange_bool.array_ref(dtype = bool)
+        all_flange = np.take(flange_array, all_tris)
+        assert all_flange.shape == (gcs.count,)
+
+    # note: following is a grid cells property, not a gcs property
+    if return_bisector:
+        if is_curtain:
+            log.debug("preparing columns bisector")
+            bisector = column_bisector_from_faces((grid.nj, grid.ni), j_faces[0], i_faces[0])
+            # log.debug('finished preparing columns bisector')
+        else:
+            log.debug("preparing cells bisector")
+            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector)
+            if is_curtain:
+                bisector = bisector[0]  # reduce to a columns property
+
+    # note: following is a grid cells property, not a gcs property
+    if return_shadow:
+        log.debug("preparing cells shadow")
+        shadow = shadow_from_faces(tuple(grid.extent_kji), k_faces)
+
+    if progress_fn is not None:
+        progress_fn(1.0)
+
+    log.debug(f"finishing find_faces_to_represent_surface_regular_optimised for {name}")
+
+    # if returning properties, construct dictionary
+    if return_properties:
+        props_dict = {}
+        if return_triangles:
+            props_dict["triangle"] = all_tris
+        if return_depths:
+            props_dict["depth"] = all_depths
+        if return_offsets:
+            props_dict["offset"] = all_offsets
+        if return_bisector:
+            props_dict["grid bisector"] = (bisector, is_curtain)
+        if return_shadow:
+            props_dict["grid shadow"] = shadow
+        if return_flange_bool:
+            props_dict["flange bool"] = all_flange
+        return (gcs, props_dict)
+
+    return gcs
+
+
+def find_faces_to_represent_surface_regular_optimised(grid,
+                                                      surface,
+                                                      name,
+                                                      title = None,
+                                                      agitate = False,
+                                                      random_agitation = False,
+                                                      feature_type = "fault",
+                                                      is_curtain = False,
+                                                      progress_fn = None,
+                                                      return_properties = None,
+                                                      raw_bisector = False,
+                                                      n_batches = 20):
+    """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
+
+    argumants:
+        grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
+           must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
+        surface (Surface): the surface to be intersected with the grid
+        name (str): the feature name to use in the grid connection set
+        title (str, optional): the citation title to use for the grid connection set; defaults to name
+        agitate (bool, default False): if True, the points of the surface are perturbed by a small
+           offset, which can help if the surface has been built from a regular mesh with a periodic resonance
+           with the grid
+        random_agitation (bool, default False): if True, the agitation is by a small random distance; if False,
+           a constant positive shift of 5.0e-6 is applied to x, y & z values; ignored if agitate is False
+        feature_type (str, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+        is_curtain (bool, default False): if True, only the top layer of the grid is processed and the bisector
+           property, if requested, is generated with indexable element columns
+        progress_fn (f(x: float), optional): a callback function to be called at intervals by this function;
+           the argument will progress from 0.0 to 1.0 in unspecified and uneven increments
+        return_properties (List[str]): if present, a list of property arrays to calculate and
+           return as a dictionary; recognised values in the list are 'triangle', 'depth', 'offset',
+           'flange bool', 'grid bisector', or 'grid shadow';
+           triangle is an index into the surface triangles of the triangle detected for the gcs face; depth is
+           the z value of the intersection point of the inter-cell centre vector with a triangle in the surface;
+           offset is a measure of the distance between the centre of the cell face and the intersection point;
+           grid bisector is a grid cell boolean property holding True for the set of cells on one
+           side of the surface, deemed to be shallower;
+           grid shadow is a grid cell int8 property holding 0: cell neither above nor below a K face of the
+           gridded surface, 1 cell is above K face(s), 2 cell is below K face(s), 3 cell is between K faces;
+           the returned dictionary has the passed strings as keys and numpy arrays as values
+        raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
+           form without assessing which side is shallower (True values indicate same side as origin cell)
+        n_batches (int, default 20): the number of batches of triangles to use at the low level (numba multi
+           threading allows some parallelism between the batches)
+
+    returns:
+        gcs  or  (gcs, gcs_props)
+        where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
+        gcs_props is a dictionary mapping from requested return_properties string to numpy array
+
+    notes:
+        this function is designed for aligned regular grids only;
+        this function can handle the surface and grid being in different coordinate reference systems, as
+        long as the implicit parent crs is shared;
+        no trimming of the surface is carried out here: for computational efficiency, it is recommended
+        to trim first;
+        organisational objects for the feature are created if needed;
+        if the offset return property is requested, the implicit units will be the z units of the grid's crs
+    """
+
+    assert isinstance(grid, grr.RegularGrid)
+    assert grid.is_aligned
+    return_triangles = False
+    return_depths = False
+    return_offsets = False
+    return_bisector = False
+    return_shadow = False
+    return_flange_bool = False
+    if return_properties:
+        assert all([
+            p in [
+                "triangle",
+                "depth",
+                "offset",
+                "grid bisector",
+                "grid shadow",
+                "flange bool",
+            ] for p in return_properties
+        ])
+        return_triangles = "triangle" in return_properties
+        return_depths = "depth" in return_properties
+        return_offsets = "offset" in return_properties
+        return_bisector = "grid bisector" in return_properties
+        return_shadow = "grid shadow" in return_properties
+        return_flange_bool = "flange bool" in return_properties
+        if return_flange_bool:
+            return_triangles = True
+
+    if title is None:
+        title = name
+
+    if progress_fn is not None:
+        progress_fn(0.0)
+
+    log.debug(f"intersecting surface {surface.title} with regular grid {grid.title}")
+    # log.debug(f'grid extent kji: {grid.extent_kji}')
+
+    triangles, points = surface.triangles_and_points()
+    t_dtype = np.int32 if len(triangles) < 2_147_483_648 else np.int64
+
+    assert (triangles is not None and points is not None), f"surface {surface.title} is empty"
+    if agitate:
+        if random_agitation:
+            points += 1.0e-5 * (np.random.random(points.shape) - 0.5)
+        else:
+            points += 5.0e-6
+    # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+    # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
+    # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+    if not bu.matching_uuids(grid.crs_uuid, surface.crs_uuid):
+        log.debug("converting from surface crs to grid crs")
+        s_crs = rqc.Crs(surface.model, uuid = surface.crs_uuid)
+        s_crs.convert_array_to(grid.crs, points)
+        surface.crs_uuid = grid.crs.uuid
+        # log.debug(f'surface: {surface.title}; p0: {points[0]}; crs uuid: {surface.crs_uuid}')
+        # log.debug(f'surface min xyz: {np.min(points, axis = 0)}')
+        # log.debug(f'surface max xyz: {np.max(points, axis = 0)}')
+
+    # convert surface points to work with unit cube grid cells
+    dx = grid.block_dxyz_dkji[2, 0]
+    dy = grid.block_dxyz_dkji[1, 1]
+    dz = grid.block_dxyz_dkji[0, 2]
+    points[:, 0] /= dx
+    points[:, 1] /= dy
+    points[:, 2] /= dz
+    points[:] -= 0.5
+    p = points[triangles]
+
+    nk = 1 if is_curtain else grid.nk
+    # K direction (xy projection)
+    k_faces_kji0 = None
+    k_triangles = None
+    k_depths = None
+    k_offsets = None
+    if nk > 1:
+        # log.debug("searching for k faces")
+
+        k_hits, k_depths = vec.points_in_triangles_aligned_unified(grid.ni, grid.nj, 0, 1, 2, p, n_batches)
+
+        k_faces = np.floor(k_depths)
+        mask = np.logical_and(k_faces >= 0, k_faces < nk - 1)
+
+        if np.any(mask):
+            k_hits = k_hits[mask, :]
+            k_faces = k_faces[mask]
+            k_depths = k_depths[mask]
+            k_triangles = k_hits[:, 0]
+            k_faces_kji0 = np.empty((len(k_faces), 3), dtype = np.int32)
+            k_faces_kji0[:, 0] = k_faces
+            k_faces_kji0[:, 1] = k_hits[:, 1]
+            k_faces_kji0[:, 2] = k_hits[:, 2]
+            if return_offsets:
+                k_offsets = (k_depths - k_faces.astype(np.float64) - 0.5) * dz
+            if return_depths:
+                k_depths[:] += 0.5
+                k_depths[:] *= dz
+            log.debug(f"k face count: {np.count_nonzero(k_faces)}")
+
+        del k_hits
+        del k_faces
+
+    if progress_fn is not None:
+        progress_fn(0.3)
+
+    # J direction (xz projection)
+    j_faces_kji0 = None
+    j_triangles = None
+    j_depths = None
+    j_offsets = None
+    if grid.nj > 1:
+        # log.debug("searching for J faces")
+
+        j_hits, j_depths = vec.points_in_triangles_aligned_unified(grid.ni, grid.nk, 0, 2, 1, p, n_batches)
+
+        j_faces = np.floor(j_depths)
+        mask = np.logical_and(j_faces >= 0, j_faces < grid.nj - 1)
+
+        if np.any(mask):
+            j_hits = j_hits[mask, :]
+            j_faces = j_faces[mask]
+            j_depths = j_depths[mask]
+            j_triangles = j_hits[:, 0]
+            j_faces_kji0 = np.empty((len(j_faces), 3), dtype = np.int32)
+            j_faces_kji0[:, 0] = j_hits[:, 1]
+            j_faces_kji0[:, 1] = j_faces
+            j_faces_kji0[:, 2] = j_hits[:, 2]
+            if return_offsets:
+                j_offsets = (j_depths - j_faces.astype(np.float64) - 0.5) * dy
+            if return_depths:
+                j_depths[:] += 0.5
+                j_depths[:] *= dy
+            if is_curtain and grid.nk > 1:  # expand arrays to all layers
+                j_faces = np.repeat(np.expand_dims(j_faces_kji0, axis = 0), grid.nk, axis = 0)
+                j_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = 0)
+                j_faces_kji0 = j_faces.reshape((-1, 3))
+                j_triangles = np.repeat(j_triangles, grid.nk, axis = 0)
+                if return_depths:
+                    j_depths = np.repeat(j_depths, grid.nk, axis = 0)
+                if return_offsets:
+                    j_offsets = np.repeat(j_offsets, grid.nk, axis = 0)
+            log.debug(f"j face count: {np.count_nonzero(j_faces)}")
+
+        del j_hits
+        del j_faces
+
+    if progress_fn is not None:
+        progress_fn(0.6)
+
+    # I direction (yz projection)
+    i_faces_kji0 = None
+    i_triangles = None
+    i_depths = None
+    i_offsets = None
+    if grid.ni > 1:
+        # log.debug("searching for I faces")
+
+        i_hits, i_depths = vec.points_in_triangles_aligned_unified(grid.nj, grid.nk, 1, 2, 0, p, n_batches)
+
+        i_faces = np.floor(i_depths)
+        mask = np.logical_and(i_faces >= 0, i_faces < grid.ni - 1)
+
+        if np.any(mask):
+            i_hits = i_hits[mask, :]
+            i_faces = i_faces[mask]
+            i_depths = i_depths[mask]
+            i_triangles = i_hits[:, 0]
+            i_faces_kji0 = np.empty((len(i_faces), 3), dtype = np.int32)
+            i_faces_kji0[:, 0] = i_hits[:, 1]
+            i_faces_kji0[:, 1] = i_hits[:, 2]
+            i_faces_kji0[:, 2] = i_faces
+            if return_offsets:
+                i_offsets = (i_depths - i_faces.astype(np.float64) - 0.5) * dx
+            if return_depths:
+                i_depths[:] += 0.5
+                i_depths[:] *= dx
+            if is_curtain and grid.nk > 1:  # expand arrays to all layers
+                i_faces = np.repeat(np.expand_dims(i_faces_kji0, axis = 0), grid.nk, axis = 0)
+                i_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = 0)
+                i_faces_kji0 = i_faces.reshape((-1, 3))
+                i_triangles = np.repeat(i_triangles, grid.nk, axis = 0)
+                if return_depths:
+                    i_depths = np.repeat(i_depths, grid.nk, axis = 0)
+                if return_offsets:
+                    i_offsets = np.repeat(i_offsets, grid.nk, axis = 0)
+            log.debug(f"j face count: {np.count_nonzero(j_faces)}")
+
+        del i_hits
+        del i_faces
+
+    if progress_fn is not None:
+        progress_fn(0.9)
+
+    log.debug("converting face sets into grid connection set")
+    # TODO: new gcs class method to build from faces kji0 lists
+    # NB: kji0 arrays currently in internal face protocol: use as cell_kji0 with polarity of 1 (and add 1 to axis for paired cell)
+    gcs = rqf.GridConnectionSet(
+        grid.model,
+        grid = grid,
+        k_faces = k_faces,
+        j_faces = j_faces,
+        i_faces = i_faces,
+        k_sides = None,
+        j_sides = None,
+        i_sides = None,
+        feature_name = name,
+        feature_type = feature_type,
+        title = title,
+        create_organizing_objects_where_needed = True,
+    )
+    # log.debug('finished coversion to gcs')
+
+    # TODO: redo following property arrays to take directly from list-like data
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
         # log.debug('preparing triangles array')
@@ -1370,6 +1728,7 @@ def intersect_numba(
         face_idx[index2] = d2
         face_idx[2 - axis] = face
 
+        # dangerous: relies on indivisible read-modify-write of memory word containing multiple faces elements
         faces[face_idx[0], face_idx[1], face_idx[2]] = True
 
         if return_depths:
