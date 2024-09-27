@@ -1179,7 +1179,7 @@ def points_in_triangles_aligned_optimised(nx: int,
     return collated
 
 
-# @njit(parallel = True)
+@njit(parallel = True)
 def points_in_triangles_aligned_unified(nx: int,
                                         ny: int,
                                         ax: int,
@@ -1216,8 +1216,7 @@ def points_in_triangles_aligned_unified(nx: int,
     batch_size = (n_triangles - 1) // n_batches + 1
     tp = [np.empty((0, 3), dtype = np.int32)] * n_batches
     tz = [np.empty((0,), dtype = np.float64)] * n_batches
-    # for batch in prange(n_batches):
-    for batch in range(n_batches):
+    for batch in prange(n_batches):
         base = batch * batch_size
         tp[batch], tz[batch] = _points_in_triangles_aligned_unified_batch(nx, ny, base,
                                                                           triangles[base:(batch + 1) * batch_size], ax,
@@ -1258,8 +1257,9 @@ def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle
 
 
 @njit
-def _points_in_triangles_aligned_unified_batch(nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
-                                               az: int) -> Tuple[np.ndarray, List[float]]:  # pragma: no cover
+def _points_in_triangles_aligned_unified_batch(
+        nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
+        az: int) -> Tuple[np.ndarray[int], np.ndarray[float]]:  # pragma: no cover
     # returns list like int array with each row being (tri number, axis y int, axis x int), and
     # corresponding list like float array being axis z sampled at point on triangle
     int_list = []
@@ -1336,7 +1336,7 @@ def _points_in_triangles_aligned_unified_batch(nx: int, ny: int, base_triangle: 
         int_array = np.array(int_list, dtype = np.int32)
         z_array = np.array(sampled_z_list, dtype = np.float64)
 
-    return (int_array, sampled_z_list)
+    return (int_array, z_array)
 
 
 def triangle_normal_vector(p3):
