@@ -1069,7 +1069,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 j_depths[:] *= dy
             if is_curtain and grid.nk > 1:  # expand arrays to all layers
                 j_faces = np.repeat(np.expand_dims(j_faces_kji0, axis = 0), grid.nk, axis = 0)
-                j_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = 0)
+                j_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = -1)
                 j_faces_kji0 = j_faces.reshape((-1, 3))
                 j_triangles = np.repeat(j_triangles, grid.nk, axis = 0)
                 if return_offsets:
@@ -1121,7 +1121,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 i_depths[:] *= dx
             if is_curtain and grid.nk > 1:  # expand arrays to all layers
                 i_faces = np.repeat(np.expand_dims(i_faces_kji0, axis = 0), grid.nk, axis = 0)
-                i_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = 0)
+                i_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = -1)
                 i_faces_kji0 = i_faces.reshape((-1, 3))
                 i_triangles = np.repeat(i_triangles, grid.nk, axis = 0)
                 if return_offsets:
