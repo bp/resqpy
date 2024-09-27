@@ -1257,11 +1257,11 @@ def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle
 
 
 @njit
-def _points_in_triangles_aligned_unified_batch(
-        nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
-        az: int) -> Tuple[np.ndarray[int], np.ndarray[float]]:  # pragma: no cover
+def _points_in_triangles_aligned_unified_batch(nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
+                                               az: int) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
     # returns list like int array with each row being (tri number, axis y int, axis x int), and
     # corresponding list like float array being axis z sampled at point on triangle
+    # todo: add type subscripting once support for python 3.8 is dropped
     int_list = []
     sampled_z_list = []
 
