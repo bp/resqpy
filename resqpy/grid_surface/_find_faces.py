@@ -1932,7 +1932,7 @@ def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, o
         bisect[:] = np.logical_or(bisect, change)
 
 
-@njit
+@njit  # pragma: no cover
 def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
