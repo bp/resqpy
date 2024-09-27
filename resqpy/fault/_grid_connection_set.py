@@ -267,6 +267,9 @@ class GridConnectionSet(BaseResqpy):
             fip = np.empty(cip.shape, dtype = np.int8)
             fip[:, 0] = gcs.face_index_map[0, 1]
             fip[:, 1] = gcs.face_index_map[0, 0]
+        else:
+            cip = np.empty((0, 2), dtype = gcs.cell_index_dtype)
+            fip = np.empty((0, 2), dtype = np.int8)
         if j_faces_kji0 is not None and len(j_faces_kji0) > 0:
             ci = grid.natural_cell_indices(j_faces_kji0)
             if remove_duplicates:
