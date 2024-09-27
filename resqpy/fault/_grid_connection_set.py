@@ -219,7 +219,6 @@ class GridConnectionSet(BaseResqpy):
         """Create a GridConnectionSet given a grid and 3 list-like arrays identifying faces by indices.
         
         arguments:
-        
             - grid (Grid): the single grid to be referenced by the grid connection set
             - k_faces_kji0 (numpy int array of shape (Nk, 3)): indices of cells on negative side of desired K faces
             - j_faces_kji0 (numpy int array of shape (Nj, 3)): indices of cells on negative side of desired J faces
@@ -241,11 +240,9 @@ class GridConnectionSet(BaseResqpy):
             - extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
 
         returns:
-        
             - a new GridConnectionSet populated based on the faces indices
-            
+
         notes:
-        
             - this method only supports creation of single grid connection sets
             - the faces indices are for cells on the negative side of the face
             - the paired cell is implicitly the neighbouring cell in the positive direction of the axis

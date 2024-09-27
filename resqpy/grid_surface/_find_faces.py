@@ -1313,7 +1313,6 @@ def bisector_from_faces(  # type: ignore
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     arguments:
-    
         - grid_extent_kji (Tuple[int, int, int]): the shape of the grid
         - k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension
         - j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
@@ -1324,13 +1323,11 @@ def bisector_from_faces(  # type: ignore
 
     returns:
         Tuple containing:
-
         - array (np.ndarray): boolean bisectors array where values are True for cells on the side
           of the surface that has a lower mean k index on average and False for cells on the other side.
         - is_curtain (bool): True if the surface is a curtain (vertical), otherwise False.
 
     notes:
-    
         - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
         - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
           assigned to either the True or False part
@@ -1384,7 +1381,7 @@ def bisector_from_faces(  # type: ignore
     # Setting up the array for the changing values.
     changing_array = np.zeros_like(box_array, dtype = np.bool_)
 
-    fill_bisector(box_array, open_k, open_j, open_i, changing_array)
+    _fill_bisector(box_array, open_k, open_j, open_i, changing_array)
 
     # set up the full bisectors array and assigning the bounding box values
     array = np.zeros(grid_extent_kji, dtype = np.bool_)
@@ -1399,7 +1396,7 @@ def bisector_from_faces(  # type: ignore
     assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
 
     # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = shallow_or_curtain(array, true_count, raw_bisector)
+    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
 
     return array, is_curtain
 
@@ -1409,7 +1406,6 @@ def column_bisector_from_face_indices(grid_extent_ji: Tuple[int, int], j_faces_j
     """Returns a numpy bool array denoting the bisection of the top layer of the grid by the curtain face sets.
 
     arguments:
-    
         - grid_extent_ji (pair of int): the shape of a layer of the grid
         - j_faces_ji0, i_faces_ji0 (2D numpy int arrays of shape (N, 2)): indices of faces within a layer
 
@@ -1418,7 +1414,6 @@ def column_bisector_from_face_indices(grid_extent_ji: Tuple[int, int], j_faces_j
         set False for cells on othe side
 
     notes:
-    
         - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
         - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
           assigned to the False part
@@ -1924,7 +1919,7 @@ def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
 
 
 @njit
-def fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray, change: np.ndarray):
+def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray, change: np.ndarray):
     while True:
         change[:] = False
 
@@ -1947,7 +1942,7 @@ def fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, op
 
 
 @njit
-def shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
+def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
     s: int = a.shape
