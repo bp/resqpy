@@ -14,7 +14,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional
 
 
 def radians_from_degrees(deg):
@@ -1015,7 +1015,7 @@ def vertical_intercept_nan(x: float, x_value_0: float, x_value_1: float, y_value
 
 @njit
 def vertical_intercept_nan_yz(x: float, x_0: float, x_1: float, y_0: float, y_1: float, z_0: float,
-                              z_1: float) -> Union[float, float]:  # pragma: no cover
+                              z_1: float) -> Tuple[float, float]:  # pragma: no cover
     """Finds the y & z values of a straight line between two points at a given x.
 
     If the x value given is not within the x values of the points, returns NaN.
@@ -1186,7 +1186,7 @@ def points_in_triangles_aligned_unified(nx: int,
                                         ay: int,
                                         az: int,
                                         triangles: np.ndarray,
-                                        n_batches: int = 20) -> Union[np.ndarray, np.ndarray]:  # pragma: no cover
+                                        n_batches: int = 20) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
 
     arguments:
@@ -1259,7 +1259,7 @@ def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle
 
 @njit
 def _points_in_triangles_aligned_unified_batch(nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
-                                               az: int) -> Union[np.ndarray, np.ndarray]:  # pragma: no cover
+                                               az: int) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
     # returns list like int array with each row being (tri number, axis y int, axis x int), and
     # corresponding list like float array being axis z sampled at point on triangle
     int_list = []

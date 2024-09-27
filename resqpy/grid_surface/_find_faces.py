@@ -1339,7 +1339,7 @@ def bisector_from_faces(  # type: ignore
     if using_indices:
         box = get_boundary_from_indices(k_faces, j_faces, i_faces, grid_extent_kji)
         # set k_faces as bool arrays covering box
-        k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces, j_faces, i_faces, grid_extent_kji, box)
+        k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces, j_faces, i_faces, box)
     else:
         box = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
         # switch k_faces etc. to box coverage
@@ -1945,7 +1945,7 @@ def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, o
 def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
-    s: int = a.shape
+    s: Tuple[int, int, int] = a.shape
     layer_cell_count: int = s[1] * s[2]
     k_sum: int = 0
     opposite_k_sum: int = 0
@@ -1982,7 +1982,6 @@ def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndar
 
 
 def _box_face_arrays_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-                                  grid_extent_kji: np.ndarray,
                                   box: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     box_shape = box[1, :] - box[0, :]
     k_a = np.zeros((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = np.bool_)
