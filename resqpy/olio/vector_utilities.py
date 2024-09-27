@@ -14,7 +14,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 
 def radians_from_degrees(deg):
@@ -1259,7 +1259,7 @@ def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle
 
 @njit
 def _points_in_triangles_aligned_unified_batch(nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
-                                               az: int) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
+                                               az: int) -> Tuple[np.ndarray, List[float]]:  # pragma: no cover
     # returns list like int array with each row being (tri number, axis y int, axis x int), and
     # corresponding list like float array being axis z sampled at point on triangle
     int_list = []

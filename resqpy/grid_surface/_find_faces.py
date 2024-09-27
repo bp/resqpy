@@ -1945,13 +1945,12 @@ def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, o
 def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
-    s: Tuple[int, int, int] = a.shape
-    layer_cell_count: int = s[1] * s[2]
+    layer_cell_count: int = a.shape[1] * a.shape[2]
     k_sum: int = 0
     opposite_k_sum: int = 0
     is_curtain: bool = False
     layer_count: int = 0
-    for k in range(s[0]):
+    for k in range(a.shape[0]):
         layer_count = np.count_nonzero(a[k])
         k_sum += (k + 1) * layer_count
         opposite_k_sum += (k + 1) * (layer_cell_count - layer_count)
