@@ -1031,7 +1031,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 k_props.append(k_depths)
             if return_offsets:
                 k_props.append(k_offsets)
-            log.debug(f"k face count: {np.count_nonzero(k_faces)}")
+            log.debug(f"k face count: {len(k_faces_kji0)}")
 
         del k_hits
         del k_faces
@@ -1083,7 +1083,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 j_props.append(j_depths)
             if return_offsets:
                 j_props.append(j_offsets)
-            log.debug(f"j face count: {np.count_nonzero(j_faces)}")
+            log.debug(f"j face count: {len(j_faces_kji0)}")
 
         del j_hits
         del j_faces
@@ -1135,7 +1135,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 i_props.append(i_depths)
             if return_offsets:
                 i_props.append(i_offsets)
-            log.debug(f"j face count: {np.count_nonzero(j_faces)}")
+            log.debug(f"i face count: {len(i_faces_kji0)}")
 
         del i_hits
         del i_faces
@@ -1210,8 +1210,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector,
-                                                       True)
+            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0, i_faces_kji0,
+                                                       raw_bisector, True)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
@@ -1958,5 +1958,9 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
     box[1, 0] = max(k_max_kji0[0], j_max_kji0[0], i_max_kji0[0]) + 1
     box[1, 1] = max(k_max_kji0[1], j_max_kji0[1], i_max_kji0[1]) + 1
     box[1, 2] = max(k_max_kji0[2], j_max_kji0[2], i_max_kji0[2]) + 1
+    box[0, :] = np.maximum(box[0, :] - 1, 0)
+    # include buffer layer where box does not reach edge of grid
+    extent_kji = np.array(grid_extent_kji, dtype = np.int32)
     assert np.all(box[1] <= grid_extent_kji)
+    box[1, :] = np.minimum(box[1, :] + 1, extent_kji)
     return box

@@ -1179,7 +1179,7 @@ def points_in_triangles_aligned_optimised(nx: int,
     return collated
 
 
-@njit(parallel = True)
+# @njit(parallel = True)
 def points_in_triangles_aligned_unified(nx: int,
                                         ny: int,
                                         ax: int,
@@ -1216,7 +1216,8 @@ def points_in_triangles_aligned_unified(nx: int,
     batch_size = (n_triangles - 1) // n_batches + 1
     tp = [np.empty((0, 3), dtype = np.int32)] * n_batches
     tz = [np.empty((0,), dtype = np.float64)] * n_batches
-    for batch in prange(n_batches):
+    # for batch in prange(n_batches):
+    for batch in range(n_batches):
         base = batch * batch_size
         tp[batch], tz[batch] = _points_in_triangles_aligned_unified_batch(nx, ny, base,
                                                                           triangles[base:(batch + 1) * batch_size], ax,

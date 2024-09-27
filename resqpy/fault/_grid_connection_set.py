@@ -267,7 +267,7 @@ class GridConnectionSet(BaseResqpy):
             cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
             cip[:, 0] = ci
             cip[:, 1] = ci + nj_ni
-            fip = np.empty(cip.shaoe, dtype = np.int8)
+            fip = np.empty(cip.shape, dtype = np.int8)
             fip[:, 0] = gcs.face_index_map[0, 1]
             fip[:, 1] = gcs.face_index_map[0, 0]
         if j_faces_kji0 is not None and len(j_faces_kji0) > 0:
@@ -277,7 +277,7 @@ class GridConnectionSet(BaseResqpy):
             j_cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
             j_cip[:, 0] = ci
             j_cip[:, 1] = ci + grid.ni
-            j_fip = np.empty(j_cip.shaoe, dtype = np.int8)
+            j_fip = np.empty(j_cip.shape, dtype = np.int8)
             j_fip[:, 0] = gcs.face_index_map[1, 1]
             j_fip[:, 1] = gcs.face_index_map[1, 0]
             cip = np.concatenate((cip, j_cip), axis = 0)
@@ -290,15 +290,18 @@ class GridConnectionSet(BaseResqpy):
             i_cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
             i_cip[:, 0] = ci
             i_cip[:, 1] = ci + 1
-            i_fip = np.empty(i_cip.shaoe, dtype = np.int8)
+            i_fip = np.empty(i_cip.shape, dtype = np.int8)
             i_fip[:, 0] = gcs.face_index_map[2, 1]
             i_fip[:, 1] = gcs.face_index_map[2, 0]
             cip = np.concatenate((cip, i_cip), axis = 0)
             fip = np.concatenate((fip, i_fip), axis = 0)
             del i_cip, i_fip
+        gcs.cell_index_pairs = cip
+        gcs.face_index_pairs = fip
         gcs.count = len(gcs.cell_index_pairs)
         gcs.feature_indices = np.zeros(gcs.count, dtype = np.int8)
         assert len(gcs.face_index_pairs) == gcs.count
+        return gcs
 
     @classmethod
     def from_gcs_uuid_list(cls,
@@ -2314,6 +2317,8 @@ def _sort_and_remove_duplicates(a, props = None):
     m = np.empty(a.size, dtype = bool)
     m[0] = True
     m[1:] = (a[1:] != a[:-1])
+    if np.all(m):
+        return a
     if not no_props:
         for i in range(len(props)):
             p = props[i][si]
