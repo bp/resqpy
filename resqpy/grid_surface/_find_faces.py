@@ -999,6 +999,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     k_triangles = None
     k_depths = None
     k_offsets = None
+    k_props = None
     if nk > 1:
         # log.debug("searching for k faces")
 
@@ -1021,6 +1022,13 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             if return_depths:
                 k_depths[:] += 0.5
                 k_depths[:] *= dz
+            k_props = []
+            if return_triangles:
+                k_props.append(k_triangles)
+            if return_depths:
+                k_props.append(k_depths)
+            if return_offsets:
+                k_props.append(k_offsets)
             log.debug(f"k face count: {np.count_nonzero(k_faces)}")
 
         del k_hits
@@ -1034,6 +1042,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     j_triangles = None
     j_depths = None
     j_offsets = None
+    j_props = None
     if grid.nj > 1:
         # log.debug("searching for J faces")
 
@@ -1061,10 +1070,17 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 j_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = 0)
                 j_faces_kji0 = j_faces.reshape((-1, 3))
                 j_triangles = np.repeat(j_triangles, grid.nk, axis = 0)
-                if return_depths:
-                    j_depths = np.repeat(j_depths, grid.nk, axis = 0)
                 if return_offsets:
                     j_offsets = np.repeat(j_offsets, grid.nk, axis = 0)
+                if return_depths:
+                    j_depths = np.repeat(j_depths, grid.nk, axis = 0)
+            j_props = []
+            if return_triangles:
+                j_props.append(j_triangles)
+            if return_depths:
+                j_props.append(j_depths)
+            if return_offsets:
+                j_props.append(j_offsets)
             log.debug(f"j face count: {np.count_nonzero(j_faces)}")
 
         del j_hits
@@ -1078,6 +1094,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     i_triangles = None
     i_depths = None
     i_offsets = None
+    i_props = None
     if grid.ni > 1:
         # log.debug("searching for I faces")
 
@@ -1105,10 +1122,17 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 i_faces[:, :, 0] = np.expand_dims(np.arange(grid.nk, dtype = np.int32), axis = 0)
                 i_faces_kji0 = i_faces.reshape((-1, 3))
                 i_triangles = np.repeat(i_triangles, grid.nk, axis = 0)
-                if return_depths:
-                    i_depths = np.repeat(i_depths, grid.nk, axis = 0)
                 if return_offsets:
                     i_offsets = np.repeat(i_offsets, grid.nk, axis = 0)
+                if return_depths:
+                    i_depths = np.repeat(i_depths, grid.nk, axis = 0)
+            i_props = []
+            if return_triangles:
+                i_props.append(i_triangles)
+            if return_depths:
+                i_props.append(i_depths)
+            if return_offsets:
+                i_props.append(i_offsets)
             log.debug(f"j face count: {np.count_nonzero(j_faces)}")
 
         del i_hits
@@ -1118,52 +1142,49 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         progress_fn(0.9)
 
     log.debug("converting face sets into grid connection set")
-    # TODO: new gcs class method to build from faces kji0 lists
-    # NB: kji0 arrays currently in internal face protocol: use as cell_kji0 with polarity of 1 (and add 1 to axis for paired cell)
-    gcs = rqf.GridConnectionSet(
-        grid.model,
-        grid = grid,
-        k_faces = k_faces,
-        j_faces = j_faces,
-        i_faces = i_faces,
-        k_sides = None,
-        j_sides = None,
-        i_sides = None,
-        feature_name = name,
-        feature_type = feature_type,
-        title = title,
-        create_organizing_objects_where_needed = True,
-    )
+    # NB: kji0 arrays in internal face protocol: used as cell_kji0 with polarity of 1
+    # property lists have elements replaced with sorted and filtered equivalents
+    gcs = rqf.GridConnectionSet.from_faces_indices(grid = grid,
+                                                   k_faces_kji0 = k_faces_kji0,
+                                                   j_faces_kji0 = j_faces_kji0,
+                                                   i_faces_kji0 = i_faces_kji0,
+                                                   remove_duplicates = True,
+                                                   k_properties = k_props,
+                                                   j_properties = j_props,
+                                                   i_properties = i_props,
+                                                   feature_name = name,
+                                                   feature_type = feature_type,
+                                                   create_organizing_objects_where_needed = True,
+                                                   title = title)
     # log.debug('finished coversion to gcs')
 
-    # TODO: redo following property arrays to take directly from list-like data
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
         # log.debug('preparing triangles array')
-        k_tri_list = (np.empty((0,)) if k_triangles is None else k_triangles[_where_true(k_faces)])
-        j_tri_list = (np.empty((0,)) if j_triangles is None else j_triangles[_where_true(j_faces)])
-        i_tri_list = (np.empty((0,)) if i_triangles is None else i_triangles[_where_true(i_faces)])
-        all_tris = np.concatenate((k_tri_list, j_tri_list, i_tri_list), axis = 0)
+        k_triangles = np.emptry((0,), dtype = np.int32) if k_props is None else k_props.pop(0)
+        j_triangles = np.emptry((0,), dtype = np.int32) if j_props is None else j_props.pop(0)
+        i_triangles = np.emptry((0,), dtype = np.int32) if i_props is None else i_props.pop(0)
+        all_tris = np.concatenate((k_triangles, j_triangles, i_triangles), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
         assert all_tris.shape == (gcs.count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
         # log.debug('preparing depths array')
-        k_depths_list = (np.empty((0,)) if k_depths is None else k_depths[_where_true(k_faces)])
-        j_depths_list = (np.empty((0,)) if j_depths is None else j_depths[_where_true(j_faces)])
-        i_depths_list = (np.empty((0,)) if i_depths is None else i_depths[_where_true(i_faces)])
-        all_depths = np.concatenate((k_depths_list, j_depths_list, i_depths_list), axis = 0)
+        k_depths = np.emptry((0,), dtype = np.float64) if k_props is None else k_props.pop(0)
+        j_depths = np.emptry((0,), dtype = np.float64) if j_props is None else j_props.pop(0)
+        i_depths = np.emptry((0,), dtype = np.float64) if i_props is None else i_props.pop(0)
+        all_depths = np.concatenate((k_depths, j_depths, i_depths), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
         assert all_depths.shape == (gcs.count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
         # log.debug('preparing offsets array')
-        k_offsets_list = (np.empty((0,)) if k_offsets is None else k_offsets[_where_true(k_faces)])
-        j_offsets_list = (np.empty((0,)) if j_offsets is None else j_offsets[_where_true(j_faces)])
-        i_offsets_list = (np.empty((0,)) if i_offsets is None else i_offsets[_where_true(i_faces)])
-        all_offsets = _all_offsets(grid.crs, k_offsets_list, j_offsets_list, i_offsets_list)
+        k_offsets = np.emptry((0,), dtype = np.float64) if k_props is None else k_props[0]
+        j_offsets = np.emptry((0,), dtype = np.float64) if j_props is None else j_props[0]
+        i_offsets = np.emptry((0,), dtype = np.float64) if i_props is None else i_props[0]
+        all_offsets = _all_offsets(grid.crs, k_offsets, j_offsets, i_offsets)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
 
@@ -1178,6 +1199,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         all_flange = np.take(flange_array, all_tris)
         assert all_flange.shape == (gcs.count,)
 
+    # TODO: replace bisector generation with functions using face indices
     # note: following is a grid cells property, not a gcs property
     if return_bisector:
         if is_curtain:
@@ -1190,6 +1212,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
+    # TODO: replace shadow generation with function using face indices
     # note: following is a grid cells property, not a gcs property
     if return_shadow:
         log.debug("preparing cells shadow")
