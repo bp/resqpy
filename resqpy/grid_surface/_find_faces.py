@@ -1205,8 +1205,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if return_bisector:
         if is_curtain:
             log.debug("preparing columns bisector")
-            # TODO: replace bisector generation with functions using face indices
-            bisector = column_bisector_from_faces((grid.nj, grid.ni), j_faces[0], i_faces[0])
+            bisector = column_bisector_from_face_indices((grid.nj, grid.ni), j_faces_kji0[:, 1:], i_faces_kji0[:, 1:])
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
@@ -1215,11 +1214,10 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
-    # TODO: replace shadow generation with function using face indices
     # note: following is a grid cells property, not a gcs property
     if return_shadow:
         log.debug("preparing cells shadow")
-        shadow = shadow_from_faces(tuple(grid.extent_kji), k_faces)
+        shadow = shadow_from_face_indices(tuple(grid.extent_kji), k_faces_kji0)
 
     if progress_fn is not None:
         progress_fn(1.0)
@@ -1406,6 +1404,35 @@ def bisector_from_faces(  # type: ignore
     return array, is_curtain
 
 
+def column_bisector_from_face_indices(grid_extent_ji: Tuple[int, int], j_faces_ji0: np.ndarray,
+                                      i_faces_ji0: np.ndarray) -> np.ndarray:
+    """Returns a numpy bool array denoting the bisection of the top layer of the grid by the curtain face sets.
+
+    arguments:
+    
+        - grid_extent_ji (pair of int): the shape of a layer of the grid
+        - j_faces_ji0, i_faces_ji0 (2D numpy int arrays of shape (N, 2)): indices of faces within a layer
+
+    returns:
+        numpy bool array of shape grid_extent_ji, set True for cells on one side of the face sets;
+        set False for cells on othe side
+
+    notes:
+    
+        - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
+        - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+          assigned to the False part
+        - the resulting array is suitable for use as a grid property with indexable element of columns
+        - the array is set True for the side of the curtain that contains cell [0, 0]
+    """
+    assert len(grid_extent_ji) == 2
+    j_faces = np.zeros((grid_extent_ji[0] - 1, grid_extent_ji[1]), dtype = np.bool_)
+    i_faces = np.zeros((grid_extent_ji[0], grid_extent_ji[1] - 1), dtype = np.bool_)
+    j_faces[j_faces_ji0[:, 0], j_faces_ji0[:, 1]] = True
+    i_faces[i_faces_ji0[:, 0], i_faces_ji0[:, 1]] = True
+    return column_bisector_from_faces(grid_extent_ji, j_faces, i_faces)
+
+
 def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndarray, i_faces: np.ndarray) -> np.ndarray:
     """Returns a numpy bool array denoting the bisection of the top layer of the grid by the curtain face sets.
 
@@ -1454,6 +1481,42 @@ def column_bisector_from_faces(grid_extent_ji: Tuple[int, int], j_faces: np.ndar
         log.warning("curtain is leaky or misses grid when setting column bisector")
     # log.debug(f'returning bisector with count: {np.count_nonzero(a)} of {a.size}; shape: {a.shape}')
     return a
+
+
+def shadow_from_face_indices(extent_kji, kji0):
+    """Returns a numpy int8 array indicating whether cells are above, below or between K faces.
+
+    arguments:
+        extent_kji (triple int): the shape of the grid
+        kji0 (numpy int array of shape (N, 3)): indices where a K face is present
+
+    returns:
+        numpy int8 array of shape extent_kji; values are: 0 neither above nor below a K face;
+            1: above any K faces in the column; 2 below any K faces in the column;
+            3: between K faces (one or more above and one or more below)
+    """
+    assert len(extent_kji) == 3
+    limit = extent_kji[0] - 1  # maximum number of iterations needed to spead shadow
+    shadow = np.zeros(extent_kji, dtype = np.int8)
+    shadow[kji0[:, 0], kji0[:, 1], kji0[:, 2]] = 1
+    shadow[kji0[:, 0] + 1, kji0[:, 1], kji0[:, 2]] += 2
+    for _ in range(limit):
+        c = np.logical_and(shadow[:-1] == 0, shadow[1:] == 1)
+        if np.count_nonzero(c) == 0:
+            break
+        shadow[:-1][c] = 1
+    for _ in range(limit):
+        c = np.logical_and(shadow[1:] == 0, shadow[:-1] == 2)
+        if np.count_nonzero(c) == 0:
+            break
+        shadow[1:][c] = 2
+    for _ in range(limit):
+        c = np.logical_and(shadow[:-1] >= 2, shadow[1:] == 1)
+        if np.count_nonzero(c) == 0:
+            break
+        shadow[:-1][c] = 3
+        shadow[1:][c] = 3
+    return shadow
 
 
 def shadow_from_faces(extent_kji, k_faces):
