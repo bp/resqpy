@@ -9,6 +9,8 @@ import warnings
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
 from typing import Tuple, Optional, Dict
+# import pyinstrument
+# from pyinstrument import Profiler
 
 import resqpy as rq
 import resqpy.crs as rqc
@@ -1333,6 +1335,9 @@ def bisector_from_faces(  # type: ignore
           assigned to either the True or False part
         - a value of False for using_indices is DEPRECATED, pending proving of newer indices based approach
     """
+    # profiler = Profiler(interval = 0.0001)
+    # profiler.start()
+
     assert len(grid_extent_kji) == 3
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
@@ -1353,25 +1358,7 @@ def bisector_from_faces(  # type: ignore
     box_array = np.zeros(box_shape, dtype = np.bool_)
 
     # seed the bisector box array from (0, 0, 0) up to the first faces that represent the surface
-    box_array, first_k, first_j, first_i = _seed_array_box_faces((0, 0, 0), k_faces, j_faces, i_faces, box, box_array)
-    points = set()
-    for dimension, first_true in enumerate([first_k, first_j, first_i]):
-        for dimension_value in range(1, first_true):
-            point = [0, 0, 0]
-            point[dimension] = dimension_value
-            point = tuple(point)  # type: ignore
-            box_array, first_k_sub, first_j_sub, first_i_sub = _seed_array_box_faces(
-                point, k_faces, j_faces, i_faces, box, box_array)
-            for sub_dimension, first_true_sub in enumerate([first_k_sub, first_j_sub, first_i_sub]):
-                if dimension != sub_dimension:
-                    for sub_dimension_value in range(1, first_true_sub):
-                        point = [0, 0, 0]
-                        point[dimension] = dimension_value
-                        point[sub_dimension] = sub_dimension_value
-                        point = tuple(point)  # type: ignore
-                        if point not in points:
-                            points.add(point)
-                            box_array, _, _, _ = _seed_array_box_faces(point, k_faces, j_faces, i_faces, box, box_array)
+    _seed_bisector(k_faces, j_faces, i_faces, box, box_array)
 
     # prepare to spread True values to neighbouring cells that are not the other side of a face
     open_k = np.logical_not(k_faces)
@@ -1397,6 +1384,9 @@ def bisector_from_faces(  # type: ignore
 
     # negate the array if it minimises the mean k and determine if the surface is a curtain
     is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+
+    # profiler.stop()
+    # profiler.print()
 
     return array, is_curtain
 
@@ -1865,11 +1855,10 @@ def _seed_array_box_faces(
     i_faces: np.ndarray,
     box: np.ndarray,
     array: np.ndarray,
-) -> Tuple[np.ndarray, int, int, int]:
+) -> Tuple[int, int, int]:
     """Sets values of the array True up until a face is hit in each direction, faces arrays only cover box
 
     arguments:
-    
         - point (Tuple[int, int, int]): indices of the initial seed point
         - k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension
         - j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
@@ -1880,13 +1869,15 @@ def _seed_array_box_faces(
     returns:
         Tuple containing:
 
-        - array (np.ndarray): boolean array that has been seeded
         - first_k (int): the index of the first k face in the k direction from the seed point or the
           array size in the k direction if there are no k faces
         - first_j (int): the index of the first j face in the j direction from the seed point or the
           array size in the j direction if there are no j faces
         - first_i (int): the index of the first i face in the i direction from the seed point or the
           array size in the i direction if there are no i faces
+          
+    note:
+        - array is updated in situ
     """
     k = point[0]
     j = point[1]
@@ -1907,7 +1898,7 @@ def _seed_array_box_faces(
         first_i = _first_true(i_faces[k, j, :-1])
         array[k, j, :first_i] = True
 
-    return array, first_k, first_j, first_i
+    return first_k, first_j, first_i
 
 
 def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
@@ -1918,7 +1909,7 @@ def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
     return np.concatenate((k_offsets_list, ji_offsets), axis = 0)
 
 
-@njit
+# NB. using njit on this function significantly slows down execution - perhaps because arrays are sized differently on each call?
 def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray, change: np.ndarray):
     while True:
         change[:] = False
@@ -2020,3 +2011,27 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
     assert np.all(box[1] <= grid_extent_kji)
     box[1, :] = np.minimum(box[1, :] + 1, extent_kji)
     return box
+
+
+def _seed_bisector(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, box: np.ndarray,
+                   box_array: np.ndarray):
+    # seed the bisector box array from (0, 0, 0) up to the first faces that represent the surface
+    first_k, first_j, first_i = _seed_array_box_faces((0, 0, 0), k_faces, j_faces, i_faces, box, box_array)
+    points = set()
+    for dimension, first_true in enumerate([first_k, first_j, first_i]):
+        for dimension_value in range(1, first_true):
+            point = [0, 0, 0]
+            point[dimension] = dimension_value
+            point = tuple(point)  # type: ignore
+            first_k_sub, first_j_sub, first_i_sub = _seed_array_box_faces(point, k_faces, j_faces, i_faces, box,
+                                                                          box_array)
+            for sub_dimension, first_true_sub in enumerate([first_k_sub, first_j_sub, first_i_sub]):
+                if dimension != sub_dimension:
+                    for sub_dimension_value in range(1, first_true_sub):
+                        point = [0, 0, 0]
+                        point[dimension] = dimension_value
+                        point[sub_dimension] = sub_dimension_value
+                        point = tuple(point)  # type: ignore
+                        if point not in points:
+                            points.add(point)
+                            _seed_array_box_faces(point, k_faces, j_faces, i_faces, box, box_array)
