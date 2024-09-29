@@ -262,6 +262,10 @@ def test_set_multi_patch_from_triangles_and_points(triple_patch_model_crs_surfac
                 assert np.all(t == previous_t)
             else:
                 previous_t = t
+            ct, cp = surf.triangles_and_points(patch, copy = True)
+            assert np.all(ct == t)
+            assert_array_almost_equal(cp, p)
+            assert id(ct) != id(t) and id(cp) != id(p)
 
     model, crs, surf = triple_patch_model_crs_surface
     check_surface(surf)
