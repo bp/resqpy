@@ -10,6 +10,7 @@ import math as maths
 import numpy as np
 import pandas as pd
 
+import resqpy.grid as grr
 import resqpy.fault
 import resqpy.olio.read_nexus_fault as rnf
 import resqpy.olio.trademark as tm
@@ -198,6 +199,109 @@ class GridConnectionSet(BaseResqpy):
             if find_properties:
                 self.extract_property_collection()
         self._set_cell_index_dtype()
+
+    @classmethod
+    def from_faces_indices(cls,
+                           grid,
+                           k_faces_kji0,
+                           j_faces_kji0,
+                           i_faces_kji0,
+                           remove_duplicates = True,
+                           k_properties = None,
+                           j_properties = None,
+                           i_properties = None,
+                           feature_name = None,
+                           feature_type = 'fault',
+                           create_organizing_objects_where_needed = True,
+                           title = None,
+                           originator = None,
+                           extra_metadata = None):
+        """Create a GridConnectionSet given a grid and 3 list-like arrays identifying faces by indices.
+        
+        arguments:
+            - grid (Grid): the single grid to be referenced by the grid connection set
+            - k_faces_kji0 (numpy int array of shape (Nk, 3)): indices of cells on negative side of desired K faces
+            - j_faces_kji0 (numpy int array of shape (Nj, 3)): indices of cells on negative side of desired J faces
+            - i_faces_kji0 (numpy int array of shape (Ni, 3)): indices of cells on negative side of desired I faces
+            - remove_duplicates (bool, default True): if True, indices are sorted and duplicates removed
+            - k_properties (list of 1D numpy arrays, optional): if present and remove_duplicates is True, each array
+              is sorted and has elements removed to keep them compatible with the indices
+            - j_properties (list of 1D numpy arrays, optional): if present and remove_duplicates is True, each array
+              is sorted and has elements removed to keep them compatible with the indices
+            - i_properties (list of 1D numpy arrays, optional): if present and remove_duplicates is True, each array
+              is sorted and has elements removed to keep them compatible with the indices
+            - feature_name (string, optional): the feature name to use when setting from faces
+            - feature_type (string, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+            - create_organizing_objects_where_needed (boolean, default True): if True, a fault interpretation object
+              and tectonic boundary feature object will be created if such objects do not exist for the feature;
+              if False, missing organizational objects will cause an error to be logged
+            - title (str, optional): the citation title to use for a new grid connection set
+            - originator (str, optional): the name of the person creating the new grid connection set, defaults to login id
+            - extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
+
+        returns:
+            - a new GridConnectionSet populated based on the faces indices
+
+        notes:
+            - this method only supports creation of single grid connection sets
+            - the faces indices are for cells on the negative side of the face
+            - the paired cell is implicitly the neighbouring cell in the positive direction of the axis
+            - the indices must therefore not include the last cell in the axis, though this is not checked
+            - if properties are passed, they should be passed in list variables which have their elements
+              replaced; individual property arrays should therefore be extracted from the lists afterwards
+        """
+        assert isinstance(grid, grr.Grid)
+
+        gcs = cls(grid.model, title = title, originator = originator, extra_metadata = extra_metadata)
+
+        gcs._sort_out_organizing_objects(feature_type, feature_name, create_organizing_objects_where_needed)
+
+        nj_ni = grid.nj * grid.ni
+        if k_faces_kji0 is not None and len(k_faces_kji0) > 0:
+            ci = grid.natural_cell_indices(k_faces_kji0)
+            if remove_duplicates:
+                ci = _sort_and_remove_duplicates(ci, k_properties)
+            cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
+            cip[:, 0] = ci
+            cip[:, 1] = ci + nj_ni
+            fip = np.empty(cip.shape, dtype = np.int8)
+            fip[:, 0] = gcs.face_index_map[0, 1]
+            fip[:, 1] = gcs.face_index_map[0, 0]
+        else:
+            cip = np.empty((0, 2), dtype = gcs.cell_index_dtype)
+            fip = np.empty((0, 2), dtype = np.int8)
+        if j_faces_kji0 is not None and len(j_faces_kji0) > 0:
+            ci = grid.natural_cell_indices(j_faces_kji0)
+            if remove_duplicates:
+                ci = _sort_and_remove_duplicates(ci, j_properties)
+            j_cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
+            j_cip[:, 0] = ci
+            j_cip[:, 1] = ci + grid.ni
+            j_fip = np.empty(j_cip.shape, dtype = np.int8)
+            j_fip[:, 0] = gcs.face_index_map[1, 1]
+            j_fip[:, 1] = gcs.face_index_map[1, 0]
+            cip = np.concatenate((cip, j_cip), axis = 0)
+            fip = np.concatenate((fip, j_fip), axis = 0)
+            del j_cip, j_fip
+        if i_faces_kji0 is not None and len(i_faces_kji0) > 0:
+            ci = grid.natural_cell_indices(i_faces_kji0)
+            if remove_duplicates:
+                ci = _sort_and_remove_duplicates(ci, i_properties)
+            i_cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
+            i_cip[:, 0] = ci
+            i_cip[:, 1] = ci + 1
+            i_fip = np.empty(i_cip.shape, dtype = np.int8)
+            i_fip[:, 0] = gcs.face_index_map[2, 1]
+            i_fip[:, 1] = gcs.face_index_map[2, 0]
+            cip = np.concatenate((cip, i_cip), axis = 0)
+            fip = np.concatenate((fip, i_fip), axis = 0)
+            del i_cip, i_fip
+        gcs.cell_index_pairs = cip
+        gcs.face_index_pairs = fip
+        gcs.count = len(gcs.cell_index_pairs)
+        gcs.feature_indices = np.zeros(gcs.count, dtype = np.int8)
+        assert len(gcs.face_index_pairs) == gcs.count
+        return gcs
 
     @classmethod
     def from_gcs_uuid_list(cls,
@@ -448,24 +552,13 @@ class GridConnectionSet(BaseResqpy):
                                        create_organizing_objects_where_needed,
                                        feature_type = feature_type)
 
-    def set_pairs_from_face_masks(
-            self,
-            k_faces,
-            j_faces,
-            i_faces,
-            feature_name,
-            create_organizing_objects_where_needed,
-            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
-            k_sides = None,
-            j_sides = None,
-            i_sides = None):
-        """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
-
+    def _sort_out_organizing_objects(self, feature_type, feature_name, create_organizing_objects_where_needed):
+        """Finds or creates interpretation and feature objects."""
         assert feature_type in ['fault', 'horizon', 'geobody boundary']
         if feature_name is None:
-            feature_name = 'feature from face masks'  # not sure this default is wise
+            feature_name = 'feature from faces'  # not sure this default is wise
         if len(self.grid_list) > 1:
-            log.warning('setting grid connection set pairs from face masks for first grid in list only')
+            log.warning('setting grid connection set pairs from faces for first grid in list only')
         grid = self.grid_list[0]
         if feature_type == 'fault':
             feature_flavour = 'TectonicBoundaryFeature'
@@ -522,6 +615,23 @@ class GridConnectionSet(BaseResqpy):
                 log.error('no interpretation found for feature: ' + feature_name)
                 return
         self.feature_list = [('obj_' + interpretation_flavour, fi_uuid, str(feature_name))]
+
+    def set_pairs_from_face_masks(
+            self,
+            k_faces,
+            j_faces,
+            i_faces,
+            feature_name,
+            create_organizing_objects_where_needed,
+            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
+            k_sides = None,
+            j_sides = None,
+            i_sides = None):
+        """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
+
+        self._sort_out_organizing_objects(feature_type, feature_name, create_organizing_objects_where_needed)
+
+        grid = self.grid_list[0]
         cell_pair_list = []
         face_pair_list = []
         nj_ni = grid.nj * grid.ni
@@ -561,7 +671,7 @@ class GridConnectionSet(BaseResqpy):
         self.cell_index_pairs = np.array(cell_pair_list, dtype = self.cell_index_dtype)
         self.face_index_pairs = np.array(face_pair_list, dtype = np.int8)
         self.count = len(self.cell_index_pairs)
-        self.feature_indices = np.zeros(self.count, dtype = np.int32)
+        self.feature_indices = np.zeros(self.count, dtype = np.int8)
         assert len(self.face_index_pairs) == self.count
 
     def set_pairs_from_faces_df(self,
@@ -2190,3 +2300,27 @@ def _copy_organisation_objects(target_model, source_model, gcs):
     for _, uuid, _ in gcs.feature_list:
         target_model.copy_uuid_from_other_model(source_model,
                                                 uuid)  # will copy related features as well as interpretations
+
+
+def _sort_and_remove_duplicates(a, props = None):
+    """Return copy of 1D array a, sorted and with duplicates removed; secondary arrays can be kept in alignment."""
+    if a is None or a.size <= 1:
+        return a
+    assert a.ndim == 1
+    si = None
+    no_props = (props is None or len(props) == 0)
+    if no_props:
+        a = np.sort(a)
+    else:
+        si = np.argsort(a)
+        a = a[si]
+    m = np.empty(a.size, dtype = bool)
+    m[0] = True
+    m[1:] = (a[1:] != a[:-1])
+    if np.all(m):
+        return a
+    if not no_props:
+        for i in range(len(props)):
+            p = props[i][si]
+            props[i] = p[m]
+    return a[m]

@@ -14,7 +14,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 
 def radians_from_degrees(deg):
@@ -1014,6 +1014,47 @@ def vertical_intercept_nan(x: float, x_value_0: float, x_value_1: float, y_value
 
 
 @njit
+def vertical_intercept_nan_yz(x: float, x_0: float, x_1: float, y_0: float, y_1: float, z_0: float,
+                              z_1: float) -> Tuple[float, float]:  # pragma: no cover
+    """Finds the y & z values of a straight line between two points at a given x.
+
+    If the x value given is not within the x values of the points, returns NaN.
+
+    arguments:
+        x (float): x value at which to determine the y value
+        x_0 (float): the x coordinate of point a
+        x_1 (float): the x coordinate of point b
+        y_0 (float): the y coordinate of point a
+        y_1 (float): the y coordinate of point b
+        z_0 (float): the z coordinate of point a
+        z_1 (float): the z coordinate of point b
+
+    returns:
+        y, z (float, float): y & z values of the straight line segment between point a and point b,
+            evaluated at x; if x is outside the x values range, y & z are NaN
+    """
+    y = np.nan
+    z = np.nan
+    if x_1 < x_0:
+        x_0, x_1 = x_1, x_0
+        y_0, y_1 = y_1, y_0
+        z_0, z_1 = z_1, z_0
+    if x >= x_0 and x <= x_1:
+        if x_0 == x_1:
+            y = y_0
+            z = z_0
+        else:
+            xr = x_1 - x_0
+            m = (y_1 - y_0) / xr
+            c = y_1 - m * x_1
+            y = m * x + c
+            m = (z_1 - z_0) / xr
+            c = z_1 - m * x_1
+            z = m * x + c
+    return (y, z)
+
+
+@njit
 def points_in_triangles_aligned_optimised_old(nx: int, ny: int, dx: float, dy: float,
                                               triangles: np.ndarray) -> np.ndarray:  # pragma: no cover
     """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
@@ -1138,6 +1179,56 @@ def points_in_triangles_aligned_optimised(nx: int,
     return collated
 
 
+@njit(parallel = True)
+def points_in_triangles_aligned_unified(nx: int,
+                                        ny: int,
+                                        ax: int,
+                                        ay: int,
+                                        az: int,
+                                        triangles: np.ndarray,
+                                        n_batches: int = 20) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
+    """Calculates which points are within which triangles in 2D for a regular mesh of aligned points.
+
+    arguments:
+        - nx (int): number of points in x axis
+        - ny (int): number of points in y axis
+        - ax (int): 'x' axis selection (0, 1, or 2)
+        - ay (int): 'y' axis selection (0, 1, or 2)
+        - az (int): 'z' axis selection (0, 1, or 2)
+        - triangles (np.ndarray): float array of each triangles' normalised vertices in 3D, shape (N, 3, 3)
+        - n_batches (int, default 20): number of parallel batches
+
+    returns:
+        list like int array with each row being (tri number, axis 'y' int, axis 'x' int), and
+        corresponding list like float array being axis 'z' sampled at point on triangle
+        
+    notes:
+        - actual axes to use for x, y, & z are determined by the ax, ay, & az arguments
+        - 0, 1, & 2 must appear once each amongst the ax, ay, & az arguments
+        - triangles points have already been normalised to a unit grid spacing and offset by half a cell
+        - returned 'z' values are in normalised form
+        - to denormalize 'z' values, add 0.5 and multiply by the actual cell length in the corresponding axis
+    """
+    n_triangles = len(triangles)
+    if n_triangles == 0:
+        return np.empty((0, 3), dtype = np.int32), np.empty((0,), dtype = np.float64)
+    n_batches = min(n_triangles, n_batches)
+    batch_size = (n_triangles - 1) // n_batches + 1
+    tp = [np.empty((0, 3), dtype = np.int32)] * n_batches
+    tz = [np.empty((0,), dtype = np.float64)] * n_batches
+    for batch in prange(n_batches):
+        base = batch * batch_size
+        tp[batch], tz[batch] = _points_in_triangles_aligned_unified_batch(nx, ny, base,
+                                                                          triangles[base:(batch + 1) * batch_size], ax,
+                                                                          ay, az)
+    collated = np.empty((0, 3), dtype = np.int32)
+    collated_z = np.empty((0,), dtype = np.float64)
+    for batch in range(n_batches):
+        collated = np.concatenate((collated, tp[batch]), axis = 0)
+        collated_z = np.concatenate((collated_z, tz[batch]), axis = 0)
+    return collated, collated_z
+
+
 @njit
 def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle: int,
                                                  triangles: np.ndarray) -> np.ndarray:  # pragma: no cover
@@ -1163,6 +1254,89 @@ def _points_in_triangles_aligned_optimised_batch(nx: int, ny: int, base_triangle
         triangles_points = np.array(triangles_points_list, dtype = np.int32)
 
     return triangles_points
+
+
+@njit
+def _points_in_triangles_aligned_unified_batch(nx: int, ny: int, base_triangle: int, tp: np.ndarray, ax: int, ay: int,
+                                               az: int) -> Tuple[np.ndarray, np.ndarray]:  # pragma: no cover
+    # returns list like int array with each row being (tri number, axis y int, axis x int), and
+    # corresponding list like float array being axis z sampled at point on triangle
+    # todo: add type subscripting once support for python 3.8 is dropped
+    int_list = []
+    sampled_z_list = []
+
+    for triangle_num in range(len(tp)):
+        tri = tp[triangle_num]
+        min_x = np.min(tri[:, ax])
+        max_x = np.max(tri[:, ax])
+        min_y = np.min(tri[:, ay])
+        max_y = np.max(tri[:, ay])
+        for xi in range(max(maths.ceil(min_x), 0), min(maths.floor(max_x) + 1, nx)):
+            x = float(xi)
+            e0_y, e0_z = vertical_intercept_nan_yz(x, tri[1, ax], tri[2, ax], tri[1, ay], tri[2, ay], tri[1, az],
+                                                   tri[2, az])
+            e1_y, e1_z = vertical_intercept_nan_yz(x, tri[0, ax], tri[1, ax], tri[0, ay], tri[1, ay], tri[0, az],
+                                                   tri[1, az])
+            e2_y, e2_z = vertical_intercept_nan_yz(x, tri[0, ax], tri[2, ax], tri[0, ay], tri[2, ay], tri[0, az],
+                                                   tri[2, az])
+            floor_y = np.nan
+            ceil_y = np.nan
+            floor_z = np.nan
+            ceil_z = np.nan
+            if not np.isnan(e0_y):
+                floor_y = e0_y
+                ceil_y = e0_y
+                floor_z = e0_z
+                ceil_z = e0_z
+            if not np.isnan(e1_y):
+                if np.isnan(floor_y):
+                    floor_y = e1_y
+                    ceil_y = e1_y
+                    floor_z = e1_z
+                    ceil_z = e1_z
+                else:
+                    if e1_y < floor_y:
+                        floor_y = e1_y
+                        floor_z = e1_z
+                    else:
+                        ceil_y = e1_y
+                        ceil_z = e1_z
+            if not np.isnan(e2_y):
+                if np.isnan(floor_y):
+                    floor_y = e2_y
+                    ceil_y = e2_y
+                    floor_z = e2_z
+                    ceil_z = e2_z
+                else:
+                    if e2_y < floor_y:
+                        floor_y = e2_y
+                        floor_z = e2_z
+                    elif e2_y > ceil_y:
+                        ceil_y = e2_y
+                        ceil_z = e2_z
+            y_range = ceil_y - floor_y
+            z_range = ceil_z - floor_z
+            t = triangle_num + base_triangle
+            extend_int_list = []
+            extend_z_list = []
+            for y in range(max(maths.ceil(floor_y), 0), min(maths.floor(ceil_y) + 1, ny)):
+                yf = float(y) - floor_y
+                if y_range > 0.0:
+                    yf /= y_range
+                z = floor_z + yf * z_range
+                extend_int_list.append([triangle_num + base_triangle, y, xi])
+                extend_z_list.append(z)
+            int_list.extend(extend_int_list)
+            sampled_z_list.extend(extend_z_list)
+
+    if len(int_list) == 0:
+        int_array = np.empty((0, 3), dtype = np.int32)
+        z_array = np.empty((0,), dtype = np.float64)
+    else:
+        int_array = np.array(int_list, dtype = np.int32)
+        z_array = np.array(sampled_z_list, dtype = np.float64)
+
+    return (int_array, z_array)
 
 
 def triangle_normal_vector(p3):

@@ -279,11 +279,13 @@ class Surface(rqsb.BaseSurface):
         self.extract_patches(self.root)
         return len(self.patch_list)
 
-    def triangles_and_points(self, patch = None):
+    def triangles_and_points(self, patch = None, copy = False):
         """Returns arrays representing one patch or a combination of all the patches in the surface.
 
         arguments:
            patch (int, optional): patch index; if None, combined arrays for all patches are returned
+           copy (bool, default False): if True, a copy of the arrays is returned; if False, the cached
+              arrays are returned
 
         returns:
            tuple (triangles, points):
@@ -296,21 +298,30 @@ class Surface(rqsb.BaseSurface):
 
         self.extract_patches(self.root)
         if patch is None:
-            if self.triangles is None:
-                points_offset = 0
-                for triangulated_patch in self.patch_list:
-                    (t, p) = triangulated_patch.triangles_and_points()
-                    if points_offset == 0:
-                        self.triangles = t.copy()
-                        self.points = p.copy()
-                    else:
-                        self.triangles = np.concatenate((self.triangles, t.copy() + points_offset))
-                        self.points = np.concatenate((self.points, p.copy()))
-                    points_offset += p.shape[0]
-            return (self.triangles, self.points)
+            if self.triangles is None or self.points is None:
+                if self.triangles is None:
+                    points_offset = 0
+                    for triangulated_patch in self.patch_list:
+                        (t, p) = triangulated_patch.triangles_and_points()
+                        if points_offset == 0:
+                            self.triangles = t
+                            self.points = p
+                        else:
+                            self.triangles = np.concatenate((self.triangles, t.copy() + points_offset))
+                            self.points = np.concatenate((self.points, p))
+                        points_offset += p.shape[0]
+            if copy:
+                return (self.triangles.copy(), self.points.copy())
+            else:
+                return (self.triangles, self.points)
         assert 0 <= patch < len(self.patch_list),  \
             ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches')
-        return self.patch_list[patch].triangles_and_points()
+        return self.patch_list[patch].triangles_and_points(copy = copy)
+
+    def decache_triangles_and_points(self):
+        """Removes the cached composite triangles and points arrays."""
+        self.points = None
+        self.triangles = None
 
     def triangle_count(self, patch = None):
         """Return the numner of triangles in this surface, or in one patch.
