@@ -57,53 +57,61 @@ class TriangulatedPatch:
             crs_root = self.model.root_for_uuid(self.crs_uuid)
         return crs_root, self.crs_uuid
 
-    def triangles_and_points(self):
+    def triangles_and_points(self, copy = False):
         """Returns arrays representing the patch.
 
-        Returns:
+        arguments:
+            copy (bool, default False): if True, a copy of the arrays is returned; if False, the cached
+              arrays are returned
+
+        returns:
            Tuple (triangles, points):
 
            * triangles (int array of shape[:, 3]): integer indices into points array,
              being the nodes of the corners of the triangles
            * points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
         """
-        if self.triangles is not None:
-            return (self.triangles, self.points)
-        assert self.triangle_count is not None and self.node_count is not None
+        if self.triangles is None:
 
-        geometry_node = rqet.find_tag(self.node, 'Geometry')
-        assert geometry_node is not None
-        p_root = rqet.find_tag(geometry_node, 'Points')
-        assert p_root is not None, 'Points xml node not found for triangle patch'
-        assert rqet.node_type(p_root) == 'Point3dHdf5Array'
-        h5_key_pair = self.model.h5_uuid_and_path_for_node(p_root, tag = 'Coordinates')
-        if h5_key_pair is None:
-            return (None, None)
-        try:
-            self.model.h5_array_element(h5_key_pair,
-                                        cache_array = True,
-                                        object = self,
-                                        array_attribute = 'points',
-                                        dtype = 'float')
-        except Exception:
-            log.error('hdf5 points failure for triangle patch ' + str(self.patch_index))
-            raise
-        self._set_t_type()
-        triangles_node = rqet.find_tag(self.node, 'Triangles')
-        h5_key_pair = self.model.h5_uuid_and_path_for_node(triangles_node)
-        if h5_key_pair is None:
-            log.warning('No Triangles found in xml for patch index: ' + str(self.patch_index))
-            return (None, None)
-        try:
-            self.model.h5_array_element(h5_key_pair,
-                                        cache_array = True,
-                                        object = self,
-                                        array_attribute = 'triangles',
-                                        dtype = self.t_type)
-        except Exception:
-            log.error('hdf5 triangles failure for triangle patch ' + str(self.patch_index))
-            raise
-        return (self.triangles, self.points)
+            assert self.triangle_count is not None and self.node_count is not None
+
+            geometry_node = rqet.find_tag(self.node, 'Geometry')
+            assert geometry_node is not None
+            p_root = rqet.find_tag(geometry_node, 'Points')
+            assert p_root is not None, 'Points xml node not found for triangle patch'
+            assert rqet.node_type(p_root) == 'Point3dHdf5Array'
+            h5_key_pair = self.model.h5_uuid_and_path_for_node(p_root, tag = 'Coordinates')
+            if h5_key_pair is None:
+                return (None, None)
+            try:
+                self.model.h5_array_element(h5_key_pair,
+                                            cache_array = True,
+                                            object = self,
+                                            array_attribute = 'points',
+                                            dtype = 'float')
+            except Exception:
+                log.error('hdf5 points failure for triangle patch ' + str(self.patch_index))
+                raise
+            self._set_t_type()
+            triangles_node = rqet.find_tag(self.node, 'Triangles')
+            h5_key_pair = self.model.h5_uuid_and_path_for_node(triangles_node)
+            if h5_key_pair is None:
+                log.warning('No Triangles found in xml for patch index: ' + str(self.patch_index))
+                return (None, None)
+            try:
+                self.model.h5_array_element(h5_key_pair,
+                                            cache_array = True,
+                                            object = self,
+                                            array_attribute = 'triangles',
+                                            dtype = self.t_type)
+            except Exception:
+                log.error('hdf5 triangles failure for triangle patch ' + str(self.patch_index))
+                raise
+
+        if copy:
+            return (self.triangles.copy(), self.points.copy())
+        else:
+            return (self.triangles, self.points)
 
     def set_to_trimmed_patch(self, larger_patch, xyz_box = None, xy_polygon = None, internal = False):
         """Populate this (empty) patch with triangles and points that overlap with a trimming volume.

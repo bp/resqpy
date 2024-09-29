@@ -9,8 +9,6 @@ import warnings
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
 from typing import Tuple, Optional, Dict
-# import pyinstrument
-# from pyinstrument import Profiler
 
 import resqpy as rq
 import resqpy.crs as rqc
@@ -607,6 +605,7 @@ def find_faces_to_represent_surface_regular_dense_optimised(grid,
     t_dtype = np.int32 if len(triangles) < 2_000_000_000 else np.int64
     assert (triangles is not None and points is not None), f"surface {surface.title} is empty"
     if agitate:
+        points = points.copy()
         if random_agitation:
             points += 1.0e-5 * (np.random.random(points.shape) - 0.5)
         else:
@@ -966,7 +965,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     log.debug(f"intersecting surface {surface.title} with regular grid {grid.title}")
     # log.debug(f'grid extent kji: {grid.extent_kji}')
 
-    triangles, points = surface.triangles_and_points()
+    triangles, points = surface.triangles_and_points(copy = True)
+    surface.decache_triangles_and_points()
+
     t_dtype = np.int32 if len(triangles) < 2_147_483_648 else np.int64
 
     assert (triangles is not None and points is not None), f"surface {surface.title} is empty"
@@ -1335,9 +1336,6 @@ def bisector_from_faces(  # type: ignore
           assigned to either the True or False part
         - a value of False for using_indices is DEPRECATED, pending proving of newer indices based approach
     """
-    # profiler = Profiler(interval = 0.0001)
-    # profiler.start()
-
     assert len(grid_extent_kji) == 3
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
@@ -1357,24 +1355,22 @@ def bisector_from_faces(  # type: ignore
     # set up the bisector array for the bounding box
     box_array = np.zeros(box_shape, dtype = np.bool_)
 
-    # seed the bisector box array from (0, 0, 0) up to the first faces that represent the surface
-    _seed_bisector(k_faces, j_faces, i_faces, box, box_array)
+    # seed the bisector box array at (0, 0, 0)
+    box_array[0, 0, 0] = True
 
     # prepare to spread True values to neighbouring cells that are not the other side of a face
     open_k = np.logical_not(k_faces)
     open_j = np.logical_not(j_faces)
     open_i = np.logical_not(i_faces)
 
-    # Setting up the array for the changing values.
-    changing_array = np.zeros_like(box_array, dtype = np.bool_)
-
-    _fill_bisector(box_array, open_k, open_j, open_i, changing_array)
+    # populate bisector array for box
+    _fill_bisector(box_array, open_k, open_j, open_i)
 
     # set up the full bisectors array and assigning the bounding box values
     array = np.zeros(grid_extent_kji, dtype = np.bool_)
     array[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]] = box_array
 
-    # set values outside of the bounding box
+    # set bisector values outside of the bounding box
     _set_bisector_outside_box(array, box, box_array)
 
     # check all array elements are not the same
@@ -1384,9 +1380,6 @@ def bisector_from_faces(  # type: ignore
 
     # negate the array if it minimises the mean k and determine if the surface is a curtain
     is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
-
-    # profiler.stop()
-    # profiler.print()
 
     return array, is_curtain
 
@@ -1823,7 +1816,7 @@ def _seed_array(
 
     note:
 
-        - this function is DEPRECATED as it is no longer in use, having been replaced by _seed_array_box_faces()
+        - this function is DEPRECATED as it is no longer in use
     """
     k = point[0]
     j = point[1]
@@ -1847,60 +1840,6 @@ def _seed_array(
     return array, first_k, first_j, first_i
 
 
-@njit  # pragma: no cover
-def _seed_array_box_faces(
-    point: Tuple[int, int, int],
-    k_faces: np.ndarray,
-    j_faces: np.ndarray,
-    i_faces: np.ndarray,
-    box: np.ndarray,
-    array: np.ndarray,
-) -> Tuple[int, int, int]:
-    """Sets values of the array True up until a face is hit in each direction, faces arrays only cover box
-
-    arguments:
-        - point (Tuple[int, int, int]): indices of the initial seed point
-        - k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension
-        - j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
-        - i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension
-        - box (numpy int array of shape (2, 3)): the boundaries of the surface in python protocol
-        - array (np.ndarray): boolean array that will be seeded
-
-    returns:
-        Tuple containing:
-
-        - first_k (int): the index of the first k face in the k direction from the seed point or the
-          array size in the k direction if there are no k faces
-        - first_j (int): the index of the first j face in the j direction from the seed point or the
-          array size in the j direction if there are no j faces
-        - first_i (int): the index of the first i face in the i direction from the seed point or the
-          array size in the i direction if there are no i faces
-          
-    note:
-        - array is updated in situ
-    """
-    k = point[0]
-    j = point[1]
-    i = point[2]
-
-    first_k = 0
-    if k == 0:
-        first_k = _first_true(k_faces[:-1, j, i])
-        array[:first_k, j, i] = True
-
-    first_j = 0
-    if j == 0:
-        first_j = _first_true(j_faces[k, :-1, i])
-        array[k, :first_j, i] = True
-
-    first_i = 0
-    if i == 0:
-        first_i = _first_true(i_faces[k, j, :-1])
-        array[k, j, :first_i] = True
-
-    return first_k, first_j, first_i
-
-
 def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
     if crs.xy_units == crs.z_units:
         return np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
@@ -1909,27 +1848,30 @@ def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
     return np.concatenate((k_offsets_list, ji_offsets), axis = 0)
 
 
-# NB. using njit on this function significantly slows down execution - perhaps because arrays are sized differently on each call?
-def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray, change: np.ndarray):
-    while True:
+@njit  # pragma: no cover
+def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray):
+    change = np.zeros(bisect.shape, dtype = np.bool_)
+    nk: int = bisect.shape[0]
+    nj: int = bisect.shape[1]
+    ni: int = bisect.shape[2]
+    going: bool = True
+    while going:
+        going = False
         change[:] = False
-
-        # k faces
-        change[1:, :, :] = np.logical_and(bisect[:-1, :, :], open_k)
-        change[:-1, :, :] = np.logical_or(change[:-1, :, :], np.logical_and(bisect[1:, :, :], open_k))
-
-        # j faces
-        change[:, 1:, :] = np.logical_or(change[:, 1:, :], np.logical_and(bisect[:, :-1, :], open_j))
-        change[:, :-1, :] = np.logical_or(change[:, :-1, :], np.logical_and(bisect[:, 1:, :], open_j))
-
-        # i faces
-        change[:, :, 1:] = np.logical_or(change[:, :, 1:], np.logical_and(bisect[:, :, :-1], open_i))
-        change[:, :, :-1] = np.logical_or(change[:, :, :-1], np.logical_and(bisect[:, :, 1:], open_i))
-
-        change[:] = np.logical_and(change, np.logical_not(bisect))
-        if np.count_nonzero(change) == 0:
-            break
-        bisect[:] = np.logical_or(bisect, change)
+        for k in range(nk):
+            for j in range(nj):
+                for i in range(ni):
+                    if bisect[k, j, i]:
+                        continue
+                    if ((k and bisect[k - 1, j, i] and open_k[k - 1, j, i]) or
+                        (j and bisect[k, j - 1, i] and open_j[k, j - 1, i]) or
+                        (i and bisect[k, j, i - 1] and open_i[k, j, i - 1]) or
+                        (k < nk - 1 and bisect[k + 1, j, i] and open_k[k, j, i]) or
+                        (j < nj - 1 and bisect[k, j + 1, i] and open_j[k, j, i]) or
+                        (i < ni - 1 and bisect[k, j, i + 1] and open_i[k, j, i])):
+                        bisect[k, j, i] = True
+                        going = True
+                        continue
 
 
 @njit  # pragma: no cover
@@ -1977,16 +1919,22 @@ def _box_face_arrays_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_fa
     k_a = np.zeros((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = np.bool_)
     j_a = np.zeros((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = np.bool_)
     i_a = np.zeros((box_shape[0], box_shape[1], box_shape[2] - 1), dtype = np.bool_)
-    for i in range(len(k_faces)):
-        kji = k_faces[i] - box[0, :]
-        k_a[kji[0], kji[1], kji[2]] = True
-    for i in range(len(j_faces)):
-        kji = j_faces[i] - box[0, :]
-        j_a[kji[0], kji[1], kji[2]] = True
-    for i in range(len(i_faces)):
-        kji = i_faces[i] - box[0, :]
-        i_a[kji[0], kji[1], kji[2]] = True
+    ko = box[0, 0]
+    jo = box[0, 1]
+    io = box[0, 2]
+    _set_face_array(k_a, k_faces, ko, jo, io)
+    _set_face_array(j_a, j_faces, ko, jo, io)
+    _set_face_array(i_a, i_faces, ko, jo, io)
     return k_a, j_a, i_a
+
+
+@njit  # pragma: no cover
+def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: int):
+    for ind in range(len(indices)):
+        k = indices[ind, 0] - ko
+        j = indices[ind, 1] - jo
+        i = indices[ind, 2] - io
+        a[k, j, i] = True
 
 
 def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
@@ -2011,27 +1959,3 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
     assert np.all(box[1] <= grid_extent_kji)
     box[1, :] = np.minimum(box[1, :] + 1, extent_kji)
     return box
-
-
-def _seed_bisector(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray, box: np.ndarray,
-                   box_array: np.ndarray):
-    # seed the bisector box array from (0, 0, 0) up to the first faces that represent the surface
-    first_k, first_j, first_i = _seed_array_box_faces((0, 0, 0), k_faces, j_faces, i_faces, box, box_array)
-    points = set()
-    for dimension, first_true in enumerate([first_k, first_j, first_i]):
-        for dimension_value in range(1, first_true):
-            point = [0, 0, 0]
-            point[dimension] = dimension_value
-            point = tuple(point)  # type: ignore
-            first_k_sub, first_j_sub, first_i_sub = _seed_array_box_faces(point, k_faces, j_faces, i_faces, box,
-                                                                          box_array)
-            for sub_dimension, first_true_sub in enumerate([first_k_sub, first_j_sub, first_i_sub]):
-                if dimension != sub_dimension:
-                    for sub_dimension_value in range(1, first_true_sub):
-                        point = [0, 0, 0]
-                        point[dimension] = dimension_value
-                        point[sub_dimension] = sub_dimension_value
-                        point = tuple(point)  # type: ignore
-                        if point not in points:
-                            points.add(point)
-                            _seed_array_box_faces(point, k_faces, j_faces, i_faces, box, box_array)
