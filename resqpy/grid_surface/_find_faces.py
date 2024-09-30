@@ -8,7 +8,7 @@ import numpy as np
 import warnings
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Union, Dict
 
 import resqpy as rq
 import resqpy.crs as rqc
@@ -832,8 +832,7 @@ def find_faces_to_represent_surface_regular_dense_optimised(grid,
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector,
-                                                       False)
+            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
@@ -1215,8 +1214,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0, i_faces_kji0,
-                                                       raw_bisector, True)
+            bisector, is_curtain = bisector_from_face_indices(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0,
+                                                              i_faces_kji0, raw_bisector)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
@@ -1314,8 +1313,8 @@ def find_faces_to_represent_surface(grid, surface, name, mode = "auto", feature_
 
 
 def bisector_from_faces(  # type: ignore
-        grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-        raw_bisector: bool, using_indices: bool) -> Tuple[np.ndarray, bool]:
+        grid_extent_kji: Tuple[int, int, int], k_faces: Union[np.ndarray, None], j_faces: Union[np.ndarray, None],
+        i_faces: Union[np.ndarray, None], raw_bisector: bool) -> Tuple[np.ndarray, bool]:
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     arguments:
@@ -1324,8 +1323,6 @@ def bisector_from_faces(  # type: ignore
         - j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
         - i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension
         - raw_bisector (bool): if True, the bisector is returned without determining which side is shallower
-        - using_indices (bool): if True, k_faces etc. are list-like arrays of kji indices; if False, they
-          are full boolean arrays covering the internal faces
 
     returns:
         Tuple containing:
@@ -1337,21 +1334,88 @@ def bisector_from_faces(  # type: ignore
         - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
         - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
           assigned to either the True or False part
-        - a value of False for using_indices is DEPRECATED, pending proving of newer indices based approach
+        - this function is DEPRECATED, pending proving of newer indices based approach
     """
     assert len(grid_extent_kji) == 3
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
-    if using_indices:
-        box = get_boundary_from_indices(k_faces, j_faces, i_faces, grid_extent_kji)
-        # set k_faces as bool arrays covering box
-        k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces, j_faces, i_faces, box)
+    box = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
+    box_shape = box[1, :] - box[0, :]
+
+    # set up the bisector array for the bounding box
+    box_array = np.zeros(box_shape, dtype = np.bool_)
+
+    # seed the bisector box array at (0, 0, 0)
+    box_array[0, 0, 0] = True
+
+    # prepare to spread True values to neighbouring cells that are not the other side of a face
+    if k_faces is None:
+        open_k = np.ones((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = bool)
     else:
-        box = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
-        # switch k_faces etc. to box coverage
         k_faces = k_faces[box[0, 0]:box[1, 0] - 1, box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]]
+        open_k = np.logical_not(k_faces)
+    if j_faces is None:
+        open_j = np.ones((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = bool)
+    else:
         j_faces = j_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1] - 1, box[0, 2]:box[1, 2]]
+        open_j = np.logical_not(j_faces)
+    if i_faces is None:
+        open_i = np.ones((box_shape[0], box_shape[1], box_shape[2] - 1), dtype = bool)
+    else:
         i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
+        open_i = np.logical_not(i_faces)
+
+    # populate bisector array for box
+    _fill_bisector(box_array, open_k, open_j, open_i)
+
+    # set up the full bisectors array and assigning the bounding box values
+    array = np.zeros(grid_extent_kji, dtype = np.bool_)
+    array[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]] = box_array
+
+    # set bisector values outside of the bounding box
+    _set_bisector_outside_box(array, box, box_array)
+
+    # check all array elements are not the same
+    true_count = np.count_nonzero(array)
+    cell_count = array.size
+    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
+
+    # negate the array if it minimises the mean k and determine if the surface is a curtain
+    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+
+    return array, is_curtain
+
+
+def bisector_from_face_indices(  # type: ignore
+        grid_extent_kji: Tuple[int, int, int], k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray,
+                                                                                                          None],
+        i_faces_kji0: Union[np.ndarray, None], raw_bisector: bool) -> Tuple[np.ndarray, bool]:
+    """Creates a boolean array denoting the bisection of the grid by the face sets.
+
+    arguments:
+        - grid_extent_kji (Tuple[int, int, int]): the shape of the grid
+        - k_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the k dimension
+        - j_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the j dimension
+        - i_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the i dimension
+        - raw_bisector (bool): if True, the bisector is returned without determining which side is shallower
+
+    returns:
+        Tuple containing:
+        - array (np.ndarray): boolean bisectors array where values are True for cells on the side
+          of the surface that has a lower mean k index on average and False for cells on the other side.
+        - is_curtain (bool): True if the surface is a curtain (vertical), otherwise False.
+
+    notes:
+        - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
+        - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+          assigned to either the True or False part
+    """
+    assert len(grid_extent_kji) == 3
+
+    # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
+    box = get_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
+    # set k_faces as bool arrays covering box
+    k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, box)
 
     box_shape = box[1, :] - box[0, :]
 
@@ -1546,9 +1610,9 @@ def shadow_from_faces(extent_kji, k_faces):
 
 
 def get_boundary(  # type: ignore
-    k_faces: np.ndarray,
-    j_faces: np.ndarray,
-    i_faces: np.ndarray,
+    k_faces: Union[np.ndarray, None],
+    j_faces: Union[np.ndarray, None],
+    i_faces: Union[np.ndarray, None],
     grid_extent_kji: Tuple[int, int, int],
 ) -> np.ndarray:
     """Cretaes a box of the indices that bound the surface (where the faces are True).
@@ -1573,6 +1637,9 @@ def get_boundary(  # type: ignore
 
     for f_i, faces in enumerate([k_faces, j_faces, i_faces]):
 
+        if faces is None:
+            continue
+
         # NB. k, j & i for rest of loop refer to indices of faces, regardless of which face set is being processed
 
         where_k, where_j, where_i = _where_true(faces)
@@ -1596,21 +1663,21 @@ def get_boundary(  # type: ignore
         else:
             if min_k > 0:
                 min_k -= 1
-            if max_k < j_faces.shape[0] - 1:
+            if max_k < grid_extent_kji[0] - 1:
                 max_k += 1
         if f_i == 1:
             max_j += 1
         else:
             if min_j > 0:
                 min_j -= 1
-            if max_j < k_faces.shape[1] - 1:
+            if max_j < grid_extent_kji[1] - 1:
                 max_j += 1
         if f_i == 2:
             max_i += 1
         else:
             if min_i > 0:
                 min_i -= 1
-            if max_i < k_faces.shape[2] - 1:
+            if max_i < grid_extent_kji[2] - 1:
                 max_i += 1
 
         if starting:
@@ -1641,9 +1708,9 @@ def get_boundary(  # type: ignore
 
 
 def get_boundary_dict(  # type: ignore
-    k_faces: np.ndarray,
-    j_faces: np.ndarray,
-    i_faces: np.ndarray,
+    k_faces: Union[np.ndarray, None],
+    j_faces: Union[np.ndarray, None],
+    i_faces: Union[np.ndarray, None],
     grid_extent_kji: Tuple[int, int, int],
 ) -> Dict[str, int]:
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
@@ -1795,63 +1862,6 @@ def intersect_numba(
     return faces, offsets, triangle_per_face
 
 
-@njit  # pragma: no cover
-def _seed_array(
-    point: Tuple[int, int, int],
-    k_faces: np.ndarray,
-    j_faces: np.ndarray,
-    i_faces: np.ndarray,
-    box: np.ndarray,
-    array: np.ndarray,
-) -> Tuple[np.ndarray, int, int, int]:
-    """Sets values of the array True up until a face is hit in each direction.
-
-    arguments:
-
-        - point (Tuple[int, int, int]): coordinates of the initial seed point
-        - k_faces (np.ndarray): a boolean array of which faces represent the surface in the k dimension
-        - j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
-        - i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension
-        - box (numpy int array of shape (2, 3)): the boundaries of the surface in python protocol
-        - array (np.ndarray): boolean array that will be seeded
-
-    returns:
-        Tuple containing:
-
-        - array (np.ndarray): boolean array that has been seeded.
-        - first_k (int): the index of the first k face in the k direction from the seed point or the
-            array size in the k direction if there are no k faces.
-        - first_j (int): the index of the first j face in the j direction from the seed point or the
-            array size in the j direction if there are no j faces.
-        - first_i (int): the index of the first i face in the i direction from the seed point or the
-            array size in the i direction if there are no i faces.
-
-    note:
-
-        - this function is DEPRECATED as it is no longer in use
-    """
-    k = point[0]
-    j = point[1]
-    i = point[2]
-
-    first_k = 0
-    if k == 0:
-        first_k = _first_true(k_faces[box[0, 0]:box[1, 0] - 1, box[0, 1] + j, box[0, 2] + i])
-        array[:first_k, j, i] = True
-
-    first_j = 0
-    if j == 0:
-        first_j = _first_true(j_faces[box[0, 0] + k, box[0, 1]:box[1, 1] - 1, box[0, 2] + i])
-        array[k, :first_j, i] = True
-
-    first_i = 0
-    if i == 0:
-        first_i = _first_true(i_faces[box[0, 0] + k, box[0, 1] + j, box[0, 2]:box[1, 2] - 1])
-        array[k, j, :first_i] = True
-
-    return array, first_k, first_j, first_i
-
-
 def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
     if crs.xy_units == crs.z_units:
         return np.concatenate((k_offsets_list, j_offsets_list, i_offsets_list), axis = 0)
@@ -1925,8 +1935,9 @@ def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndar
         a[:, :, :box[0, 2]] = True
 
 
-def _box_face_arrays_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-                                  box: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _box_face_arrays_from_indices(  # type: ignore
+        k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
+        i_faces_kji0: Union[np.ndarray, None], box: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     box_shape = box[1, :] - box[0, :]
     k_a = np.zeros((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = np.bool_)
     j_a = np.zeros((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = np.bool_)
@@ -1934,14 +1945,20 @@ def _box_face_arrays_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_fa
     ko = box[0, 0]
     jo = box[0, 1]
     io = box[0, 2]
-    _set_face_array(k_a, k_faces, ko, jo, io)
-    _set_face_array(j_a, j_faces, ko, jo, io)
-    _set_face_array(i_a, i_faces, ko, jo, io)
+    if k_faces_kji0 is not None:
+        _set_face_array(k_a, k_faces_kji0, ko, jo, io)
+    if j_faces_kji0 is not None:
+        _set_face_array(j_a, j_faces_kji0, ko, jo, io)
+    if i_faces_kji0 is not None:
+        _set_face_array(i_a, i_faces_kji0, ko, jo, io)
     return k_a, j_a, i_a
 
 
 @njit  # pragma: no cover
 def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: int):
+    k: int = 0
+    j: int = 0
+    i: int = 0
     for ind in range(len(indices)):
         k = indices[ind, 0] - ko
         j = indices[ind, 1] - jo
@@ -1949,15 +1966,16 @@ def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: in
         a[k, j, i] = True
 
 
-def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-                              grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
+def get_boundary_from_indices(  # type: ignore
+        k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
+        i_faces_kji0: Union[np.ndarray, None], grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
     """Return python protocol box containing indices"""
-    k_min_kji0 = np.min(k_faces, axis = 0)
-    k_max_kji0 = np.max(k_faces, axis = 0)
-    j_min_kji0 = np.min(j_faces, axis = 0)
-    j_max_kji0 = np.max(j_faces, axis = 0)
-    i_min_kji0 = np.min(i_faces, axis = 0)
-    i_max_kji0 = np.max(i_faces, axis = 0)
+    k_min_kji0 = None if k_faces_kji0 is None else np.min(k_faces_kji0, axis = 0)
+    k_max_kji0 = None if k_faces_kji0 is None else np.max(k_faces_kji0, axis = 0)
+    j_min_kji0 = None if j_faces_kji0 is None else np.min(j_faces_kji0, axis = 0)
+    j_max_kji0 = None if j_faces_kji0 is None else np.max(j_faces_kji0, axis = 0)
+    i_min_kji0 = None if i_faces_kji0 is None else np.min(i_faces_kji0, axis = 0)
+    i_max_kji0 = None if i_faces_kji0 is None else np.max(i_faces_kji0, axis = 0)
     box = np.empty((2, 3), dtype = np.int32)
     box[0, :] = grid_extent_kji
     box[1, :] = -1
@@ -1965,26 +1983,30 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
         box[0, 0] = k_min_kji0[0]
         box[0, 1] = k_min_kji0[1]
         box[0, 2] = k_min_kji0[2]
-        box[1, 0] = k_max_kji0[0]
-        box[1, 1] = k_max_kji0[1]
-        box[1, 2] = k_max_kji0[2]
+        box[1, 0] = k_max_kji0[0]  # type: ignore
+        box[1, 1] = k_max_kji0[1]  # type: ignore
+        box[1, 2] = k_max_kji0[2]  # type: ignore
     if j_min_kji0 is not None:
         box[0, 0] = min(box[0, 0], j_min_kji0[0])
         box[0, 1] = min(box[0, 1], j_min_kji0[1])
         box[0, 2] = min(box[0, 2], j_min_kji0[2])
-        box[1, 0] = max(box[1, 0], j_max_kji0[0])
-        box[1, 1] = max(box[1, 1], j_max_kji0[1])
-        box[1, 2] = max(box[1, 2], j_max_kji0[2])
+        box[1, 0] = max(box[1, 0], j_max_kji0[0])  # type: ignore
+        box[1, 1] = max(box[1, 1], j_max_kji0[1])  # type: ignore
+        box[1, 2] = max(box[1, 2], j_max_kji0[2])  # type: ignore
     if i_min_kji0 is not None:
         box[0, 1] = min(box[0, 1], i_min_kji0[0])
         box[0, 2] = min(box[0, 2], i_min_kji0[1])
         box[0, 2] = min(box[0, 2], i_min_kji0[2])
-        box[1, 0] = max(box[1, 0], i_max_kji0[0])
-        box[1, 1] = max(box[1, 1], i_max_kji0[1])
-        box[1, 2] = max(box[1, 2], i_max_kji0[2])
+        box[1, 0] = max(box[1, 0], i_max_kji0[0])  # type: ignore
+        box[1, 1] = max(box[1, 1], i_max_kji0[1])  # type: ignore
+        box[1, 2] = max(box[1, 2], i_max_kji0[2])  # type: ignore
     assert np.all(box[1] >= box[0]), 'attempt to find bounding box when all faces None'
     # include buffer layer where box does not reach edge of grid
     box[0, :] = np.maximum(box[0, :] - 1, 0)
-    box[1, :] = np.minimum(box[1, :], np.array(grid_extent_kji, dtype = np.int32) - 1)
-    box[1, :] += 1  # python protocol
+    extent_kji = np.array(grid_extent_kji, dtype = np.int32)
+    box[1, :] += 2  # buffer layer and python protocol
+    box[1, :] = np.minimum(box[1, :], extent_kji)
+    assert np.all(box[0] >= 0)
+    assert np.all(box[1] > box[0])
+    assert np.all(box[1] <= grid_extent_kji)
     return box
