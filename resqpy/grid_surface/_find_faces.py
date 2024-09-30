@@ -1362,9 +1362,18 @@ def bisector_from_faces(  # type: ignore
     box_array[0, 0, 0] = True
 
     # prepare to spread True values to neighbouring cells that are not the other side of a face
-    open_k = np.logical_not(k_faces)
-    open_j = np.logical_not(j_faces)
-    open_i = np.logical_not(i_faces)
+    if k_faces is None:
+        open_k = np.ones((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = bool)
+    else:
+        open_k = np.logical_not(k_faces)
+    if j_faces is None:
+        open_j = np.ones((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = bool)
+    else:
+        open_j = np.logical_not(j_faces)
+    if i_faces is None:
+        open_i = np.ones((box_shape[0], box_shape[1], box_shape[2] - 1), dtype = bool)
+    else:
+        open_i = np.logical_not(i_faces)
 
     # populate bisector array for box
     _fill_bisector(box_array, open_k, open_j, open_i)
