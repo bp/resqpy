@@ -1932,9 +1932,9 @@ def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndar
         a[:, :, :box[0, 2]] = True
 
 
-def _box_face_arrays_from_indices(k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
-                                  i_faces_kji0: Union[np.ndarray, None],
-                                  box: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _box_face_arrays_from_indices(  # type: ignore
+        k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
+        i_faces_kji0: Union[np.ndarray, None], box: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     box_shape = box[1, :] - box[0, :]
     k_a = np.zeros((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = np.bool_)
     j_a = np.zeros((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = np.bool_)
@@ -1963,9 +1963,9 @@ def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: in
         a[k, j, i] = True
 
 
-def get_boundary_from_indices(k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
-                              i_faces_kji0: Union[np.ndarray, None], grid_extent_kji: Tuple[int, int,
-                                                                                            int]) -> np.ndarray:
+def get_boundary_from_indices(  # type: ignore
+        k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
+        i_faces_kji0: Union[np.ndarray, None], grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
     """Return python protocol box containing indices"""
     k_min_kji0 = None if k_faces_kji0 is None else np.min(k_faces_kji0, axis = 0)
     k_max_kji0 = None if k_faces_kji0 is None else np.max(k_faces_kji0, axis = 0)
