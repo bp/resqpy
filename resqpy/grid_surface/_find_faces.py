@@ -1361,8 +1361,8 @@ def bisector_from_faces(  # type: ignore
         open_j = np.logical_not(j_faces)
     if i_faces is None:
         open_i = np.ones((box_shape[0], box_shape[1], box_shape[2] - 1), dtype = bool)
-        i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
     else:
+        i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
         open_i = np.logical_not(i_faces)
 
     # populate bisector array for box
@@ -1610,9 +1610,9 @@ def shadow_from_faces(extent_kji, k_faces):
 
 
 def get_boundary(  # type: ignore
-    k_faces: np.ndarray,
-    j_faces: np.ndarray,
-    i_faces: np.ndarray,
+    k_faces: Union[np.ndarray, None],
+    j_faces: Union[np.ndarray, None],
+    i_faces: Union[np.ndarray, None],
     grid_extent_kji: Tuple[int, int, int],
 ) -> np.ndarray:
     """Cretaes a box of the indices that bound the surface (where the faces are True).
@@ -1636,6 +1636,9 @@ def get_boundary(  # type: ignore
     starting = True
 
     for f_i, faces in enumerate([k_faces, j_faces, i_faces]):
+
+        if faces is None:
+            continue
 
         # NB. k, j & i for rest of loop refer to indices of faces, regardless of which face set is being processed
 
@@ -1705,9 +1708,9 @@ def get_boundary(  # type: ignore
 
 
 def get_boundary_dict(  # type: ignore
-    k_faces: np.ndarray,
-    j_faces: np.ndarray,
-    i_faces: np.ndarray,
+    k_faces: Union[np.ndarray, None],
+    j_faces: Union[np.ndarray, None],
+    i_faces: Union[np.ndarray, None],
     grid_extent_kji: Tuple[int, int, int],
 ) -> Dict[str, int]:
     """Cretaes a dictionary of the indices that bound the surface (where the faces are True).
