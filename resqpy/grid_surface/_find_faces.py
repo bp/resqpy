@@ -1314,8 +1314,8 @@ def find_faces_to_represent_surface(grid, surface, name, mode = "auto", feature_
 
 
 def bisector_from_faces(  # type: ignore
-        grid_extent_kji: Tuple[int, int, int], k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-        raw_bisector: bool, using_indices: bool) -> Tuple[np.ndarray, bool]:
+        grid_extent_kji: Tuple[int, int, int], k_faces: Optional[np.ndarray], j_faces: Optional[np.ndarray],
+        i_faces: Optional[np.ndarray], raw_bisector: bool, using_indices: bool) -> Tuple[np.ndarray, bool]:
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     arguments:
@@ -1925,7 +1925,8 @@ def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndar
         a[:, :, :box[0, 2]] = True
 
 
-def _box_face_arrays_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
+def _box_face_arrays_from_indices(k_faces: Optional[np.ndarray], j_faces: Optional[np.ndarray],
+                                  i_faces: Optional[np.ndarray],
                                   box: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     box_shape = box[1, :] - box[0, :]
     k_a = np.zeros((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = np.bool_)
@@ -1934,9 +1935,12 @@ def _box_face_arrays_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_fa
     ko = box[0, 0]
     jo = box[0, 1]
     io = box[0, 2]
-    _set_face_array(k_a, k_faces, ko, jo, io)
-    _set_face_array(j_a, j_faces, ko, jo, io)
-    _set_face_array(i_a, i_faces, ko, jo, io)
+    if k_faces is not None:
+        _set_face_array(k_a, k_faces, ko, jo, io)
+    if j_faces is not None:
+        _set_face_array(j_a, j_faces, ko, jo, io)
+    if i_faces is not None:
+        _set_face_array(i_a, i_faces, ko, jo, io)
     return k_a, j_a, i_a
 
 
@@ -1949,15 +1953,15 @@ def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: in
         a[k, j, i] = True
 
 
-def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces: np.ndarray,
-                              grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
+def get_boundary_from_indices(k_faces: Optional[np.ndarray], j_faces: Optional[np.ndarray],
+                              i_faces: Optional[np.ndarray], grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
     """Return python protocol box containing indices"""
-    k_min_kji0 = np.min(k_faces, axis = 0)
-    k_max_kji0 = np.max(k_faces, axis = 0)
-    j_min_kji0 = np.min(j_faces, axis = 0)
-    j_max_kji0 = np.max(j_faces, axis = 0)
-    i_min_kji0 = np.min(i_faces, axis = 0)
-    i_max_kji0 = np.max(i_faces, axis = 0)
+    k_min_kji0 = None if k_faces is None else np.min(k_faces, axis = 0)
+    k_max_kji0 = None if k_faces is None else np.max(k_faces, axis = 0)
+    j_min_kji0 = None if j_faces is None else np.min(j_faces, axis = 0)
+    j_max_kji0 = None if j_faces is None else np.max(j_faces, axis = 0)
+    i_min_kji0 = None if i_faces is None else np.min(i_faces, axis = 0)
+    i_max_kji0 = None if i_faces is None else np.max(i_faces, axis = 0)
     box = np.empty((2, 3), dtype = np.int32)
     box[0, :] = grid_extent_kji
     box[1, :] = -1
@@ -1988,4 +1992,7 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
     extent_kji = np.array(grid_extent_kji, dtype = np.int32)
     box[1, :] += 1  # python protocol
     box[1, :] = np.minimum(box[1, :], extent_kji)
+    assert np.all(box[0] >= 0)
+    assert np.all(box[1] > box[0])
+    assert np.all(box[1] <= grid_extent_kji)
     return box
