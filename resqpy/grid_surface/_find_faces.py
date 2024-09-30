@@ -832,8 +832,7 @@ def find_faces_to_represent_surface_regular_dense_optimised(grid,
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector,
-                                                       False)
+            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces, j_faces, i_faces, raw_bisector)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
@@ -1215,8 +1214,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            bisector, is_curtain = bisector_from_faces(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0, i_faces_kji0,
-                                                       raw_bisector, True)
+            bisector, is_curtain = bisector_from_face_indices(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0,
+                                                              i_faces_kji0, raw_bisector)
             if is_curtain:
                 bisector = bisector[0]  # reduce to a columns property
 
@@ -1315,7 +1314,7 @@ def find_faces_to_represent_surface(grid, surface, name, mode = "auto", feature_
 
 def bisector_from_faces(  # type: ignore
         grid_extent_kji: Tuple[int, int, int], k_faces: Optional[np.ndarray], j_faces: Optional[np.ndarray],
-        i_faces: Optional[np.ndarray], raw_bisector: bool, using_indices: bool) -> Tuple[np.ndarray, bool]:
+        i_faces: Optional[np.ndarray], raw_bisector: bool) -> Tuple[np.ndarray, bool]:
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     arguments:
@@ -1324,8 +1323,6 @@ def bisector_from_faces(  # type: ignore
         - j_faces (np.ndarray): a boolean array of which faces represent the surface in the j dimension
         - i_faces (np.ndarray): a boolean array of which faces represent the surface in the i dimension
         - raw_bisector (bool): if True, the bisector is returned without determining which side is shallower
-        - using_indices (bool): if True, k_faces etc. are list-like arrays of kji indices; if False, they
-          are full boolean arrays covering the internal faces
 
     returns:
         Tuple containing:
@@ -1337,21 +1334,89 @@ def bisector_from_faces(  # type: ignore
         - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
         - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
           assigned to either the True or False part
-        - a value of False for using_indices is DEPRECATED, pending proving of newer indices based approach
+        - this function is DEPRECATED, pending proving of newer indices based approach
     """
     assert len(grid_extent_kji) == 3
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
-    if using_indices:
-        box = get_boundary_from_indices(k_faces, j_faces, i_faces, grid_extent_kji)
-        # set k_faces as bool arrays covering box
-        k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces, j_faces, i_faces, box)
+    box = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
+    # switch k_faces etc. to box coverage
+    k_faces = k_faces[box[0, 0]:box[1, 0] - 1, box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]]
+    j_faces = j_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1] - 1, box[0, 2]:box[1, 2]]
+    i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
+
+    box_shape = box[1, :] - box[0, :]
+
+    # set up the bisector array for the bounding box
+    box_array = np.zeros(box_shape, dtype = np.bool_)
+
+    # seed the bisector box array at (0, 0, 0)
+    box_array[0, 0, 0] = True
+
+    # prepare to spread True values to neighbouring cells that are not the other side of a face
+    if k_faces is None:
+        open_k = np.ones((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = bool)
     else:
-        box = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
-        # switch k_faces etc. to box coverage
-        k_faces = k_faces[box[0, 0]:box[1, 0] - 1, box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]]
-        j_faces = j_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1] - 1, box[0, 2]:box[1, 2]]
-        i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
+        open_k = np.logical_not(k_faces)
+    if j_faces is None:
+        open_j = np.ones((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = bool)
+    else:
+        open_j = np.logical_not(j_faces)
+    if i_faces is None:
+        open_i = np.ones((box_shape[0], box_shape[1], box_shape[2] - 1), dtype = bool)
+    else:
+        open_i = np.logical_not(i_faces)
+
+    # populate bisector array for box
+    _fill_bisector(box_array, open_k, open_j, open_i)
+
+    # set up the full bisectors array and assigning the bounding box values
+    array = np.zeros(grid_extent_kji, dtype = np.bool_)
+    array[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]] = box_array
+
+    # set bisector values outside of the bounding box
+    _set_bisector_outside_box(array, box, box_array)
+
+    # check all array elements are not the same
+    true_count = np.count_nonzero(array)
+    cell_count = array.size
+    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
+
+    # negate the array if it minimises the mean k and determine if the surface is a curtain
+    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+
+    return array, is_curtain
+
+
+def bisector_from_face_indices(  # type: ignore
+        grid_extent_kji: Tuple[int, int, int], k_faces_kji0: Optional[np.ndarray], j_faces_kji0: Optional[np.ndarray],
+        i_faces_kji0: Optional[np.ndarray], raw_bisector: bool) -> Tuple[np.ndarray, bool]:
+    """Creates a boolean array denoting the bisection of the grid by the face sets.
+
+    arguments:
+        - grid_extent_kji (Tuple[int, int, int]): the shape of the grid
+        - k_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the k dimension
+        - j_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the j dimension
+        - i_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the i dimension
+        - raw_bisector (bool): if True, the bisector is returned without determining which side is shallower
+
+    returns:
+        Tuple containing:
+        - array (np.ndarray): boolean bisectors array where values are True for cells on the side
+          of the surface that has a lower mean k index on average and False for cells on the other side.
+        - is_curtain (bool): True if the surface is a curtain (vertical), otherwise False.
+
+    notes:
+        - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
+        - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
+          assigned to either the True or False part
+    """
+    assert len(grid_extent_kji) == 3
+
+    # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
+    box = get_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
+    # set k_faces as bool arrays covering box
+    k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, box)
 
     box_shape = box[1, :] - box[0, :]
 

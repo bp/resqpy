@@ -217,7 +217,7 @@ def test_find_faces_to_represent_surface_regular_optimised_random_agitation(smal
     np.testing.assert_array_equal(fip_normal, fip_optimised)
 
 
-def test_find_faces_to_represent_surface_regular_optimised_with_return_properties(small_grid_and_surface,):
+def test_find_faces_to_represent_surface_regular_optimised_with_return_properties(small_grid_and_surface):
     # Arrange
     grid = small_grid_and_surface[0]
     surface = small_grid_and_surface[1]
@@ -365,7 +365,7 @@ def test_bisector_from_faces_flat_surface_k():
     )
 
     # Act
-    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False, False)
+    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
     bounds = rqgs.get_boundary_dict(k_faces, j_faces, i_faces, grid_extent_kji)
 
     # Assert
@@ -449,7 +449,7 @@ def test_bisector_from_faces_flat_surface_j():
     )
 
     # Act
-    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False, False)
+    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
     ca = rqgs.column_bisector_from_faces(grid_extent_kji[1:], j_faces[0], i_faces[0])
 
     # Assert
@@ -513,7 +513,7 @@ def test_bisector_from_faces_flat_surface_i():
     )
 
     # Act
-    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False, False)
+    a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
     # Assert
     np.all(a == np.array(
@@ -556,7 +556,7 @@ def test_bisector_from_faces_flat_surface_k_hole():
 
     # Act & Assert
     with pytest.raises(AssertionError):
-        rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False, False)
+        rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
 
 
 def test_shadow_from_faces_flat_surface_k_hole():
