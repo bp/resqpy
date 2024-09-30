@@ -1166,9 +1166,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_triangles:
         # log.debug('preparing triangles array')
-        k_triangles = np.emptry((0,), dtype = np.int32) if k_props is None else k_props.pop(0)
-        j_triangles = np.emptry((0,), dtype = np.int32) if j_props is None else j_props.pop(0)
-        i_triangles = np.emptry((0,), dtype = np.int32) if i_props is None else i_props.pop(0)
+        k_triangles = np.empty((0,), dtype = np.int32) if k_props is None else k_props.pop(0)
+        j_triangles = np.empty((0,), dtype = np.int32) if j_props is None else j_props.pop(0)
+        i_triangles = np.empty((0,), dtype = np.int32) if i_props is None else i_props.pop(0)
         all_tris = np.concatenate((k_triangles, j_triangles, i_triangles), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
         assert all_tris.shape == (gcs.count,)
@@ -1176,9 +1176,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_depths:
         # log.debug('preparing depths array')
-        k_depths = np.emptry((0,), dtype = np.float64) if k_props is None else k_props.pop(0)
-        j_depths = np.emptry((0,), dtype = np.float64) if j_props is None else j_props.pop(0)
-        i_depths = np.emptry((0,), dtype = np.float64) if i_props is None else i_props.pop(0)
+        k_depths = np.empty((0,), dtype = np.float64) if k_props is None else k_props.pop(0)
+        j_depths = np.empty((0,), dtype = np.float64) if j_props is None else j_props.pop(0)
+        i_depths = np.empty((0,), dtype = np.float64) if i_props is None else i_props.pop(0)
         all_depths = np.concatenate((k_depths, j_depths, i_depths), axis = 0)
         # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
         assert all_depths.shape == (gcs.count,)
@@ -1186,9 +1186,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     # NB. following assumes faces have been added to gcs in a particular order!
     if return_offsets:
         # log.debug('preparing offsets array')
-        k_offsets = np.emptry((0,), dtype = np.float64) if k_props is None else k_props[0]
-        j_offsets = np.emptry((0,), dtype = np.float64) if j_props is None else j_props[0]
-        i_offsets = np.emptry((0,), dtype = np.float64) if i_props is None else i_props[0]
+        k_offsets = np.empty((0,), dtype = np.float64) if k_props is None else k_props[0]
+        j_offsets = np.empty((0,), dtype = np.float64) if j_props is None else j_props[0]
+        i_offsets = np.empty((0,), dtype = np.float64) if i_props is None else i_props[0]
         all_offsets = _all_offsets(grid.crs, k_offsets, j_offsets, i_offsets)
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
