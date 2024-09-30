@@ -1985,6 +1985,7 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
     assert np.all(box[1] >= box[0]), 'attempt to find bounding box when all faces None'
     # include buffer layer where box does not reach edge of grid
     box[0, :] = np.maximum(box[0, :] - 1, 0)
-    box[1, :] = np.minimum(box[1, :], np.array(grid_extent_kji, dtype = np.int32) - 1)
+    extent_kji = np.array(grid_extent_kji, dtype = np.int32)
     box[1, :] += 1  # python protocol
+    box[1, :] = np.minimum(box[1, :], extent_kji)
     return box
