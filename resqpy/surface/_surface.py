@@ -949,7 +949,7 @@ class Surface(rqsb.BaseSurface):
             v_index = None
             for line in lines:
                 if "VRTX" in line:
-                    words = line.rstrip().split(" ")
+                    words = line.rstrip().split()
                     v_i = int(words[1])
                     if v_index is None:
                         v_index = v_i
@@ -959,7 +959,7 @@ class Surface(rqsb.BaseSurface):
                         v_index = v_i
                     vertices.append(words[2:5])
                 elif "TRGL" in line:
-                    triangles.append(line.rstrip().split(" ")[1:4])
+                    triangles.append(line.rstrip().split()[1:4])
         assert len(vertices) >= 3, 'vertices missing'
         assert len(triangles) > 0, 'triangles missing'
         t_type = np.int32 if len(vertices) <= 2_147_483_647 else np.int64
