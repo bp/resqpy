@@ -1412,7 +1412,6 @@ def bisector_from_face_indices(  # type: ignore
     assert len(grid_extent_kji) == 3
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
-    print(f'*** grid extent:\n{grid_extent_kji}')
     box = get_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
     # set k_faces as bool arrays covering box
     k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, box)
@@ -1942,15 +1941,11 @@ def _box_face_arrays_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kj
     ko = box[0, 0]
     jo = box[0, 1]
     io = box[0, 2]
-    print(f'*** bfafi: ko, jo, io: {ko, jo, io}')
     if k_faces_kji0 is not None:
-        print('*** bfafi: setting from k')
         _set_face_array(k_a, k_faces_kji0, ko, jo, io)
     if j_faces_kji0 is not None:
-        print('*** bfafi: setting from j')
         _set_face_array(j_a, j_faces_kji0, ko, jo, io)
     if i_faces_kji0 is not None:
-        print('*** bfafi: setting from i')
         _set_face_array(i_a, i_faces_kji0, ko, jo, io)
     return k_a, j_a, i_a
 
@@ -1976,7 +1971,6 @@ def get_boundary_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kji0: 
     j_max_kji0 = None if j_faces_kji0 is None else np.max(j_faces_kji0, axis = 0)
     i_min_kji0 = None if i_faces_kji0 is None else np.min(i_faces_kji0, axis = 0)
     i_max_kji0 = None if i_faces_kji0 is None else np.max(i_faces_kji0, axis = 0)
-    print(f'*** i max kji0:\n{i_max_kji0}')
     box = np.empty((2, 3), dtype = np.int32)
     box[0, :] = grid_extent_kji
     box[1, :] = -1
@@ -1987,7 +1981,6 @@ def get_boundary_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kji0: 
         box[1, 0] = k_max_kji0[0]
         box[1, 1] = k_max_kji0[1]
         box[1, 2] = k_max_kji0[2]
-        print(f'*** box max I after k face indices:\n{box[1, 2]}')
     if j_min_kji0 is not None:
         box[0, 0] = min(box[0, 0], j_min_kji0[0])
         box[0, 1] = min(box[0, 1], j_min_kji0[1])
@@ -1995,7 +1988,6 @@ def get_boundary_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kji0: 
         box[1, 0] = max(box[1, 0], j_max_kji0[0])
         box[1, 1] = max(box[1, 1], j_max_kji0[1])
         box[1, 2] = max(box[1, 2], j_max_kji0[2])
-        print(f'*** box max I after j face indices:\n{box[1, 2]}')
     if i_min_kji0 is not None:
         box[0, 1] = min(box[0, 1], i_min_kji0[0])
         box[0, 2] = min(box[0, 2], i_min_kji0[1])
@@ -2003,18 +1995,13 @@ def get_boundary_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kji0: 
         box[1, 0] = max(box[1, 0], i_max_kji0[0])
         box[1, 1] = max(box[1, 1], i_max_kji0[1])
         box[1, 2] = max(box[1, 2], i_max_kji0[2])
-        print(f'*** box max I after i face indices:\n{box[1, 2]}')
     assert np.all(box[1] >= box[0]), 'attempt to find bounding box when all faces None'
     # include buffer layer where box does not reach edge of grid
     box[0, :] = np.maximum(box[0, :] - 1, 0)
-    print(f'*** box max I before python inc:\n{box[1, 2]}')
     extent_kji = np.array(grid_extent_kji, dtype = np.int32)
     box[1, :] += 2  # buffer layer and python protocol
-    print(f'*** box max I after python inc:\n{box[1, 2]}')
     box[1, :] = np.minimum(box[1, :], extent_kji)
-    print(f'*** box max I after minimum:\n{box[1, 2]}')
     assert np.all(box[0] >= 0)
     assert np.all(box[1] > box[0])
     assert np.all(box[1] <= grid_extent_kji)
-    print(f'**** box:\n{box}')
     return box
