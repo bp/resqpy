@@ -1340,11 +1340,6 @@ def bisector_from_faces(  # type: ignore
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
     box = get_boundary(k_faces, j_faces, i_faces, grid_extent_kji)
-    # switch k_faces etc. to box coverage
-    k_faces = k_faces[box[0, 0]:box[1, 0] - 1, box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]]
-    j_faces = j_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1] - 1, box[0, 2]:box[1, 2]]
-    i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
-
     box_shape = box[1, :] - box[0, :]
 
     # set up the bisector array for the bounding box
@@ -1357,13 +1352,16 @@ def bisector_from_faces(  # type: ignore
     if k_faces is None:
         open_k = np.ones((box_shape[0] - 1, box_shape[1], box_shape[2]), dtype = bool)
     else:
+        k_faces = k_faces[box[0, 0]:box[1, 0] - 1, box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]]
         open_k = np.logical_not(k_faces)
     if j_faces is None:
         open_j = np.ones((box_shape[0], box_shape[1] - 1, box_shape[2]), dtype = bool)
     else:
+        j_faces = j_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1] - 1, box[0, 2]:box[1, 2]]
         open_j = np.logical_not(j_faces)
     if i_faces is None:
         open_i = np.ones((box_shape[0], box_shape[1], box_shape[2] - 1), dtype = bool)
+        i_faces = i_faces[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2] - 1]
     else:
         open_i = np.logical_not(i_faces)
 
