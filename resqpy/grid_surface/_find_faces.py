@@ -1867,7 +1867,7 @@ def _all_offsets(crs, k_offsets_list, j_offsets_list, i_offsets_list):
     return np.concatenate((k_offsets_list, ji_offsets), axis = 0)
 
 
-# @njit  # pragma: no cover
+@njit  # pragma: no cover
 def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray):
     change = np.zeros(bisect.shape, dtype = np.bool_)
     nk: int = bisect.shape[0]
@@ -1893,7 +1893,7 @@ def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, o
                         continue
 
 
-# @njit  # pragma: no cover
+@njit  # pragma: no cover
 def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
@@ -1955,7 +1955,7 @@ def _box_face_arrays_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kj
     return k_a, j_a, i_a
 
 
-# @njit  # pragma: no cover
+@njit  # pragma: no cover
 def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: int):
     k: int = 0
     j: int = 0
