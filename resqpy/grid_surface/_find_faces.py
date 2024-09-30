@@ -1663,21 +1663,21 @@ def get_boundary(  # type: ignore
         else:
             if min_k > 0:
                 min_k -= 1
-            if max_k < j_faces.shape[0] - 1:
+            if max_k < grid_extent_kji[0] - 1:
                 max_k += 1
         if f_i == 1:
             max_j += 1
         else:
             if min_j > 0:
                 min_j -= 1
-            if max_j < k_faces.shape[1] - 1:
+            if max_j < grid_extent_kji[1] - 1:
                 max_j += 1
         if f_i == 2:
             max_i += 1
         else:
             if min_i > 0:
                 min_i -= 1
-            if max_i < k_faces.shape[2] - 1:
+            if max_i < grid_extent_kji[2] - 1:
                 max_i += 1
 
         if starting:
@@ -1983,23 +1983,23 @@ def get_boundary_from_indices(  # type: ignore
         box[0, 0] = k_min_kji0[0]
         box[0, 1] = k_min_kji0[1]
         box[0, 2] = k_min_kji0[2]
-        box[1, 0] = k_max_kji0[0]
-        box[1, 1] = k_max_kji0[1]
-        box[1, 2] = k_max_kji0[2]
+        box[1, 0] = k_max_kji0[0]  # type: ignore
+        box[1, 1] = k_max_kji0[1]  # type: ignore
+        box[1, 2] = k_max_kji0[2]  # type: ignore
     if j_min_kji0 is not None:
         box[0, 0] = min(box[0, 0], j_min_kji0[0])
         box[0, 1] = min(box[0, 1], j_min_kji0[1])
         box[0, 2] = min(box[0, 2], j_min_kji0[2])
-        box[1, 0] = max(box[1, 0], j_max_kji0[0])
-        box[1, 1] = max(box[1, 1], j_max_kji0[1])
-        box[1, 2] = max(box[1, 2], j_max_kji0[2])
+        box[1, 0] = max(box[1, 0], j_max_kji0[0])  # type: ignore
+        box[1, 1] = max(box[1, 1], j_max_kji0[1])  # type: ignore
+        box[1, 2] = max(box[1, 2], j_max_kji0[2])  # type: ignore
     if i_min_kji0 is not None:
         box[0, 1] = min(box[0, 1], i_min_kji0[0])
         box[0, 2] = min(box[0, 2], i_min_kji0[1])
         box[0, 2] = min(box[0, 2], i_min_kji0[2])
-        box[1, 0] = max(box[1, 0], i_max_kji0[0])
-        box[1, 1] = max(box[1, 1], i_max_kji0[1])
-        box[1, 2] = max(box[1, 2], i_max_kji0[2])
+        box[1, 0] = max(box[1, 0], i_max_kji0[0])  # type: ignore
+        box[1, 1] = max(box[1, 1], i_max_kji0[1])  # type: ignore
+        box[1, 2] = max(box[1, 2], i_max_kji0[2])  # type: ignore
     assert np.all(box[1] >= box[0]), 'attempt to find bounding box when all faces None'
     # include buffer layer where box does not reach edge of grid
     box[0, :] = np.maximum(box[0, :] - 1, 0)
