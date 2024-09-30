@@ -45,6 +45,120 @@ def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surfac
     np.testing.assert_array_equal(fip_normal, fip_old_fuddy_duddy)
 
 
+def test_find_faces_to_represent_surface_no_k_faces(small_grid_and_surface_no_k):
+    # Arrange
+    grid = small_grid_and_surface_no_k[0]
+    surface = small_grid_and_surface_no_k[1]
+    old_fuddy_duddy_crs = rqc.Crs(surface.model, xy_units = 'ft', z_units = 'chain')
+    old_fuddy_duddy_crs.create_xml()
+    surface.model.store_epc()
+    s2 = rqs.Surface(surface.model, uuid = surface.uuid)
+    s2.change_crs(old_fuddy_duddy_crs)
+    name = "test"
+    assert grid.is_aligned
+
+    # Act
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name)
+    cip_normal = gcs_normal.cell_index_pairs
+    fip_normal = gcs_normal.face_index_pairs
+
+    gcs_dense = rqgs.find_faces_to_represent_surface_regular_dense_optimised(grid, surface, name)
+    cip_dense = gcs_dense.cell_index_pairs
+    fip_dense = gcs_dense.face_index_pairs
+
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name)
+    cip_optimised = gcs_optimised.cell_index_pairs
+    fip_optimised = gcs_optimised.face_index_pairs
+
+    gcs_old_fuddy_duddy = rqgs.find_faces_to_represent_surface_regular_optimised(grid, s2, name)
+    cip_old_fuddy_duddy = gcs_old_fuddy_duddy.cell_index_pairs
+    fip_old_fuddy_duddy = gcs_old_fuddy_duddy.face_index_pairs
+
+    # Assert – quite harsh as gcs face ordering could legitimately vary
+    np.testing.assert_array_equal(cip_normal, cip_dense)
+    np.testing.assert_array_equal(fip_normal, fip_dense)
+    np.testing.assert_array_equal(cip_normal, cip_optimised)
+    np.testing.assert_array_equal(fip_normal, fip_optimised)
+    np.testing.assert_array_equal(cip_normal, cip_old_fuddy_duddy)
+    np.testing.assert_array_equal(fip_normal, fip_old_fuddy_duddy)
+
+
+def test_find_faces_to_represent_surface_no_j_faces(small_grid_and_surface_no_j):
+    # Arrange
+    grid = small_grid_and_surface_no_j[0]
+    surface = small_grid_and_surface_no_j[1]
+    old_fuddy_duddy_crs = rqc.Crs(surface.model, xy_units = 'ft', z_units = 'chain')
+    old_fuddy_duddy_crs.create_xml()
+    surface.model.store_epc()
+    s2 = rqs.Surface(surface.model, uuid = surface.uuid)
+    s2.change_crs(old_fuddy_duddy_crs)
+    name = "test"
+    assert grid.is_aligned
+
+    # Act
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name)
+    cip_normal = gcs_normal.cell_index_pairs
+    fip_normal = gcs_normal.face_index_pairs
+
+    gcs_dense = rqgs.find_faces_to_represent_surface_regular_dense_optimised(grid, surface, name)
+    cip_dense = gcs_dense.cell_index_pairs
+    fip_dense = gcs_dense.face_index_pairs
+
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name)
+    cip_optimised = gcs_optimised.cell_index_pairs
+    fip_optimised = gcs_optimised.face_index_pairs
+
+    gcs_old_fuddy_duddy = rqgs.find_faces_to_represent_surface_regular_optimised(grid, s2, name)
+    cip_old_fuddy_duddy = gcs_old_fuddy_duddy.cell_index_pairs
+    fip_old_fuddy_duddy = gcs_old_fuddy_duddy.face_index_pairs
+
+    # Assert – quite harsh as gcs face ordering could legitimately vary
+    np.testing.assert_array_equal(cip_normal, cip_dense)
+    np.testing.assert_array_equal(fip_normal, fip_dense)
+    np.testing.assert_array_equal(cip_normal, cip_optimised)
+    np.testing.assert_array_equal(fip_normal, fip_optimised)
+    np.testing.assert_array_equal(cip_normal, cip_old_fuddy_duddy)
+    np.testing.assert_array_equal(fip_normal, fip_old_fuddy_duddy)
+
+
+def test_find_faces_to_represent_surface_no_i_faces(small_grid_and_surface_no_i):
+    # Arrange
+    grid = small_grid_and_surface_no_i[0]
+    surface = small_grid_and_surface_no_i[1]
+    old_fuddy_duddy_crs = rqc.Crs(surface.model, xy_units = 'ft', z_units = 'chain')
+    old_fuddy_duddy_crs.create_xml()
+    surface.model.store_epc()
+    s2 = rqs.Surface(surface.model, uuid = surface.uuid)
+    s2.change_crs(old_fuddy_duddy_crs)
+    name = "test"
+    assert grid.is_aligned
+
+    # Act
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name)
+    cip_normal = gcs_normal.cell_index_pairs
+    fip_normal = gcs_normal.face_index_pairs
+
+    gcs_dense = rqgs.find_faces_to_represent_surface_regular_dense_optimised(grid, surface, name)
+    cip_dense = gcs_dense.cell_index_pairs
+    fip_dense = gcs_dense.face_index_pairs
+
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name)
+    cip_optimised = gcs_optimised.cell_index_pairs
+    fip_optimised = gcs_optimised.face_index_pairs
+
+    gcs_old_fuddy_duddy = rqgs.find_faces_to_represent_surface_regular_optimised(grid, s2, name)
+    cip_old_fuddy_duddy = gcs_old_fuddy_duddy.cell_index_pairs
+    fip_old_fuddy_duddy = gcs_old_fuddy_duddy.face_index_pairs
+
+    # Assert – quite harsh as gcs face ordering could legitimately vary
+    np.testing.assert_array_equal(cip_normal, cip_dense)
+    np.testing.assert_array_equal(fip_normal, fip_dense)
+    np.testing.assert_array_equal(cip_normal, cip_optimised)
+    np.testing.assert_array_equal(fip_normal, fip_optimised)
+    np.testing.assert_array_equal(cip_normal, cip_old_fuddy_duddy)
+    np.testing.assert_array_equal(fip_normal, fip_old_fuddy_duddy)
+
+
 def test_find_faces_to_represent_surface_regular_optimised_constant_agitation(small_grid_and_surface):
     # Arrange
     grid = small_grid_and_surface[0]

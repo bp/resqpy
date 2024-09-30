@@ -520,6 +520,93 @@ def small_grid_and_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surfa
 
 
 @pytest.fixture
+def small_grid_and_surface_no_k(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
+    """Creates a small RegularGrid and a curtain triangular surface."""
+    crs = Crs(tmp_model)
+    crs.create_xml()
+
+    extent = 10
+    extent_kji = (extent, extent, extent)
+    dxyz = (1.0, 1.0, 1.0)
+    crs_uuid = crs.uuid
+    title = "small_grid"
+    grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
+    grid.create_xml()
+
+    n_points = 100
+    points = np.array(([0.37, 0.043, 0.017], [0.37, 0.043, 0.921], [0.61, 0.903, 0.027], [0.61, 0.903, 0.981]),
+                      dtype = float) * extent
+    triangles = np.array(([0, 1, 2], [1, 2, 3]), dtype = np.int32)
+    surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_curtain")
+    surface.set_from_triangles_and_points(triangles, points)
+    surface.triangles_and_points()
+    surface.write_hdf5()
+    surface.create_xml()
+
+    tmp_model.store_epc()
+
+    return grid, surface
+
+
+@pytest.fixture
+def small_grid_and_surface_no_j(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
+    """Creates a small RegularGrid and tiny triangular surface which will map to no J faces."""
+    crs = Crs(tmp_model)
+    crs.create_xml()
+
+    extent = 10
+    extent_kji = (extent, extent, extent)
+    dxyz = (1.0, 1.0, 1.0)
+    crs_uuid = crs.uuid
+    title = "small_grid"
+    grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
+    grid.create_xml()
+
+    n_points = 100
+    points = np.array(([0.37, 0.017, 0.043], [0.37, 0.921, 0.043], [0.61, 0.027, 0.903], [0.61, 0.981, 0.903]),
+                      dtype = float) * extent
+    triangles = np.array(([0, 1, 2], [1, 2, 3]), dtype = np.int32)
+    surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_surface_no_j")
+    surface.set_from_triangles_and_points(triangles, points)
+    surface.triangles_and_points()
+    surface.write_hdf5()
+    surface.create_xml()
+
+    tmp_model.store_epc()
+
+    return grid, surface
+
+
+@pytest.fixture
+def small_grid_and_surface_no_i(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
+    """Creates a small RegularGrid and tiny triangular surface which will map to no I faces."""
+    crs = Crs(tmp_model)
+    crs.create_xml()
+
+    extent = 10
+    extent_kji = (extent, extent, extent)
+    dxyz = (1.0, 1.0, 1.0)
+    crs_uuid = crs.uuid
+    title = "small_grid"
+    grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
+    grid.create_xml()
+
+    n_points = 100
+    points = np.array(([0.017, 0.37, 0.043], [0.921, 0.37, 0.043], [0.027, 0.61, 0.903], [0.981, 0.61, 0.903]),
+                      dtype = float) * extent
+    triangles = np.array(([0, 1, 2], [1, 2, 3]), dtype = np.int32)
+    surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_surface_no_j")
+    surface.set_from_triangles_and_points(triangles, points)
+    surface.triangles_and_points()
+    surface.write_hdf5()
+    surface.create_xml()
+
+    tmp_model.store_epc()
+
+    return grid, surface
+
+
+@pytest.fixture
 def small_grid_and_extended_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
     """Creates a small RegularGrid and a random triangular surface extended with a flange."""
     crs = Crs(tmp_model)
