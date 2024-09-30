@@ -1146,6 +1146,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if progress_fn is not None:
         progress_fn(0.9)
 
+    assert k_faces_kji0 is not None or j_faces_kji0 is not None or i_faces_kji0 is not None,  \
+        f'did not find any faces to represent {name}: surface does not intersect grid?'
+
     log.debug("converting face sets into grid connection set")
     # NB: kji0 arrays in internal face protocol: used as cell_kji0 with polarity of 1
     # property lists have elements replaced with sorted and filtered equivalents
@@ -1947,15 +1950,32 @@ def get_boundary_from_indices(k_faces: np.ndarray, j_faces: np.ndarray, i_faces:
     i_min_kji0 = np.min(i_faces, axis = 0)
     i_max_kji0 = np.max(i_faces, axis = 0)
     box = np.empty((2, 3), dtype = np.int32)
-    box[0, 0] = min(k_min_kji0[0], j_min_kji0[0], i_min_kji0[0])
-    box[0, 1] = min(k_min_kji0[1], j_min_kji0[1], i_min_kji0[1])
-    box[0, 2] = min(k_min_kji0[2], j_min_kji0[2], i_min_kji0[2])
-    box[1, 0] = max(k_max_kji0[0], j_max_kji0[0], i_max_kji0[0]) + 1
-    box[1, 1] = max(k_max_kji0[1], j_max_kji0[1], i_max_kji0[1]) + 1
-    box[1, 2] = max(k_max_kji0[2], j_max_kji0[2], i_max_kji0[2]) + 1
-    box[0, :] = np.maximum(box[0, :] - 1, 0)
+    box[0, :] = grid_extent_kji
+    box[1, :] = -1
+    if k_min_kji0 is not None:
+        box[0, 0] = k_min_kji0[0]
+        box[0, 1] = k_min_kji0[1]
+        box[0, 2] = k_min_kji0[2]
+        box[1, 0] = k_max_kji0[0]
+        box[1, 1] = k_max_kji0[1]
+        box[1, 2] = k_max_kji0[2]
+    if j_min_kji0 is not None:
+        box[0, 0] = min(box[0, 0], j_min_kji0[0])
+        box[0, 1] = min(box[0, 1], j_min_kji0[1])
+        box[0, 2] = min(box[0, 2], j_min_kji0[2])
+        box[1, 0] = max(box[1, 0], j_max_kji0[0])
+        box[1, 1] = max(box[1, 1], j_max_kji0[1])
+        box[1, 2] = max(box[1, 2], j_max_kji0[2])
+    if i_min_kji0 is not None:
+        box[0, 1] = min(box[0, 1], i_min_kji0[0])
+        box[0, 2] = min(box[0, 2], i_min_kji0[1])
+        box[0, 2] = min(box[0, 2], i_min_kji0[2])
+        box[1, 0] = max(box[1, 0], i_max_kji0[0])
+        box[1, 1] = max(box[1, 1], i_max_kji0[1])
+        box[1, 2] = max(box[1, 2], i_max_kji0[2])
+    assert np.all(box[1] >= box[0]), 'attempt to find bounding box when all faces None'
     # include buffer layer where box does not reach edge of grid
-    extent_kji = np.array(grid_extent_kji, dtype = np.int32)
-    assert np.all(box[1] <= grid_extent_kji)
-    box[1, :] = np.minimum(box[1, :] + 1, extent_kji)
+    box[0, :] = np.maximum(box[0, :] - 1, 0)
+    box[1, :] = np.minimum(box[1, :], np.array(grid_extent_kji, dtype = np.int32) - 1)
+    box[1, :] += 1  # python protocol
     return box
