@@ -7,6 +7,9 @@ from resqpy.multi_processing.wrappers.grid_surface_mp import find_faces_to_repre
 from resqpy.multi_processing._multiprocessing import rm_tree
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.uuid as bu
+from resqpy.olio.random_seed import seed
+
+seed(83469613)
 
 
 def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface: Tuple[RegularGrid, Surface]):
