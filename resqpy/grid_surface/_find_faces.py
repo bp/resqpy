@@ -1943,9 +1943,6 @@ def _box_face_arrays_from_indices(k_faces_kji0: Optional[np.ndarray], j_faces_kj
     jo = box[0, 1]
     io = box[0, 2]
     print(f'*** bfafi: ko, jo, io: {ko, jo, io}')
-    print(f'*** bfafi: k kji0:\n{k_faces_kji0}')
-    print(f'*** bfafi: j kji0:\n{j_faces_kji0}')
-    print(f'*** bfafi: i kji0:\n{i_faces_kji0}')
     if k_faces_kji0 is not None:
         print('*** bfafi: setting from k')
         _set_face_array(k_a, k_faces_kji0, ko, jo, io)
