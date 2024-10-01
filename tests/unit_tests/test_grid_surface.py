@@ -309,6 +309,7 @@ def test_find_faces_to_represent_curtain_regular_optimised_with_return_propertie
     return_properties.append("depth")
     return_properties.append("triangle")
     return_properties.append("flange bool")
+    return_properties.append("grid bisector")
     (
         gcs_optimised,
         properties_optimised,
@@ -322,6 +323,7 @@ def test_find_faces_to_represent_curtain_regular_optimised_with_return_propertie
     depths_optimised = properties_optimised["depth"]
     offsets_optimised = properties_optimised["offset"]
     flange_optimised = properties_optimised["flange bool"]
+    bisector_optimised, is_curtain_optimised = properties_optimised["grid bisector"]
 
     # Assert – quite harsh as faces could legitimately be in different order
     np.testing.assert_array_equal(cip_normal, cip_optimised)
@@ -335,6 +337,8 @@ def test_find_faces_to_represent_curtain_regular_optimised_with_return_propertie
     assert np.all(triangles_optimised >= 0)
     assert flange_optimised.shape == offsets_optimised.shape
     assert not np.any(flange_optimised)
+    assert bisector_optimised.shape == (grid.nj, grid.ni)
+    assert is_curtain_optimised
 
 
 def test_find_faces_to_represent_surface_regular_dense_optimised_with_return_properties(small_grid_and_surface,):

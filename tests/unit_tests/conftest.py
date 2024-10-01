@@ -534,7 +534,7 @@ def small_grid_and_surface_no_k(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.
     grid.create_xml()
 
     n_points = 100
-    points = np.array(([0.37, 0.043, 0.017], [0.37, 0.043, 0.921], [0.61, 0.903, 0.027], [0.61, 0.903, 0.981]),
+    points = np.array(([0.37, -0.043, -0.017], [0.37, -0.043, 1.021], [0.61, 1.003, -0.027], [0.61, 1.003, 1.081]),
                       dtype = float) * extent
     triangles = np.array(([0, 1, 2], [1, 2, 3]), dtype = np.int32)
     surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_curtain")
