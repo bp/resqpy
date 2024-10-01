@@ -1145,8 +1145,12 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if progress_fn is not None:
         progress_fn(0.9)
 
-    assert k_faces_kji0 is not None or j_faces_kji0 is not None or i_faces_kji0 is not None,  \
-        f'did not find any faces to represent {name}: surface does not intersect grid?'
+    if k_faces_kji0 is None and j_faces_kji0 is None and i_faces_kji0 is None:
+        log.error(f'did not find any faces to represent {name}: surface does not intersect grid?')
+        if return_properties:
+            return (None, {})
+        else:
+            return None
 
     log.debug("converting face sets into grid connection set")
     # NB: kji0 arrays in internal face protocol: used as cell_kji0 with polarity of 1
