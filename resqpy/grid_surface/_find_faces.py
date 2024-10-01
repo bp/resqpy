@@ -1226,7 +1226,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            if k_faces_kji0 is None and j_faces_kji0 is None and i_faces_kji0 is None:
+            if ((k_faces_kji0 is None or len(k_faces_kji0) == 0) and
+                (j_faces_kji0 is None or len(j_faces_kji0) == 0) and (i_faces_kji0 is None or len(i_faces_kji0) == 0)):
                 bisector = np.ones((grid.nj, grid.ni), dtype = bool)
                 is_curtain = True
             else:
