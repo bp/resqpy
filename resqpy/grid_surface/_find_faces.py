@@ -1145,7 +1145,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if progress_fn is not None:
         progress_fn(0.9)
 
-    if k_faces_kji0 is None and j_faces_kji0 is None and i_faces_kji0 is None:
+    if ((k_faces_kji0 is None or len(k_faces_kji0) == 0) and (j_faces_kji0 is None or len(j_faces_kji0) == 0) and
+        (i_faces_kji0 is None or len(i_faces_kji0) == 0)):
         log.error(f'did not find any faces to represent {name}: surface does not intersect grid?')
         if return_properties:
             return (None, {})
@@ -2011,8 +2012,8 @@ def get_boundary_from_indices(  # type: ignore
         box[1, 1] = max(box[1, 1], j_max_kji0[1])  # type: ignore
         box[1, 2] = max(box[1, 2], j_max_kji0[2])  # type: ignore
     if i_min_kji0 is not None:
-        box[0, 1] = min(box[0, 1], i_min_kji0[0])
-        box[0, 2] = min(box[0, 2], i_min_kji0[1])
+        box[0, 0] = min(box[0, 0], i_min_kji0[0])
+        box[0, 1] = min(box[0, 1], i_min_kji0[1])
         box[0, 2] = min(box[0, 2], i_min_kji0[2])
         box[1, 0] = max(box[1, 0], i_max_kji0[0])  # type: ignore
         box[1, 1] = max(box[1, 1], i_max_kji0[1])  # type: ignore
