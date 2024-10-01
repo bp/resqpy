@@ -1050,7 +1050,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if grid.nj > 1:
         # log.debug("searching for J faces")
 
-        j_hits, j_depths = vec.points_in_triangles_aligned_unified(grid.ni, grid.nk, 0, 2, 1, p, n_batches)
+        j_hits, j_depths = vec.points_in_triangles_aligned_unified(grid.ni, nk, 0, 2, 1, p, n_batches)
 
         j_faces = np.floor(j_depths)
         mask = np.logical_and(j_faces >= 0, j_faces < grid.nj - 1)
@@ -1102,7 +1102,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if grid.ni > 1:
         # log.debug("searching for I faces")
 
-        i_hits, i_depths = vec.points_in_triangles_aligned_unified(grid.nj, grid.nk, 1, 2, 0, p, n_batches)
+        i_hits, i_depths = vec.points_in_triangles_aligned_unified(grid.nj, nk, 1, 2, 0, p, n_batches)
 
         i_faces = np.floor(i_depths)
         mask = np.logical_and(i_faces >= 0, i_faces < grid.ni - 1)

@@ -277,6 +277,66 @@ def test_find_faces_to_represent_surface_regular_optimised_with_return_propertie
     assert not np.any(flange_optimised)
 
 
+def test_find_faces_to_represent_curtain_regular_optimised_with_return_properties(small_grid_and_surface_no_k):
+    # Arrange
+    grid = small_grid_and_surface_no_k[0]
+    surface = small_grid_and_surface_no_k[1]
+    surf_flange = rqp.Property.from_array(
+        surface.model,
+        cached_array = None,
+        source_info = "constant False",
+        keyword = "flange bool",
+        support_uuid = surface.uuid,
+        property_kind = "flange bool",
+        indexable_element = "faces",
+        discrete = True,
+        const_value = 0,
+        expand_const_arrays = False,
+        dtype = bool,
+    )
+    name = "test"
+    return_properties = ["offset"]
+
+    # Act
+    gcs_normal, properties_dict = rqgs.find_faces_to_represent_surface_regular(grid,
+                                                                               surface,
+                                                                               name,
+                                                                               return_properties = return_properties)
+    cip_normal = gcs_normal.cell_index_pairs
+    fip_normal = gcs_normal.face_index_pairs
+    offsets_normal = properties_dict["offset"]
+
+    return_properties.append("depth")
+    return_properties.append("triangle")
+    return_properties.append("flange bool")
+    (
+        gcs_optimised,
+        properties_optimised,
+    ) = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                               surface,
+                                                               name,
+                                                               return_properties = return_properties)
+    cip_optimised = gcs_optimised.cell_index_pairs
+    fip_optimised = gcs_optimised.face_index_pairs
+    triangles_optimised = properties_optimised["triangle"]
+    depths_optimised = properties_optimised["depth"]
+    offsets_optimised = properties_optimised["offset"]
+    flange_optimised = properties_optimised["flange bool"]
+
+    # Assert – quite harsh as faces could legitimately be in different order
+    np.testing.assert_array_equal(cip_normal, cip_optimised)
+    np.testing.assert_array_equal(fip_normal, fip_optimised)
+    # offsets are no longer all matching due to different handling of duplicate hits
+    assert offsets_optimised.shape == offsets_normal.shape
+    assert offsets_optimised.size == gcs_optimised.count
+    assert depths_optimised.shape == offsets_optimised.shape
+    assert np.all(depths_optimised > 0.0)
+    assert triangles_optimised.shape == offsets_optimised.shape
+    assert np.all(triangles_optimised >= 0)
+    assert flange_optimised.shape == offsets_optimised.shape
+    assert not np.any(flange_optimised)
+
+
 def test_find_faces_to_represent_surface_regular_dense_optimised_with_return_properties(small_grid_and_surface,):
     # Arrange
     grid = small_grid_and_surface[0]
