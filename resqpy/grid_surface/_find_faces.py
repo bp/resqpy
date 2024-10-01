@@ -1145,8 +1145,12 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if progress_fn is not None:
         progress_fn(0.9)
 
-    assert k_faces_kji0 is not None or j_faces_kji0 is not None or i_faces_kji0 is not None,  \
-        f'did not find any faces to represent {name}: surface does not intersect grid?'
+    if k_faces_kji0 is None and j_faces_kji0 is None and i_faces_kji0 is None:
+        log.error(f'did not find any faces to represent {name}: surface does not intersect grid?')
+        if return_properties:
+            return (None, {})
+        else:
+            return None
 
     log.debug("converting face sets into grid connection set")
     # NB: kji0 arrays in internal face protocol: used as cell_kji0 with polarity of 1
@@ -1210,14 +1214,26 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     if return_bisector:
         if is_curtain:
             log.debug("preparing columns bisector")
-            bisector = column_bisector_from_face_indices((grid.nj, grid.ni), j_faces_kji0[:, 1:], i_faces_kji0[:, 1:])
+            if j_faces_kji0 is None:
+                j_faces_ji0 = np.empty((0, 2), dtype = np.int32)
+            else:
+                j_faces_ji0 = j_faces_kji0[:, 1:]
+            if i_faces_kji0 is None:
+                i_faces_ji0 = np.empty((0, 2), dtype = np.int32)
+            else:
+                i_faces_ji0 = i_faces_kji0[:, 1:]
+            bisector = column_bisector_from_face_indices((grid.nj, grid.ni), j_faces_ji0, i_faces_ji0)
             # log.debug('finished preparing columns bisector')
         else:
             log.debug("preparing cells bisector")
-            bisector, is_curtain = bisector_from_face_indices(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0,
-                                                              i_faces_kji0, raw_bisector)
-            if is_curtain:
-                bisector = bisector[0]  # reduce to a columns property
+            if k_faces_kji0 is None and j_faces_kji0 is None and i_faces_kji0 is None:
+                bisector = np.ones((grid.nj, grid.ni), dtype = bool)
+                is_curtain = True
+            else:
+                bisector, is_curtain = bisector_from_face_indices(tuple(grid.extent_kji), k_faces_kji0, j_faces_kji0,
+                                                                  i_faces_kji0, raw_bisector)
+                if is_curtain:
+                    bisector = bisector[0]  # reduce to a columns property
 
     # note: following is a grid cells property, not a gcs property
     if return_shadow:
