@@ -184,6 +184,10 @@ class ApsProperty:
         """The uuid of the local property kind for this property (may be None)."""
         return self.aps.local_property_kind_uuid(self.part)
 
+    def uncache_array(self):
+        """Remove the array (if cached) from the parent attribute property set."""
+        super().uncache_part_array(self.part)
+
 
 class AttributePropertySet(rqp.PropertyCollection):
     """Class for set of RESQML properties for any supporting representation, using attribute syntax."""
