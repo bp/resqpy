@@ -53,7 +53,7 @@ def test_dtype_size(tmp_path):
 def test_use_int32(tmp_path):
 
     extent_kji = (11, 23, 37)
-    a = np.arange(np.product(extent_kji), dtype = int).reshape(extent_kji)
+    a = np.arange(np.prod(extent_kji), dtype = int).reshape(extent_kji)
 
     for use_option in [True, False, None]:
 
