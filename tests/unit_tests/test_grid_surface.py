@@ -404,10 +404,21 @@ def test_find_faces_to_represent_curtain_regular_optimised_with_return_propertie
     offsets_optimised = properties_optimised["offset"]
     flange_optimised = properties_optimised["flange bool"]
     bisector_optimised, is_curtain_optimised = properties_optimised["grid bisector"]
+    (
+        gcs_optimised_packed,
+        properties_optimised_packed,
+    ) = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                               surface,
+                                                               name,
+                                                               return_properties = return_properties,
+                                                               packed_bisectors = True)
+    bisector_packed, is_curtain_packed = properties_optimised["grid bisector"]
 
     # Assert – quite harsh as faces could legitimately be in different order
     np.testing.assert_array_equal(cip_normal, cip_optimised)
     np.testing.assert_array_equal(fip_normal, fip_optimised)
+    np.testing.assert_array_equal(gcs_optimised_packed.cell_index_pairs, cip_optimised)
+    np.testing.assert_array_equal(gcs_optimised_packed.face_index_pairs, fip_optimised)
     # offsets are no longer all matching due to different handling of duplicate hits
     assert offsets_optimised.shape == offsets_normal.shape
     assert offsets_optimised.size == gcs_optimised.count
@@ -419,6 +430,9 @@ def test_find_faces_to_represent_curtain_regular_optimised_with_return_propertie
     assert not np.any(flange_optimised)
     assert bisector_optimised.shape == (grid.nj, grid.ni)
     assert is_curtain_optimised
+    assert bisector_packed.shape == (grid.nj, grid.ni)  # curtain bisectors are returned unpacked anyway!
+    assert is_curtain_packed
+    assert np.all(bisector_packed == bisector_optimised)
 
 
 def test_find_faces_to_represent_surface_regular_dense_optimised_with_return_properties(small_grid_and_surface,):
