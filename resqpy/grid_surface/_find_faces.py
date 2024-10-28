@@ -25,17 +25,17 @@ import resqpy.olio.vector_utilities as vec
 
 
 @njit
-def _bitwise_count_njit(a: np.ndarray) -> np.int64:
+def _bitwise_count_njit(a: np.ndarray) -> int:
     """Deprecated: only needed till numpy versions < 2.0.0 are dropped."""
-    c: np.int64 = 0
-    c += np.count_nonzero(np.bitwise_and(a, 0x01, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x02, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x04, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x08, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x10, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x20, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x40, dtype = np.uint8))
-    c += np.count_nonzero(np.bitwise_and(a, 0x80, dtype = np.uint8))
+    c: int = 0
+    c += np.count_nonzero(np.bitwise_and(a, 0x01))
+    c += np.count_nonzero(np.bitwise_and(a, 0x02))
+    c += np.count_nonzero(np.bitwise_and(a, 0x04))
+    c += np.count_nonzero(np.bitwise_and(a, 0x08))
+    c += np.count_nonzero(np.bitwise_and(a, 0x10))
+    c += np.count_nonzero(np.bitwise_and(a, 0x20))
+    c += np.count_nonzero(np.bitwise_and(a, 0x40))
+    c += np.count_nonzero(np.bitwise_and(a, 0x80))
     return c
 
 
