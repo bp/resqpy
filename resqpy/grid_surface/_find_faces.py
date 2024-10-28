@@ -24,6 +24,27 @@ import resqpy.olio.vector_utilities as vec
 # note: resqpy.grid_surface._grid_surface_cuda will be imported by the find_faces_to_represent_surface() function if needed
 
 
+@njit
+def _bitwise_count_njit(a: np.ndarray) -> np.int64:
+    """Deprecated: only needed till numpy versions < 2.0.0 are dropped."""
+    c: np.int64 = 0
+    c += np.count_nonzero(np.bitwise_and(a, 0x01, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x02, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x04, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x08, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x10, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x20, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x40, dtype = np.uint8))
+    c += np.count_nonzero(np.bitwise_and(a, 0x80, dtype = np.uint8))
+    return c
+
+
+if hasattr(np, 'bitwise_count'):
+    bitwise_count = np.bitwise_count
+else:
+    bitwise_count = _bitwise_count_njit
+
+
 def find_faces_to_represent_surface_staffa(grid, surface, name, feature_type = "fault", progress_fn = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
@@ -1554,7 +1575,7 @@ def packed_bisector_from_face_indices(  # type: ignore
     _set_packed_bisector_outside_box(array, box, box_array)
 
     # check all array elements are not the same
-    true_count = np.sum(np.bitwise_count(array))  # note: might include some padding bits
+    true_count = np.sum(bitwise_count(array))  # note: might include some padding bits
     cell_count = np.prod(
         _shape_packed(grid_extent_kji)) * 8  # includes padding bits, so might be a little larger than true cell count
     assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
@@ -2069,7 +2090,7 @@ def _packed_shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> boo
     is_curtain: bool = False
     layer_count: int = 0
     for k in range(a.shape[0]):
-        layer_count = np.sum(np.bitwise_count(a[k]))
+        layer_count = np.sum(bitwise_count(a[k]))
         k_sum += (k + 1) * layer_count
         opposite_k_sum += (k + 1) * (layer_cell_count - layer_count)
     mean_k: float = float(k_sum) / float(true_count)
