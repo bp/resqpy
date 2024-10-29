@@ -24,7 +24,7 @@ import resqpy.olio.vector_utilities as vec
 # note: resqpy.grid_surface._grid_surface_cuda will be imported by the find_faces_to_represent_surface() function if needed
 
 
-@njit
+@njit  # pragma: no cover
 def _bitwise_count_njit(a: np.ndarray) -> int:
     """Deprecated: only needed till numpy versions < 2.0.0 are dropped."""
     c: int = 0
@@ -1562,6 +1562,15 @@ def packed_bisector_from_face_indices(  # type: ignore
     else:
         open_i = np.invert(i_faces, dtype = np.uint8)
 
+    # close off faces in padding bits
+    tail = grid_extent_kji[2] % 8  # number of valid bits in padded byte
+    if tail:
+        m = np.uint8((255 << (8 - tail)) & 255)
+        open_k[:, :, -1] &= m
+        open_j[:, :, -1] &= m
+        m = np.uint8((m << 1) & 255)
+        open_i[:, :, -1] &= m
+
     # populate bisector array for box
     _fill_packed_bisector(box_array, open_k, open_j, open_i)
 
@@ -1575,9 +1584,8 @@ def packed_bisector_from_face_indices(  # type: ignore
     _set_packed_bisector_outside_box(array, box, box_array)
 
     # check all array elements are not the same
-    true_count = np.sum(bitwise_count(array))  # note: might include some padding bits
-    cell_count = np.prod(
-        _shape_packed(grid_extent_kji)) * 8  # includes padding bits, so might be a little larger than true cell count
+    true_count = np.sum(bitwise_count(array))  # note: will usually include some padding bits, so not so true!
+    cell_count = np.prod(grid_extent_kji)
     assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
 
     # negate the array if it minimises the mean k and determine if the surface is a curtain

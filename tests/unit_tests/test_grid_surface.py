@@ -505,6 +505,9 @@ def test_bisector_from_faces_flat_surface_k():
         ],
         dtype = bool,
     )
+    k_face_indices = np.array([(0, 0, 0), (0, 0, 1), (0, 0, 2), (0, 1, 0), (0, 1, 1), (0, 1, 2), (0, 2, 0), (0, 2, 1),
+                               (0, 2, 2)],
+                              dtype = np.int32)
     j_faces = np.array(
         [
             [[False, False, False], [False, False, False]],
@@ -524,6 +527,7 @@ def test_bisector_from_faces_flat_surface_k():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
+    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, k_face_indices, None, None, False)
     bounds = rqgs.get_boundary_dict(k_faces, j_faces, i_faces, grid_extent_kji)
 
     # Assert
@@ -540,6 +544,12 @@ def test_bisector_from_faces_flat_surface_k():
     assert bounds["k_max"] == 1
     assert bounds["j_max"] == 2
     assert bounds["i_max"] == 2
+    assert pa.ndim == 3
+    assert pa.shape[:2] == a.shape[:2]
+    assert pa.shape[2] == (a.shape[2] - 1) // 8 + 1
+    assert np.all(np.unpackbits(pa, axis = 2, count = a.shape[2]).astype(bool) == a)
+    assert p_is_curtain is False
+    assert np.all(pa[0, :, -1] == 0xE0)  # 3 bits set in padded bytes (as ni < 8, all bytes are padded bytes here)
 
 
 def test_where_true_and_get_boundary():
@@ -597,6 +607,9 @@ def test_bisector_from_faces_flat_surface_j():
         ],
         dtype = bool,
     )
+    j_face_indices = np.array([(0, 0, 0), (0, 0, 1), (0, 0, 2), (1, 0, 0), (1, 0, 1), (1, 0, 2), (2, 0, 0), (2, 0, 1),
+                               (2, 0, 2)],
+                              dtype = np.int32)
     i_faces = np.array(
         [
             [[False, False], [False, False], [False, False]],
@@ -608,6 +621,7 @@ def test_bisector_from_faces_flat_surface_j():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
+    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, None, j_face_indices, None, False)
     ca = rqgs.column_bisector_from_faces(grid_extent_kji[1:], j_faces[0], i_faces[0])
 
     # Assert
@@ -622,6 +636,13 @@ def test_bisector_from_faces_flat_surface_j():
     assert is_curtain is True
     assert ca.shape == tuple(grid_extent_kji[1:])
     assert np.all(ca == a[0]) or np.all(ca == np.logical_not(a[0]))
+    assert pa.ndim == 3
+    assert pa.shape[:2] == a.shape[:2]
+    assert pa.shape[2] == (a.shape[2] - 1) // 8 + 1
+    assert np.all(np.unpackbits(pa, axis = 2, count = a.shape[2]).astype(bool) == a)
+    assert p_is_curtain is True
+    assert np.all(pa[:, 0, -1] == 0xE0)  # 3 bits set in padded bytes
+    assert np.all(pa[:, 1:, -1] == 0)
 
 
 def test_shadow_from_faces_curtain():
@@ -669,9 +690,13 @@ def test_bisector_from_faces_flat_surface_i():
         ],
         dtype = bool,
     )
+    i_face_indices = np.array([(0, 0, 0), (0, 1, 0), (0, 2, 0), (1, 0, 0), (1, 1, 0), (1, 2, 0), (2, 0, 0), (2, 1, 0),
+                               (2, 2, 0)],
+                              dtype = np.int32)
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
+    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, None, None, i_face_indices, False)
 
     # Assert
     np.all(a == np.array(
@@ -683,6 +708,11 @@ def test_bisector_from_faces_flat_surface_i():
         dtype = bool,
     ))
     assert is_curtain is True
+    assert pa.shape[:2] == a.shape[:2]
+    assert pa.shape[2] == (a.shape[2] - 1) // 8 + 1
+    assert np.all(np.unpackbits(pa, axis = 2, count = a.shape[2]).astype(bool) == a)
+    assert p_is_curtain is True
+    assert np.all(pa[:, :, -1] == 0x80)  # one bit set
 
 
 def test_bisector_from_faces_flat_surface_k_hole():
