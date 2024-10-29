@@ -246,8 +246,10 @@ def _create_xml_facet_node(facet_type, facet, p_node):
         facet_value_node.text = facet
 
 
-def _check_shape_list(collection, indexable_element, direction, property_array, points, count):
+def _check_shape_list(collection, indexable_element, direction, property_array, points, count, pre_packed):
     shape_list = collection.supporting_shape(indexable_element = indexable_element, direction = direction)
+    if pre_packed:
+        shape_list[-1] = (shape_list[-1] - 1) // 8 + 1
     if shape_list is not None:
         if count > 1:
             shape_list.append(count)
