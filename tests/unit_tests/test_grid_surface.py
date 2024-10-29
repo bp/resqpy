@@ -725,6 +725,8 @@ def test_bisector_from_faces_flat_surface_k_hole():
         ],
         dtype = bool,
     )
+    k_face_indices = np.array([(0, 0, 0), (0, 0, 1), (0, 0, 2), (0, 1, 0), (0, 1, 2), (0, 2, 0), (0, 2, 1), (0, 2, 2)],
+                              dtype = np.int32)
     j_faces = np.array(
         [
             [[False, False, False], [False, False, False]],
@@ -745,6 +747,8 @@ def test_bisector_from_faces_flat_surface_k_hole():
     # Act & Assert
     with pytest.raises(AssertionError):
         rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
+    with pytest.raises(AssertionError):
+        rqgs.packed_bisector_from_face_indices(grid_extent_kji, k_face_indices, None, None, False)
 
 
 def test_shadow_from_faces_flat_surface_k_hole():
