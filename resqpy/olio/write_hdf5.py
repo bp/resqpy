@@ -101,7 +101,7 @@ class H5Register():
         assert chunks is None or isinstance(chunks, str) or isinstance(chunks, tuple)
         assert compression is None or (isinstance(compression, str) and compression in ['gzip', 'lzf', 'none'])
         if str(dtype) == 'pack':
-            a = np.packbits(a, axis = -1)  # todo: check this returns uint8 array
+            a = np.packbits(a, axis = -1)
             dtype = 'uint8'
         elif dtype is not None:
             a = a.astype(dtype, copy = copy)

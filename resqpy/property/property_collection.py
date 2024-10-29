@@ -88,7 +88,7 @@ class PropertyCollection():
         # above is list of (uuid, source, keyword, cached_name, discrete, uom, time_index, null_value,
         #                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                   indexable_element, count, local_property_kind_uuid, const_value, points,
-        #                   time_series_uuid, string_lookup_uuid)
+        #                   time_series_uuid, string_lookup_uuid, pre_packed)
         self.guess_warning = False
         if support is not None:
             self.model = support.model
@@ -404,7 +404,8 @@ class PropertyCollection():
           call this method once for each group of differently sized properties; for very large collections
           it might also be necessary to divide the work into smaller groups to reduce memory usage;
           this method does not write to hdf5 nor create xml – use the usual methods for further processing
-          of the imported list
+          of the imported list;
+          does not currently support packed arrays
         """
 
         source = 'sampled'
@@ -2219,7 +2220,8 @@ class PropertyCollection():
                                           const_value = None,
                                           points = False,
                                           time_series_uuid = None,
-                                          string_lookup_uuid = None):
+                                          string_lookup_uuid = None,
+                                          pre_packed = False):
         """Caches array and adds to the list of imported properties (but not to the collection dict).
 
         arguments:
@@ -2250,6 +2252,7 @@ class PropertyCollection():
               be provided when writing hdf5 and creating xml for the imported list
            string_lookup_uuid (UUID, optional): should be provided for categorical properties, though can alternatively
               be specified when creating xml
+           pre_packed (bool, default False): set to True if the property is boolean and the array is already packed
 
         returns:
            uuid of nascent property object
@@ -2271,6 +2274,7 @@ class PropertyCollection():
         assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
         assert not points or not discrete
         assert count > 0
+        assert (not pre_packed) or ((cached_array is not None) and (cached_array.dtype == np.uint8))
         rqp_c.check_and_warn_property_kind(property_kind, 'adding property to imported list')
 
         if self.imported_list is None:
@@ -2288,7 +2292,7 @@ class PropertyCollection():
         self.imported_list.append(
             (uuid, source_info, keyword, cached_name, discrete, uom, time_index, null_value, min_value, max_value,
              property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
-             const_value, points, time_series_uuid, string_lookup_uuid))
+             const_value, points, time_series_uuid, string_lookup_uuid, pre_packed))
         return uuid
 
     def add_similar_to_imported_list(self,
@@ -2311,6 +2315,7 @@ class PropertyCollection():
                                      points = None,
                                      time_series_uuid = None,
                                      string_lookup_uuid = None,
+                                     pre_packed = False,
                                      similar_model = None,
                                      title = None):
         """Caches array and adds to the list of imported properties using default metadata from a similar property.
@@ -2342,6 +2347,7 @@ class PropertyCollection():
               be provided when writing hdf5 and creating xml for the imported list
            string_lookup_uuid (UUID, optional): should be provided for categorical properties, though can alternatively
               be specified when creating xml
+           pre_packed (bool, default False): set to True if the property is boolean and the cached array is packed
            similar_model (Model, optional): the model where the similar property resides, if not the same as this
               property collection
            title (str, optional): synonym for keyword argument
@@ -2398,6 +2404,7 @@ class PropertyCollection():
         args['string_lookup_uuid'] = get_arg(time_series_uuid, similar.string_lookup_uuid())
         em = similar.extra_metadata if hasattr(similar, 'extra_metadata') else {}
         args['source_info'] = get_arg(source_info, em.get('source'))
+        args['pre_packed'] = pre_packed
 
         return self.add_cached_array_to_imported_list(cached_array, **args)
 
@@ -2445,7 +2452,8 @@ class PropertyCollection():
               as 32 bit; if None, the system default is to write as 32 bit; if True, 32 bit is used; if
               False, 64 bit data is written; ignored if dtype is not None
            use_pack (bool, default False): if True, bool arrays will be packed along their last axis; this
-              will generally result in hdf5 data that is not readable by non-resqpy applications
+              will generally result in hdf5 data that is not readable by non-resqpy applications; leave
+              as False for already packed arrays
            chunks (str, optional): if not None, one of 'auto', 'all', or 'slice', controlling hdf5 chunks
            compression (str, optional): if not None, one of 'gzip' or 'lzf' being the hdf5 compression
               algorithm to be used; gzip gives better compression ratio but is slower
@@ -2473,8 +2481,8 @@ class PropertyCollection():
                 uuid = entry[0]
                 cached_name = entry[3]
             tail = 'points_patch0' if entry[18] else 'values_patch0'
-            if use_pack and (str(dtype).startswith('bool') or
-                             (dtype is None and str(self.__dict__[cached_name].dtype) == 'bool')):
+            if use_pack and ('bool' in str(dtype) or
+                             (dtype is None and 'bool' in str(self.__dict__[cached_name].dtype))):
                 dtype = 'pack'
             h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
         h5_reg.write(file = file_name, mode = mode, use_int32 = use_int32)
@@ -2601,7 +2609,8 @@ class PropertyCollection():
                    points = False,
                    extra_metadata = {},
                    const_value = None,
-                   expand_const_arrays = False):
+                   expand_const_arrays = False,
+                   pre_packed = False):
         """Create a property xml node for a single property related to a given supporting representation node.
 
         arguments:
@@ -2661,6 +2670,8 @@ class PropertyCollection():
            const_value (float, int or bool, optional): if present, create xml for a constant array filled with this value
            expand_const_arrays (boolean, default False): if True, the hdf5 write must also have been called with the
               same argument and the xml will treat a constant array as a normal array
+           pre_packed (boolean, default False): if True, the property is a boolean property and the array has already
+              been packed into bits
 
         returns:
            the newly created property xml node
@@ -2688,7 +2699,7 @@ class PropertyCollection():
         direction = None if facet_type is None or facet_type != 'direction' else facet
 
         if self.support is not None:
-            pcxml._check_shape_list(self, indexable_element, direction, property_array, points, count)
+            pcxml._check_shape_list(self, indexable_element, direction, property_array, points, count, pre_packed)
 
         # todo: assertions:
         #    numpy data type matches discrete flag (and assumptions about precision)
