@@ -865,7 +865,7 @@ def find_faces_to_represent_surface_regular_dense_optimised(grid,
     if progress_fn is not None:
         progress_fn(1.0)
 
-    log.debug(f"finishing find_faces_to_represent_surface_regular_optimised for {name}")
+    log.debug(f"finishing find_faces_to_represent_surface_regular_dense_optimised for {name}")
 
     # if returning properties, construct dictionary
     if return_properties:
@@ -1537,7 +1537,7 @@ def packed_bisector_from_face_indices(  # type: ignore
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid), and shrink the I axis
     box = get_packed_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
-    # set k_faces as uint8 packed bool arrays covering box
+    # set k_faces, j_faces & i_faces as uint8 packed bool arrays covering box
     k_faces, j_faces, i_faces = _packed_box_face_arrays_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, box)
 
     box_shape = box[1, :] - box[0, :]
@@ -1562,9 +1562,10 @@ def packed_bisector_from_face_indices(  # type: ignore
     else:
         open_i = np.invert(i_faces, dtype = np.uint8)
 
-    # close off faces in padding bits
-    tail = grid_extent_kji[2] % 8  # number of valid bits in padded byte
-    if tail:
+    # close off faces in padding bits, if within box
+    if box[1, 2] * 8 > grid_extent_kji[2]:
+        tail = grid_extent_kji[2] % 8  # number of valid bits in padded byte
+        assert tail
         m = np.uint8((255 << (8 - tail)) & 255)
         open_k[:, :, -1] &= m
         open_j[:, :, -1] &= m
@@ -1581,7 +1582,7 @@ def packed_bisector_from_face_indices(  # type: ignore
     array[box[0, 0]:box[1, 0], box[0, 1]:box[1, 1], box[0, 2]:box[1, 2]] = box_array
 
     # set bisector values outside of the bounding box
-    _set_packed_bisector_outside_box(array, box, box_array)
+    _set_packed_bisector_outside_box(array, box, box_array, grid_extent_kji[2] % 8)
 
     # check all array elements are not the same
     true_count = np.sum(bitwise_count(array))  # note: will usually include some padding bits, so not so true!
@@ -2127,7 +2128,7 @@ def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndar
         a[:, :, :box[0, 2]] = True
 
 
-def _set_packed_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndarray):
+def _set_packed_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndarray, tail: int):
     # set values outside of the bounding box, working with packed arrays
     if box[1, 0] < a.shape[0] and np.any(box_array[-1, :, :]):
         a[box[1, 0]:, :, :] = 255
@@ -2141,6 +2142,9 @@ def _set_packed_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: 
         a[:, :, box[1, 2]:] = 255
     if box[0, 2] != 0:
         a[:, :, :box[0, 2]] = 255
+    if tail:
+        m = np.uint8((255 << (8 - tail)) & 255)
+        a[:, :, -1] &= m
 
 
 def _box_face_arrays_from_indices(  # type: ignore
