@@ -2175,7 +2175,7 @@ def _packed_box_face_arrays_from_indices(  # type: ignore
     i_a = np.zeros(tuple(box_shape), dtype = np.uint8)
     ko = box[0, 0]
     jo = box[0, 1]
-    io = box[0, 2]
+    io = box[0, 2] * 8
     if k_faces_kji0 is not None:
         _set_packed_face_array(k_a, k_faces_kji0, ko, jo, io)
     if j_faces_kji0 is not None:
