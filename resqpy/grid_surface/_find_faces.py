@@ -1575,7 +1575,6 @@ def packed_bisector_from_face_indices(  # type: ignore
     is_curtain = _packed_shallow_or_curtain_temp_bitwise_count(array, true_count, raw_bisector)
     # todo: switch to numpy bitwise_count when numba supports it and resqpy has dropped older numpy versions
     # is_curtain = _packed_shallow_or_curtain(array, true_count, raw_bisector)
-    print(f'**** array shape: {array.shape}; dtype: {array.dtype}')
 
     return array, is_curtain
 
