@@ -2027,7 +2027,7 @@ def _fill_packed_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.nda
         for k in range(nk):
             for j in range(nj):
                 for i in range(ni):
-                    m = bisect[k, j, i]  # 8 bools packed into a uint8
+                    m = np.uint8(bisect[k, j, i])  # 8 bools packed into a uint8
                     if bisect[k, j, i] == np.uint8(0xFF):  # all 8 values already set
                         continue
                     om = m  # copy to check for changes later
@@ -2039,9 +2039,9 @@ def _fill_packed_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.nda
                         m |= (bisect[k, j - 1, i] & open_j[k, j - 1, i])
                     if j < nj - 1:
                         m |= (bisect[k, j + 1, i] & open_j[k, j, i])
-                    oi = np.uint8(open_i[k, j, i])
-                    m |= (m >> 1) & (oi >> 1)
-                    m |= (m << 1) & oi
+                    oi = np.uint8(open_i[k, j, i])  # type: ignore
+                    m |= (m >> 1) & (oi >> 1)  # type: ignore
+                    m |= (m << 1) & oi  # type: ignore
                     # handle rollover bits for I
                     if i and (bisect[k, j, i - 1] & open_i[k, j, i - 1] & np.uint8(0x01)):
                         m |= np.uint8(0x80)
@@ -2085,7 +2085,8 @@ def _packed_shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> boo
     is_curtain: bool = False
     layer_count: int = 0
     for k in range(a.shape[0]):
-        layer_count = np.sum(np.bitwise_count(a[k]), dtype = np.int64)  # np.bitwise_count() not yet supported by numba
+        # np.bitwise_count() not yet supported by numba
+        layer_count = np.sum(np.bitwise_count(a[k]), dtype = np.int64)  # type: ignore
         k_sum += (k + 1) * layer_count
         opposite_k_sum += (k + 1) * (layer_cell_count - layer_count)
     mean_k: float = float(k_sum) / float(true_count)
@@ -2102,11 +2103,12 @@ def _packed_shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> boo
 def _packed_shallow_or_curtain_temp_bitwise_count(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the packed bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
-    layer_cell_count: np.int64 = 8 * a.shape[1] * a.shape[2]  # note: includes padding bits
-    k_sum: np.int64 = 0
-    opposite_k_sum: np.int64 = 0
+    # note: following 'cell count' includes padding bits
+    layer_cell_count: np.int64 = 8 * a.shape[1] * a.shape[2]  # type: ignore
+    k_sum: np.int64 = 0  # type: ignore
+    opposite_k_sum: np.int64 = 0  # type: ignore
     is_curtain: bool = False
-    layer_count: np.int64 = 0
+    layer_count: np.int64 = 0  # type: ignore
     for k in range(a.shape[0]):
         layer_count = _bitwise_count_njit(a[k])
         k_sum += (k + 1) * layer_count
@@ -2288,7 +2290,7 @@ def _shape_packed(unpacked_shape):
 @njit  # pragma: no cover
 def _bitwise_count_njit(a: np.ndarray) -> np.int64:
     """Deprecated: only needed till numpy versions < 2.0.0 are dropped."""
-    c: np.int64 = 0
+    c: np.int64 = 0  # type: ignore
     c += np.count_nonzero(np.bitwise_and(a, 0x01))
     c += np.count_nonzero(np.bitwise_and(a, 0x02))
     c += np.count_nonzero(np.bitwise_and(a, 0x04))
