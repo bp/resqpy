@@ -353,7 +353,7 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
                                                           ('vertical' if is_curtain else 'sloping'),
                                                           realization = realisation,
                                                           indexable_element = "columns" if is_curtain else "cells",
-                                                          pre_packed = use_pack)
+                                                          pre_packed = False if is_curtain else use_pack)
             elif p_name == 'grid shadow':
                 if grid_pc is None:
                     grid_pc = rqp.PropertyCollection()
