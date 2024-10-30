@@ -1590,7 +1590,9 @@ def packed_bisector_from_face_indices(  # type: ignore
     assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
 
     # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _packed_shallow_or_curtain(array, true_count, raw_bisector)
+    is_curtain = _packed_shallow_or_curtain_temp_bitwise_count(array, true_count, raw_bisector)
+    # todo: switch to numpy bitwise_count when numba supports it and resqpy has dropped older numpy versions
+    # is_curtain = _packed_shallow_or_curtain(array, true_count, raw_bisector)
 
     return array, is_curtain
 
@@ -2028,20 +2030,22 @@ def _fill_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, o
                         going = True
 
 
-# TODO: uncomment njit
-#@njit  # pragma: no cover
+@njit  # pragma: no cover
 def _fill_packed_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.ndarray, open_i: np.ndarray):
     nk: int = bisect.shape[0]
     nj: int = bisect.shape[1]
     ni: int = bisect.shape[2]
     going: bool = True
+    m: np.uint8 = 0
+    om: np.uint8 = 0
+    oi: np.uint8 = 0
     while going:
         going = False
         for k in range(nk):
             for j in range(nj):
                 for i in range(ni):
                     m = bisect[k, j, i]  # 8 bools packed into a uint8
-                    if bisect[k, j, i] == 255:  # all 8 values already set
+                    if bisect[k, j, i] == np.uint8(0xFF):  # all 8 values already set
                         continue
                     om = m  # copy to check for changes later
                     if k:
@@ -2056,10 +2060,10 @@ def _fill_packed_bisector(bisect: np.ndarray, open_k: np.ndarray, open_j: np.nda
                     m |= (m >> 1) & (oi >> 1)
                     m |= (m << 1) & oi
                     # handle rollover bits for I
-                    if i and (bisect[k, j, i - 1] & open_i[k, j, i - 1] & 1):
-                        m |= 0x80
+                    if i and (bisect[k, j, i - 1] & open_i[k, j, i - 1] & np.uint8(0x01)):
+                        m |= np.uint8(0x80)
                     if (i < ni - 1) and (oi & 1) and (bisect[k, j, i + 1] & 0x80):
-                        m |= 1
+                        m |= np.uint8(0x01)
                     if m != om:
                         bisect[k, j, i] = m
                         going = True
@@ -2088,8 +2092,7 @@ def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     return is_curtain
 
 
-# TODO: uncomment njit
-#@njit  # pragma: no cover
+@njit  # pragma: no cover
 def _packed_shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     # negate the packed bool array if it minimises the mean k and determine if the bisector indicates a curtain
     assert a.ndim == 3
@@ -2099,7 +2102,29 @@ def _packed_shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> boo
     is_curtain: bool = False
     layer_count: int = 0
     for k in range(a.shape[0]):
-        layer_count = np.sum(bitwise_count(a[k]))
+        layer_count = np.sum(np.bitwise_count(a[k]), dtype = np.int64)  # np.bitwise_count() not yet supported by numba
+        k_sum += (k + 1) * layer_count
+        opposite_k_sum += (k + 1) * (layer_cell_count - layer_count)
+    mean_k: float = float(k_sum) / float(true_count)
+    opposite_mean_k: float = float(opposite_k_sum) / float(8 * a.size - true_count)
+    if mean_k > opposite_mean_k and not raw:
+        a[:] = np.invert(a, dtype = np.uint8)
+    if abs(mean_k - opposite_mean_k) <= 0.001:
+        # log.warning('unable to determine which side of surface is shallower')
+        is_curtain = True
+    return is_curtain
+
+
+def _packed_shallow_or_curtain_temp_bitwise_count(a: np.ndarray, true_count: int, raw: bool) -> bool:
+    # negate the packed bool array if it minimises the mean k and determine if the bisector indicates a curtain
+    assert a.ndim == 3
+    layer_cell_count: int = 8 * a.shape[1] * a.shape[2]  # note: includes padding bits
+    k_sum: int = 0
+    opposite_k_sum: int = 0
+    is_curtain: bool = False
+    layer_count: int = 0
+    for k in range(a.shape[0]):
+        layer_count = np.sum(_bitwise_count_njit(a[k]), dtype = np.int64)
         k_sum += (k + 1) * layer_count
         opposite_k_sum += (k + 1) * (layer_cell_count - layer_count)
     mean_k: float = float(k_sum) / float(true_count)
