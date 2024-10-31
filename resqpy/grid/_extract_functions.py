@@ -184,8 +184,8 @@ def __process_axis(axis, child_count_list_list, child_weight_list_list, grid, in
             if intervals_info.child_count_per_interval[interval] == intervals_info.parent_count_per_interval[interval]:
                 continue  # one-to-one
             if refining_flag is None:
-                refining_flag = (intervals_info.child_count_per_interval[interval] >
-                                 intervals_info.parent_count_per_interval[interval])
+                refining_flag = (intervals_info.child_count_per_interval[interval]
+                                 > intervals_info.parent_count_per_interval[interval])
             assert refining_flag == (intervals_info.child_count_per_interval[interval] >
                                      intervals_info.parent_count_per_interval[interval]), \
                 'mixture of refining and coarsening in one local grid – allowed by RESQML but not handled by this code'
@@ -501,7 +501,7 @@ def extract_inactive_mask(grid, check_pinchout = False):
     geom_defined = grr_dg.cell_geometry_is_defined_ref(grid)
     if grid.inactive is None:
         if geom_defined is None or geom_defined is True:
-            grid.inactive = np.zeros(tuple(grid.extent_kji))  # ie. all active
+            grid.inactive = np.zeros(tuple(grid.extent_kji), dtype = bool)  # ie. all active
         else:
             grid.inactive = np.logical_not(grr_dg.cell_geometry_is_defined_ref(grid))
     if check_pinchout:
@@ -524,6 +524,7 @@ def extract_inactive_mask(grid, check_pinchout = False):
             active_gpc = rprop.selective_version_of_collection(active_gpc,
                                                                time_index = grid.time_index,
                                                                time_series_uuid = grid.time_series_uuid)
+            active_parts = active_gpc.parts()
         else:
             active_parts = []
             for part in active_gpc.parts():

@@ -15,6 +15,7 @@ import resqpy.grid as grr
 import resqpy.grid_surface as rqgs
 import resqpy.fault as rqf
 import resqpy.property as rqp
+import resqpy.lines as rql
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
@@ -75,7 +76,8 @@ class Grid(BaseResqpy):
                  geometry_required = True,
                  title = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = {},
+                 load_inactive = True):
         """Create a Grid object and optionally populate from xml tree.
 
         arguments:
@@ -91,6 +93,8 @@ class Grid(BaseResqpy):
               ignored if loading from xml
            extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
               ignored if loading from xml
+           load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+              populated if a property of kind 'active' is found for the grid
 
         returns:
            a newly created Grid object
@@ -147,6 +151,8 @@ class Grid(BaseResqpy):
             self.title = 'ROOT'
 
         if uuid is not None:
+            if load_inactive:
+                self.extract_inactive_mask()
             if geometry_required:
                 assert self.geometry_root is not None, 'grid geometry not present in xml'
             if find_properties:
@@ -185,7 +191,6 @@ class Grid(BaseResqpy):
         self.extract_parent()
         self.extract_children()
         # self.create_column_pillar_mapping()  # mapping now created on demand in other methods
-        self.extract_inactive_mask()
         self.extract_stratigraphy()
         self.get_represented_interpretation()
 
@@ -1492,6 +1497,62 @@ class Grid(BaseResqpy):
            keyword formats
         """
         return z_corner_point_depths(self, order = order)
+
+    def frontier(self, set_z_zero = True, title = None, add_as_part = True):
+        """Returns a frontier polygon (closed polyline) based on midpoints of edge coordinate lines, with z set to zero.
+        
+        arguments:
+            - set_z_zero (bool, default True): if True, the z values of the returned polyline are all set to zero; if False,
+              they are left at the midpoint z values from the edge coordinate lines
+            - title (str, optional): the citation title for the polyline; if None, one is generated using the grid title
+            - add_as_part (bool default True): if True, the xml is created for the polyline and it is added as a part to
+              the model; if False, the create_xml() method is not called fot the polyline
+              
+        returns:
+            - closed Polyline representing the frontier of the grid in plan view
+        """
+        coords = self.coordinate_line_end_points()
+        nj = self.nj
+        ni = self.ni
+        frontier = np.zeros((2 * (nj + ni), 3), dtype = float)
+        f_i = 0
+        for i in range(self.ni):
+            c = np.nanmean(coords[0, i], axis = 0)
+            if np.any(np.isnan(c)):
+                continue
+            frontier[f_i] = c
+            f_i += 1
+        for j in range(self.nj):
+            c = np.nanmean(coords[j, ni], axis = 0)
+            if np.any(np.isnan(c)):
+                continue
+            frontier[f_i] = c
+            f_i += 1
+        for i in range(self.ni, 0, -1):
+            c = np.nanmean(coords[nj, i], axis = 0)
+            if np.any(np.isnan(c)):
+                continue
+            frontier[f_i] = c
+            f_i += 1
+        for j in range(self.nj, 0, -1):
+            c = np.nanmean(coords[j, 0], axis = 0)
+            if np.any(np.isnan(c)):
+                continue
+            frontier[f_i] = c
+            f_i += 1
+        assert 4 <= f_i <= 2 * (nj + ni), 'failed to define frontier polygon (NaNs in grid geometry?)'
+        if set_z_zero:
+            frontier[:, 2] = 0.0
+        if not title:
+            title = f'frontier of {self.title}'
+        pl = rql.Polyline(self.model,
+                          set_coord = frontier[:f_i],
+                          set_crs = self.crs_uuid,
+                          is_closed = True,
+                          title = title)
+        if add_as_part:
+            pl.create_xml()
+        return pl
 
     def corner_points(self, cell_kji0 = None, points_root = None, cache_resqml_array = True, cache_cp_array = False):
         """Returns a numpy array of corner points for a single cell or the whole grid.
