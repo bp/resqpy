@@ -46,7 +46,8 @@ class RegularGrid(grr_g.Grid):
                  find_properties = True,
                  title = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = {},
+                 load_inactive = True):
         """Creates a regular grid object based on dxyz, or derived from a Mesh object.
 
         arguments:
@@ -82,6 +83,8 @@ class RegularGrid(grr_g.Grid):
               ignored if loading from xml
            extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
               ignored if loading from xml
+           load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+              populated if a property of kind 'active' is found for the grid
 
         returns:
            a newly created RegularGrid object with inheritance from the Grid class
@@ -184,7 +187,8 @@ class RegularGrid(grr_g.Grid):
                              geometry_required = False,
                              title = title,
                              originator = originator,
-                             extra_metadata = extra_metadata)
+                             extra_metadata = extra_metadata,
+                             load_inactive = load_inactive)
 
         self.geometry_defined_for_all_cells_cached = True
         self.geometry_defined_for_all_pillars_cached = True
