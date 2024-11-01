@@ -255,6 +255,9 @@ def test_tetra_grid(tmp_path):
     assert model is not None
     tetra_uuid = model.uuid(obj_type = 'UnstructuredGridRepresentation', title = 'star')
     assert tetra_uuid is not None
+    t_grid = grr.any_grid(model, tetra_uuid, load_inactive = False)
+    assert isinstance(t_grid, rug.TetraGrid)
+    assert t_grid.inactive is None
     tetra = rug.TetraGrid(model, uuid = tetra_uuid)
     assert tetra is not None
     # perform basic checks
@@ -342,6 +345,8 @@ def test_vertical_prism_grid_from_surfaces(tmp_path):
     grid_uuid = model.uuid(obj_type = 'UnstructuredGridRepresentation', title = 'the pentagon')
     assert grid_uuid is not None
 
+    p_grid = grr.any_grid(model, grid_uuid)
+    assert isinstance(p_grid, rug.PrismGrid)
     # re-instantiate the grid
     grid = rug.VerticalPrismGrid(model, uuid = grid_uuid)
     assert grid is not None

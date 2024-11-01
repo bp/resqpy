@@ -114,7 +114,8 @@ class VerticalPrismGrid(PrismGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = {},
+                 load_inactive = True):
         """Creates a new resqpy VerticalPrismGrid object.
 
         arguments:
@@ -130,6 +131,8 @@ class VerticalPrismGrid(PrismGrid):
               ignored if uuid is present
            extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
               ignored if uuid is present
+           load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+              populated if a property of kind 'active' is found for the grid
 
         returns:
            a newly created VerticalPrismGrid object
@@ -143,7 +146,8 @@ class VerticalPrismGrid(PrismGrid):
                          cache_geometry = cache_geometry,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata)
+                         extra_metadata = extra_metadata,
+                         load_inactive = load_inactive)
 
         if self.root is not None:
             assert grr.grid_flavour(self.root) in ['VerticalPrismGrid', 'PrismGrid']
