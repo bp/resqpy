@@ -1498,7 +1498,7 @@ class Grid(BaseResqpy):
         """
         return z_corner_point_depths(self, order = order)
 
-    def frontier(self, set_z_zero = True, title = None, add_as_part = True):
+    def frontier(self, set_z_zero = True, title = None, add_as_part = True, mode = 'mean'):
         """Returns a frontier polygon (closed polyline) based on midpoints of edge coordinate lines, with z set to zero.
         
         arguments:
@@ -1507,35 +1507,59 @@ class Grid(BaseResqpy):
             - title (str, optional): the citation title for the polyline; if None, one is generated using the grid title
             - add_as_part (bool default True): if True, the xml is created for the polyline and it is added as a part to
               the model; if False, the create_xml() method is not called fot the polyline
-              
+            - mode (str, default 'mean'): one of 'mean', 'top', 'base', 'inner', 'outer' determining how a non-vertical
+              edge coordinate line is converted to a point to include in the frontier
+
         returns:
             - closed Polyline representing the frontier of the grid in plan view
         """
+
+        def get_point(clep, mode, centrum):
+            if mode == 'mean':
+                return np.nanmean(clep, axis = 0)
+            if mode == 'top':
+                return clep[0]
+            if mode == 'base':
+                return clep[-1]
+            assert mode in ['inner', 'outer'], f'unrecognised frontier mode: {mode}'
+            vp = clep - np.expand_dims(centrum, axis = 0)
+            dp = np.sum(vp * vp, axis = -1)
+            if (dp[0] < dp[1] and mode == 'inner') or (dp[0] > dp[1] and mode == 'outer'):
+                return clep[0]
+            return clep[-1]
+
+        assert mode in ['mean', 'top', 'base', 'inner', 'outer']
         coords = self.coordinate_line_end_points()
+        centrum = None
+        if mode in ['inner', 'outer']:
+            centrum = np.nanmean(np.concatenate((coords[0, 0], coords[0, -1], coords[-1, 0], coords[-1, -1]), axis = 0),
+                                 axis = 0)
+            assert not np.any(
+                np.isnan(centrum)), f'trying to make frontier polygon in mode {mode} when corners of grid not defined'
         nj = self.nj
         ni = self.ni
         frontier = np.zeros((2 * (nj + ni), 3), dtype = float)
         f_i = 0
         for i in range(self.ni):
-            c = np.nanmean(coords[0, i], axis = 0)
+            c = get_point(coords[0, i], mode, centrum)
             if np.any(np.isnan(c)):
                 continue
             frontier[f_i] = c
             f_i += 1
         for j in range(self.nj):
-            c = np.nanmean(coords[j, ni], axis = 0)
+            c = get_point(coords[j, ni], mode, centrum)
             if np.any(np.isnan(c)):
                 continue
             frontier[f_i] = c
             f_i += 1
         for i in range(self.ni, 0, -1):
-            c = np.nanmean(coords[nj, i], axis = 0)
+            c = get_point(coords[nj, i], mode, centrum)
             if np.any(np.isnan(c)):
                 continue
             frontier[f_i] = c
             f_i += 1
         for j in range(self.nj, 0, -1):
-            c = np.nanmean(coords[j, 0], axis = 0)
+            c = get_point(coords[j, 0], mode, centrum)
             if np.any(np.isnan(c)):
                 continue
             frontier[f_i] = c
