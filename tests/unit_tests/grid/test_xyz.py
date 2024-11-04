@@ -723,15 +723,17 @@ def test_frontier_regular_z_non_zero(basic_regular_grid):
     assert np.all(frontier.coordinates[:, 2]) > 0.0
 
 
-def test_frontier_regular_z_zero(basic_regular_grid):
-    frontier = basic_regular_grid.frontier(set_z_zero = True)
+@pytest.mark.parametrize('mode', ['mean', 'top', 'base', 'inner', 'outer'])
+def test_frontier_regular_z_zero(basic_regular_grid, mode):
+    frontier = basic_regular_grid.frontier(set_z_zero = True, mode = mode)
     assert frontier is not None
     assert frontier.coordinates.shape == (2 * (basic_regular_grid.nj + basic_regular_grid.ni), 3)
     np.testing.assert_array_almost_equal(frontier.coordinates[:, 2], 0.0)
 
 
-def test_frontier_faulted_z_non_zero(faulted_grid):
-    frontier = faulted_grid.frontier(set_z_zero = False)
+@pytest.mark.parametrize('mode', ['mean', 'top', 'base', 'inner', 'outer'])
+def test_frontier_faulted_z_non_zero(faulted_grid, mode):
+    frontier = faulted_grid.frontier(set_z_zero = False, mode = mode)
     assert frontier is not None
     assert frontier.coordinates.shape == (2 * (faulted_grid.nj + faulted_grid.ni), 3)
     assert np.all(frontier.coordinates[:, 2]) > 0.0
