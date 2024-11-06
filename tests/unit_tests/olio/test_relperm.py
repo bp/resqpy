@@ -1,12 +1,10 @@
 # test module for the derived RelPerm class located in resqpy.olio.dataframe.py
 
 import os
-
 import numpy as np
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
-
 import resqpy.model as rq
 from resqpy.olio.relperm import (RelPerm, relperm_parts_in_model, text_to_relperm_dict)
 def test_col_headers(tmp_path):
