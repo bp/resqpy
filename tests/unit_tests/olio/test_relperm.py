@@ -10,7 +10,6 @@ from pandas.testing import assert_frame_equal
 import resqpy.model as rq
 from resqpy.olio.relperm import (RelPerm, relperm_parts_in_model, text_to_relperm_dict)
 
-
 def test_col_headers(tmp_path):
     epc = os.path.join(tmp_path, 'model.epc')
     model = rq.new_model(epc)
