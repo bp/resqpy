@@ -1170,10 +1170,9 @@ class Surface(rqsb.BaseSurface):
         return resampled
 
     def resample_surface_unique_edges(self):
-        """Returns a new surface, with the same model, title and crs as the original surface, but with additional 
-        refined points along original surface tears and edges. Each edge forming a tear or outer edge in the surface 
-        will have 3 additional points added. The output surface is re-triangulated using these new points (tears will 
-        be filled)
+        """Returns a new surface, with the same model, title and crs as the original surface, but with additional refined points along original surface tears and edges. 
+        
+        Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
 
         returns: 
             resqpy.surface.Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
