@@ -979,6 +979,7 @@ def test_resampling(tmp_path):
     assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
     assert resampled_name.extra_metadata == {'resampled from surface': str(surf.uuid)}
 
+
 def test_resample_surface_unique_edges(tmp_path):
     # Arrange
     model = rq.new_model(f"{tmp_path}\test.epc")
@@ -1026,6 +1027,7 @@ def test_resample_surface_unique_edges(tmp_path):
     assert resampled.crs_uuid == surf.crs_uuid
     assert resampled.citation_title == surf.citation_title
     assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
+
 
 def test_from_downsampling_surface(example_model_and_crs):
     model, crs = example_model_and_crs
