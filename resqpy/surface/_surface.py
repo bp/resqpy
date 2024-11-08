@@ -1178,23 +1178,21 @@ class Surface(rqsb.BaseSurface):
             resqpy.surface.Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
         """
         _, op = self.triangles_and_points()
-        ref = self.resampled_surface() # resample the original surface
+        ref = self.resampled_surface()  # resample the original surface
         rt, rp = ref.triangles_and_points()
-        de, dc = ref.distinct_edges_and_counts() # find the distinct edges and counts for the resampled surface
-        de_edge = de[dc == 1] # find edges that only appear once - tears or surface edges
-        edge_tri_index = np.sum(np.isin(rt, de_edge), axis=1)== 2
+        de, dc = ref.distinct_edges_and_counts()  # find the distinct edges and counts for the resampled surface
+        de_edge = de[dc == 1]  # find edges that only appear once - tears or surface edges
+        edge_tri_index = np.sum(np.isin(rt, de_edge), axis = 1) == 2
         edge_tris = rp[rt[edge_tri_index]]
-        mid = np.mean(rp[de_edge], axis=1) # get the midpoint of each surface edge
-        edge_ref_points = np.unique(np.concatenate([op, edge_tris.reshape(-1,3), mid]), axis=0) # combine all points
+        mid = np.mean(rp[de_edge], axis = 1)  # get the midpoint of each surface edge
+        edge_ref_points = np.unique(np.concatenate([op, edge_tris.reshape(-1, 3), mid]), axis = 0)  # combine all points
         
-        points = rqs.PointSet(self.model, 
-                          points_array= edge_ref_points, 
-                          title=self.title, 
-                          crs_uuid=self.crs_uuid) # generate a pointset from these points
+        points = rqs.PointSet(self.model, points_array= edge_ref_points, title=self.title, 
+                              crs_uuid=self.crs_uuid)  # generate a pointset from these points
         
-        output = Surface(self.model, 
-                         point_set=points,
-                         extra_metadata = {'resampled from surface': str(self.uuid)}) # return a surface with generated from these points
+        output = Surface(self.model, point_set=points,
+                         extra_metadata = {'resampled from surface': str(self.uuid)
+                                          })  # return a surface with generated from these points
         
         return output
 
