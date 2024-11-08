@@ -1187,7 +1187,7 @@ class Surface(rqsb.BaseSurface):
         mid = np.mean(rp[de_edge], axis = 1)  # get the midpoint of each surface edge
         edge_ref_points = np.unique(np.concatenate([op, edge_tris.reshape(-1, 3), mid]), axis = 0)  # combine all points
 
-        points = rqs.PointSet(self.model, points_array = edge_ref_points, title = self.title, 
+        points = rqs.PointSet(self.model, points_array = edge_ref_points, title = self.title,
                               crs_uuid = self.crs_uuid)  # generate a pointset from these points
 
         output = Surface(self.model, point_set = points,
