@@ -1186,14 +1186,14 @@ class Surface(rqsb.BaseSurface):
         edge_tris = rp[rt[edge_tri_index]]
         mid = np.mean(rp[de_edge], axis = 1)  # get the midpoint of each surface edge
         edge_ref_points = np.unique(np.concatenate([op, edge_tris.reshape(-1, 3), mid]), axis = 0)  # combine all points
-        
-        points = rqs.PointSet(self.model, points_array= edge_ref_points, title=self.title, 
-                              crs_uuid=self.crs_uuid)  # generate a pointset from these points
-        
-        output = Surface(self.model, point_set=points,
+
+        points = rqs.PointSet(self.model, points_array = edge_ref_points, title = self.title, 
+                              crs_uuid = self.crs_uuid)  # generate a pointset from these points
+
+        output = Surface(self.model, point_set = points,
                          extra_metadata = {'resampled from surface': str(self.uuid)
                                           })  # return a surface with generated from these points
-        
+
         return output
 
     def write_hdf5(self, file_name = None, mode = 'a'):
