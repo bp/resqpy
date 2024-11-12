@@ -529,13 +529,13 @@ def lookup_from_cellio(line, model):
                     string = word
 
     # Check if a StringLookupTable already exists in the model, with the same name and values
-    for existing_uuid in model.uuids(obj_type='StringTableLookup'):
-        table = rqp.StringLookup(parent_model=model, uuid=existing_uuid)
+    for existing_uuid in model.uuids(obj_type = 'StringTableLookup'):
+        table = rqp.StringLookup(parent_model = model, uuid = existing_uuid)
         if table.title == title:
             if table.str_dict == lookup_dict:
                 return table.uuid  # If the exact table exists, reuse it by returning the uuid
 
     # If no matching StringLookupTable exists, make a new one and return the uuid
-    lookup = rqp.StringLookup(parent_model=model, int_to_str_dict=lookup_dict, title=title)
+    lookup = rqp.StringLookup(parent_model = model, int_to_str_dict = lookup_dict, title = title)
     lookup.create_xml(add_as_part=True)
     return lookup.uuid
