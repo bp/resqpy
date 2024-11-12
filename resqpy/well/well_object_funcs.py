@@ -79,7 +79,7 @@ def add_wells_from_ascii_file(model,
     try:
         df = pd.read_csv(trajectory_file,
                          comment = comment_character,
-                         sep='s\+')
+                         sep=r's\+')
         if df is None:
             raise Exception
     except Exception:
