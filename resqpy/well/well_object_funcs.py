@@ -25,16 +25,16 @@ import resqpy.olio.wellspec_keywords as wsk
 def add_wells_from_ascii_file(model,
                               crs_uuid,
                               trajectory_file,
-                              comment_character='#',
+                              comment_character = '#',
                               space_separated_instead_of_csv=False,
-                              well_col='WELL',
-                              md_col='MD',
-                              x_col='X',
-                              y_col='Y',
-                              z_col='Z',
-                              length_uom='m',
-                              md_domain=None,
-                              drilled=False):
+                              well_col = 'WELL',
+                              md_col = 'MD',
+                              x_col = 'X',
+                              y_col = 'Y',
+                              z_col = 'Z',
+                              length_uom = 'm',
+                              md_domain = None,
+                              drilled = False):
     """Creates new md datum, trajectory, interpretation and feature objects for each well in an ascii file.
 
     arguments:
@@ -78,7 +78,7 @@ def add_wells_from_ascii_file(model,
 
     try:
         df = pd.read_csv(trajectory_file,
-                         comment=comment_character,
+                         comment = comment_character,
                          sep=r'\s+')
         if df is None:
             raise Exception
@@ -115,40 +115,40 @@ def add_wells_from_ascii_file(model,
         first_row = well_df.iloc[0]
         if first_row[md_col] == 0.0:
             md_datum = rqw.MdDatum(model,
-                                   crs_uuid=crs_uuid,
-                                   location=(first_row[x_col], first_row[y_col], first_row[z_col]))
+                                   crs_uuid = crs_uuid,
+                                   location = (first_row[x_col], first_row[y_col], first_row[z_col]))
         else:
-            md_datum = rqw.MdDatum(model, crs_uuid=crs_uuid,
-                                   location=(first_row[x_col], first_row[y_col], 0.0))  # sea level datum
-        md_datum.create_xml(title=str(well_name))
+            md_datum = rqw.MdDatum(model, crs_uuid = crs_uuid,
+                                   location = (first_row[x_col], first_row[y_col], 0.0))  # sea level datum
+        md_datum.create_xml(title = str(well_name))
         md_datum_list.append(md_datum)
 
         # create a well feature and add as part
-        feature = rqo.WellboreFeature(model, feature_name=well_name)
+        feature = rqo.WellboreFeature(model, feature_name = well_name)
         feature.create_xml()
         feature_list.append(feature)
 
         # create interpretation and add as part
-        interpretation = rqo.WellboreInterpretation(model, is_drilled=drilled, wellbore_feature=feature)
-        interpretation.create_xml(title_suffix=None)
+        interpretation = rqo.WellboreInterpretation(model, is_drilled = drilled, wellbore_feature = feature)
+        interpretation.create_xml(title_suffix = None)
         interpretation_list.append(interpretation)
 
         # create trajectory, write arrays to hdf5 and add as part
         trajectory = rqw.Trajectory(model,
-                                    md_datum=md_datum,
-                                    data_frame=well_df,
-                                    length_uom=length_uom,
-                                    md_domain=md_domain,
-                                    represented_interp=interpretation,
-                                    well_name=well_name)
+                                    md_datum = md_datum,
+                                    data_frame = well_df,
+                                    length_uom = length_uom,
+                                    md_domain = md_domain,
+                                    represented_interp = interpretation,
+                                    well_name = well_name)
         trajectory.write_hdf5()
-        trajectory.create_xml(title=well_name)
+        trajectory.create_xml(title = well_name)
         trajectory_list.append(trajectory)
 
     return (feature_list, interpretation_list, trajectory_list, md_datum_list)
 
 
-def well_name(well_object, model=None):
+def well_name(well_object, model = None):
     """Returns the 'best' citation title from the object or related well objects.
 
     arguments:
@@ -183,8 +183,8 @@ def well_name(well_object, model=None):
             return root_b
         elif b_digits < a_digits:
             return root_a
-        parts_like_a = model.parts(title=a)
-        parts_like_b = model.parts(title=b)
+        parts_like_a = model.parts(title = a)
+        parts_like_b = model.parts(title = b)
         if len(parts_like_a) > len(parts_like_b):
             return root_b
         return root_a
@@ -198,7 +198,7 @@ def well_name(well_object, model=None):
             return better_root(model, roots_list[0], roots_list[1])
         return better_root(model, roots_list[0], best_root(model, roots_list[1:]))
 
-    def best_root_for_object(well_object, model=None):
+    def best_root_for_object(well_object, model = None):
 
         if well_object is None:
             return None
@@ -255,10 +255,10 @@ def well_name(well_object, model=None):
             obj_root = model.root_for_uuid(obj_uuid)
 
         if obj_type == 'WellboreFeature':
-            interp_parts = model.parts(obj_type='WellboreInterpretation')
+            interp_parts = model.parts(obj_type = 'WellboreInterpretation')
             interp_parts = model.parts_list_filtered_by_related_uuid(interp_parts, obj_uuid)
             all_parts = interp_parts
-            all_traj_parts = model.parts(obj_type='WellboreTrajectoryRepresentation')
+            all_traj_parts = model.parts(obj_type = 'WellboreTrajectoryRepresentation')
             if interp_parts is not None:
                 for part in interp_parts:
                     traj_parts = model.parts_list_filtered_by_related_uuid(all_traj_parts, model.uuid_for_part(part))
@@ -266,14 +266,14 @@ def well_name(well_object, model=None):
             if all_parts is not None:
                 root_list = [model.root_for_part(part) for part in all_parts]
         elif obj_type == 'WellboreInterpretation':
-            feat_roots = model.roots(obj_type='WellboreFeature', related_uuid=obj_uuid)  # should return one root
-            traj_roots = model.roots(obj_type='WellboreTrajectoryRepresentation', related_uuid=obj_uuid)
+            feat_roots = model.roots(obj_type = 'WellboreFeature', related_uuid = obj_uuid)  # should return one root
+            traj_roots = model.roots(obj_type = 'WellboreTrajectoryRepresentation', related_uuid = obj_uuid)
             root_list = feat_roots + traj_roots
         elif obj_type == 'WellboreTrajectoryRepresentation':
-            interp_parts = model.parts(obj_type='WellboreInterpretation')
+            interp_parts = model.parts(obj_type = 'WellboreInterpretation')
             interp_parts = model.parts_list_filtered_by_related_uuid(interp_parts, obj_uuid)
             all_parts = interp_parts
-            all_feat_parts = model.parts(obj_type='WellboreFeature')
+            all_feat_parts = model.parts(obj_type = 'WellboreFeature')
             if interp_parts is not None:
                 for part in interp_parts:
                     feat_parts = model.parts_list_filtered_by_related_uuid(all_feat_parts, model.uuid_for_part(part))
@@ -437,7 +437,7 @@ def add_logs_from_cellio(blockedwell, cellio):
                 if words[0].upper() == well_name.upper():
                     wellfound = True
         assert len(data) > 0 and len(cols) > 3, f"No data for well {well_name} found in file"
-        df = pd.DataFrame(data = data, columns=[x.split()[0] for x in cols])
+        df = pd.DataFrame(data = data, columns = [x.split()[0] for x in cols])
         df = df.apply(pd.to_numeric)
         # Get the cell_indices from the grid for the given i/j/k
         df['cell_indices'] = grid.natural_cell_indices(
