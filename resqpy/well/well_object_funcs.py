@@ -26,7 +26,7 @@ def add_wells_from_ascii_file(model,
                               crs_uuid,
                               trajectory_file,
                               comment_character = '#',
-                              space_separated_instead_of_csv=False,
+                              space_separated_instead_of_csv = False,
                               well_col = 'WELL',
                               md_col = 'MD',
                               x_col = 'X',
@@ -77,9 +77,7 @@ def add_wells_from_ascii_file(model,
     assert crs_uuid is not None, 'coordinate reference system not found when trying to add wells'
 
     try:
-        df = pd.read_csv(trajectory_file,
-                         comment = comment_character,
-                         sep=r'\s+')
+        df = pd.read_csv(trajectory_file, comment = comment_character, sep=r'\s+')
         if df is None:
             raise Exception
     except Exception:
