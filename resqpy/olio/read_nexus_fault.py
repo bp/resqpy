@@ -65,7 +65,6 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
                         df = pd.DataFrame(outdata)
                         for column in df.columns:
                             df[column] = pd.to_numeric(df[column])
-                    
                         df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
                         df['grid'] = grid
                         df['name'] = name
