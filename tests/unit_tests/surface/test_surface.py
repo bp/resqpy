@@ -980,6 +980,55 @@ def test_resampling(tmp_path):
     assert resampled_name.extra_metadata == {'resampled from surface': str(surf.uuid)}
 
 
+def test_resample_surface_unique_edges(tmp_path):
+    # Arrange
+    model = rq.new_model(f"{tmp_path}\test.epc")
+    crs = rqc.Crs(model, title = 'crs example')
+    crs.create_xml()
+    model.store_epc()
+
+    x = np.linspace(1, 5, 5)
+    y = np.linspace(1, 5, 5)
+    xs, ys = np.meshgrid(x, y)
+    zs = np.random.randint(low = 5, high = 10, size = xs.shape)
+    points = np.array([xs, ys, zs], dtype = float).T
+
+    pointset = rqs.PointSet(model, title = 'points', crs_uuid = crs.uuid, points_array = points)
+    surf = rqs.Surface(model, title = 'surface', crs_uuid = crs.uuid, point_set = pointset)
+
+    surf.write_hdf5()
+    surf.create_xml()
+    model.store_epc()
+    ot, op = surf.triangles_and_points()
+
+    # Act
+    resampled = surf.resample_surface_unique_edges()
+    resampled.write_hdf5()
+    resampled.create_xml()
+    model.store_epc()
+
+    # Assert
+    reload = rq.Model(model.epc_file)
+    resampled = rqs.Surface(reload, resampled.uuid)
+    assert resampled is not None
+
+    coords = np.array([[2.5, 2.5], [3.4, 3.4], [4.6, 4.6]])
+    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords), resampled.sample_z_at_xy_points(coords))
+    rt, rp = resampled.triangles_and_points()
+
+    assert len(rt) == 112
+    assert np.min(rp[:, 0]) == np.min(op[:, 0])
+    assert np.max(rp[:, 0]) == np.max(op[:, 0])
+    assert np.min(rp[:, 1]) == np.min(op[:, 1])
+    assert np.max(rp[:, 1]) == np.max(op[:, 1])
+    assert np.min(rp[:, 2]) == np.min(op[:, 2])
+    assert np.max(rp[:, 2]) == np.max(op[:, 2])
+
+    assert resampled.crs_uuid == surf.crs_uuid
+    assert resampled.citation_title == surf.citation_title
+    assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
+
+
 def test_from_downsampling_surface(example_model_and_crs):
     model, crs = example_model_and_crs
     z_values = np.random.random((20, 25)) * 100.0 + 950.0
