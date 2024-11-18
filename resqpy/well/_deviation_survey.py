@@ -189,7 +189,6 @@ class DeviationSurvey(BaseResqpy):
                         parent_model,
                         deviation_survey_file,
                         comment_character = '#',
-                        space_separated_instead_of_csv = False,
                         md_col = 'MD',
                         azimuth_col = 'AZIM_GN',
                         inclination_col = 'INCL',
@@ -207,8 +206,6 @@ class DeviationSurvey(BaseResqpy):
            parent_model (model.Model): the parent resqml model
            deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
            comment_character (string): the character to be treated as introducing comments
-           space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
-              if True, columns are expected to be seperated by white space
            md_col (string, default 'MD'): the name of the column holding measured depth values
            azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
               to the north direction (+ve y axis) of the coordinate reference system
@@ -235,7 +232,7 @@ class DeviationSurvey(BaseResqpy):
         try:
             df = pd.read_csv(deviation_survey_file,
                              comment = comment_character,
-                             sep = '\s+')
+                             sep = r'\s+')
             if df is None:
                 raise Exception
         except Exception:
