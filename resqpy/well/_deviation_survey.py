@@ -164,6 +164,8 @@ class DeviationSurvey(BaseResqpy):
         """
 
         for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
+            if col not in data_frame.columns:
+                raise ValueError(f"Missing column: '{col}' in the DataFrame.")
             assert col in data_frame.columns
         station_count = len(data_frame)
         assert station_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
@@ -189,6 +191,7 @@ class DeviationSurvey(BaseResqpy):
                         parent_model,
                         deviation_survey_file,
                         comment_character = '#',
+                        space_separated_instead_of_csv = False,
                         md_col = 'MD',
                         azimuth_col = 'AZIM_GN',
                         inclination_col = 'INCL',
@@ -206,6 +209,8 @@ class DeviationSurvey(BaseResqpy):
            parent_model (model.Model): the parent resqml model
            deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
            comment_character (string): the character to be treated as introducing comments
+           space_separated_instead_of_csv (boolea, default False): if False, csv format expected;
+              if True, columns are expected to be seperated by white space
            md_col (string, default 'MD'): the name of the column holding measured depth values
            azimuth_col (string, default 'AZIM_GN'): the name of the column holding azimuth values relative
               to the north direction (+ve y axis) of the coordinate reference system
@@ -232,7 +237,7 @@ class DeviationSurvey(BaseResqpy):
         try:
             df = pd.read_csv(deviation_survey_file,
                              comment = comment_character,
-                             sep = r'\s+')
+                             delim_whitespace = space_separated_instead_of_csv)
             if df is None:
                 raise Exception
         except Exception:
