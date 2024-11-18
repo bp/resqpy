@@ -877,7 +877,7 @@ class BlockedWell(BaseResqpy):
     @staticmethod
     def __cell_kji0_from_df(df, df_row):
         row = df.iloc[df_row]
-        if pd.iloc(row[0]) or pd.iloc(row[1]) or pd.iloc(row[2]):
+        if pd.isna(row.iloc[0]) or pd.isna(row.iloc[1]) or pd.isna(row.iloc[2]):
             return None
         cell_kji0 = np.empty((3,), dtype = np.int32)
         cell_kji0[:] = row.iloc[2], row.iloc[1], row.iloc[0]
