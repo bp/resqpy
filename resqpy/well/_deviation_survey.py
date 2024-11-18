@@ -233,9 +233,7 @@ class DeviationSurvey(BaseResqpy):
         """
 
         try:
-            df = pd.read_csv(deviation_survey_file,
-                             comment = comment_character,
-                             delim_whitespace = space_separated_instead_of_csv)
+            df = pd.read_csv(deviation_survey_file, comment = comment_character, sep = r'\s+')
             if df is None:
                 raise Exception
         except Exception:
