@@ -235,7 +235,7 @@ class DeviationSurvey(BaseResqpy):
         try:
             df = pd.read_csv(deviation_survey_file,
                              comment = comment_character,
-                             sep = r'\s+')
+                             sep = '\s+')
             if df is None:
                 raise Exception
         except Exception:
