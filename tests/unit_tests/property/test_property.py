@@ -1406,6 +1406,7 @@ def test_property_parts_with_facets(example_model_with_properties):
     pc = model.grid().property_collection
 
     # Assert
+    # yapf: disable
     assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'rock permeability')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', property_kind = 'permeability rock')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'rock permeability')) == 0
@@ -1416,7 +1417,10 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'rock permeability',
                              facet_type = 'direction',
                              facet = 'I') is not None
-    assert rqp.property_part(model, 'ContinuousProperty', facet_type = 'direction', facet = 'I') is not None
+    assert rqp.property_part(model,
+                             'ContinuousProperty',
+                             facet_type = 'direction',
+                             facet = 'I') is not None
     assert rqp.property_part(model,
                              obj_type = 'Continuous',
                              property_kind = 'rock permeability',
@@ -1442,6 +1446,7 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'rock permeability',
                              facet_type = 'what',
                              facet = 'I') is None
+    # yapf: enable
 
 
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
