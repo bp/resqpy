@@ -1406,12 +1406,12 @@ def test_property_parts_with_facets(example_model_with_properties):
     pc = model.grid().property_collection
 
     # Assert
-    # yapf: disable
     assert len(rqp.property_parts(model, obj_type = 'ContinuousProperty', property_kind = 'rock permeability')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', property_kind = 'permeability rock')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'rock permeability')) == 0
     assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = '*')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = 'none')) == 3
+    # yapf: disable
     assert rqp.property_part(model,
                              'ContinuousProperty',
                              property_kind = 'rock permeability',
