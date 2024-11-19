@@ -538,6 +538,8 @@ def _supporting_shape_polylineset(support, indexable_element):
         shape_list = [len(support.coordinates) - reduction]
     elif indexable_element == 'nodes':
         shape_list = [len(support.coordinates)]
+    elif indexable_element in ['patches', 'enumerated elements', 'contacts']:  # one value per polyline within the set
+        shape_list = [len(support.count_perpol)]
     return shape_list
 
 
