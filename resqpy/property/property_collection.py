@@ -141,20 +141,28 @@ class PropertyCollection():
         else:
             pcs._set_support_uuid_notnone(self, support, support_uuid, model, modify_parts)
 
-    def supporting_shape(self, indexable_element = None, direction = None):
+    def supporting_shape(self,
+                         indexable_element = None,
+                         direction = None,
+                         count = 1,
+                         points = False,
+                         pre_packed = False):
         """Return the shape of the supporting representation with respect to the given indexable element
 
         arguments:
            indexable_element (string, optional): if None, a hard-coded default depending on the supporting representation class
               will be used
            direction (string, optional): must be passed if required for the combination of support class and indexable element;
-              currently only used for Grid faces.
+              currently only used for Grid faces
+           count (int, default 1): the count parameter for the property
+           points (bool, default False): set True if the property is a points property
+           pre_packed (bool, default False): set True if the required shape is for a pre-packed boolean property
 
         returns:
            list of int, being required shape of numpy array, or None if not coded for
 
         note:
-           individual property arrays will only match this shape if they have the same indexable element and a count of one
+           individual property arrays will only match this shape if they have the same indexable element and matching count etc.
         """
 
         # when at global level was causing circular reference loading issues as grid imports this module
@@ -204,6 +212,14 @@ class PropertyCollection():
         else:
             raise Exception(f'unsupported support class {type(support)} for property')
 
+        if pre_packed:
+            shape_list[-1] = (shape_list[-1] - 1) // 8 + 1
+
+        if shape_list is not None:
+            if count > 1:
+                shape_list.append(count)
+            if points:
+                shape_list.append(3)
         return shape_list
 
     def populate_from_property_set(self, property_set_root):
@@ -1867,7 +1883,7 @@ class PropertyCollection():
             shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
                                           direction = pcga._part_direction(self, part))
             assert shape is not None
-            return shape, (float if self.continuous_for_part(part) else int)
+            return tuple(shape), (float if self.continuous_for_part(part) else int)
 
         h5_key_pair = self._shape_and_type_of_part_get_h5keypair(part, part_node, model)
         if h5_key_pair is None:
@@ -2283,6 +2299,15 @@ class PropertyCollection():
         uuid = bu.new_uuid()
         cached_name = rqp_c._cache_name_for_uuid(uuid)
         if cached_array is not None:
+            direction = facet if facet_type == 'direction' else None
+            shape = self.supporting_shape(indexable_element = indexable_element,
+                                          direction = direction,
+                                          count = count,
+                                          points = points,
+                                          pre_packed = pre_packed)
+            assert shape is not None, f'unsupported indexable element {indexable_element} for supporting representation'
+            assert cached_array.shape == tuple(
+                shape), f'property array has shape {cached_array.shape} when expecting {tuple(shape)}'
             min_value, max_value = pcga._min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete)
         else:
             if const_value == null_value or isinstance(const_value, bool) or (not discrete and np.isnan(const_value)):
