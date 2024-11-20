@@ -287,7 +287,13 @@ def test_coordinate_line_end_points_s_bend_faulted_grid(s_bend_faulted_grid):
     np.testing.assert_array_almost_equal(coordinate_line_end_points[2, 7, 1], np.array([54.104242, 16., 112.723689]))
     np.testing.assert_array_almost_equal(coordinate_line_end_points[11, 28, 1], np.array([14.132444, 88., 146.132614]))
     np.testing.assert_array_almost_equal(coordinate_line_end_points[8, 18, 0], np.array([76.685067, 64., 146.146903]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[8, -3, 0], np.array([45.705, 64.0, 184.455781]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[8, -2, 0], np.array([54.84, 64.0, 180.303781]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[8, -1, 0], np.array([64.84, 64.0, 180.303781]))
     np.testing.assert_array_almost_equal(coordinate_line_end_points[5, 15, 1], np.array([67.117693, 40., 131.363778]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[-3, 15, 1], np.array([70.117693, 80.0, 132.803778]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[-2, 15, 1], np.array([70.117693, 88.0, 132.803778]))
+    np.testing.assert_array_almost_equal(coordinate_line_end_points[-1, 15, 1], np.array([70.117693, 96.0, 132.803778]))
 
 
 def test_coordinate_line_end_points_s_bend_k_gep_grid(s_bend_k_gap_grid):
