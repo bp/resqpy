@@ -77,9 +77,8 @@ def add_wells_from_ascii_file(model,
     assert crs_uuid is not None, 'coordinate reference system not found when trying to add wells'
 
     try:
-        df = pd.read_csv(trajectory_file,
-                         comment = comment_character,
-                         delim_whitespace = space_separated_instead_of_csv)
+        sep = r'\s+' if space_separated_instead_of_csv else ','
+        df = pd.read_csv(trajectory_file, comment = comment_character, sep = sep)
         if df is None:
             raise Exception
     except Exception:
@@ -350,7 +349,6 @@ def add_las_to_trajectory(las: lasio.LASFile, trajectory, realization = None, ch
 
     # Read in data from each curve in turn (skipping first curve which has depths)
     for curve in las.curves[1:]:
-
         collection.add_log(
             title = curve.mnemonic,
             data = curve.data,
@@ -444,7 +442,7 @@ def add_logs_from_cellio(blockedwell, cellio):
         df['cell_indices'] = grid.natural_cell_indices(
             np.array((df['k_index'] - 1, df['j_index'] - 1, df['i_index'] - 1), dtype = np.int32).T)
         df = df.drop(['i_index', 'j_index', 'k_index', 'x_in', 'y_in', 'z_in', 'x_out', 'y_out', 'z_out'], axis = 1)
-    assert (df['cell_indices'] == blockedwell.cell_indices).all(),  \
+    assert (df['cell_indices'] == blockedwell.cell_indices).all(), \
         'Cell indices do not match between blocked well and log inputs'
 
     # Work out if the data columns are continuous, categorical or discrete
