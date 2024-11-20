@@ -510,9 +510,9 @@ class Trajectory(BaseResqpy):
             self.title = 'well trajectory'
 
         try:
-            df = pd.read_csv(trajectory_file,
-                             comment = comment_character,
-                             delim_whitespace = space_separated_instead_of_csv)
+            sep = r'\s+' if space_separated_instead_of_csv else ','
+
+            df = pd.read_csv(trajectory_file, comment = comment_character, sep = sep)
             if df is None:
                 raise Exception
         except Exception:

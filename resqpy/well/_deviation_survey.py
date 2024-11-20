@@ -164,8 +164,6 @@ class DeviationSurvey(BaseResqpy):
         """
 
         for col in [md_col, azimuth_col, inclination_col, x_col, y_col, z_col]:
-            if col not in data_frame.columns:
-                raise ValueError(f"Missing column: '{col}' in the DataFrame.")
             assert col in data_frame.columns
         station_count = len(data_frame)
         assert station_count >= 2  # vertical well could be hamdled by allowing a single station in survey?
@@ -235,9 +233,9 @@ class DeviationSurvey(BaseResqpy):
         """
 
         try:
-            df = pd.read_csv(deviation_survey_file,
-                             comment = comment_character,
-                             delim_whitespace = space_separated_instead_of_csv)
+            sep = r'\s+' if space_separated_instead_of_csv else ','
+
+            df = pd.read_csv(deviation_survey_file, comment = comment_character, sep = sep)
             if df is None:
                 raise Exception
         except Exception:
