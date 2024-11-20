@@ -760,7 +760,8 @@ class PropertyCollection():
                   title = None,
                   title_mode = None,
                   related_uuid = None,
-                  const_value = None):
+                  const_value = None,
+                  extra = None):
         """Returns a single part selected by those arguments which are not None.
 
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
@@ -799,7 +800,8 @@ class PropertyCollection():
                                                                 title = title,
                                                                 title_mode = title_mode,
                                                                 related_uuid = related_uuid,
-                                                                const_value = const_value)
+                                                                const_value = const_value,
+                                                                extra = extra)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
@@ -832,7 +834,8 @@ class PropertyCollection():
                          title = None,
                          title_mode = None,
                          related_uuid = None,
-                         use_pack = True):
+                         use_pack = True,
+                         extra = None):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -849,7 +852,7 @@ class PropertyCollection():
 
         Other optional arguments:
         realization, support_uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
-        citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid:
+        citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid, extra:
 
         For each of these arguments: if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
@@ -885,7 +888,8 @@ class PropertyCollection():
                               multiple_handling = multiple_handling,
                               title = title,
                               title_mode = title_mode,
-                              related_uuid = related_uuid)
+                              related_uuid = related_uuid,
+                              extra = extra)
         if part is None:
             return None
         return self.cached_part_array_ref(part,
