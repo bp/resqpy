@@ -801,8 +801,7 @@ class PropertyCollection():
                                                                 title_mode = title_mode,
                                                                 related_uuid = related_uuid,
                                                                 const_value = const_value, 
-                                                                extra = extra
-                                                               )
+                                                                extra = extra)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
