@@ -708,16 +708,16 @@ class Surface(rqsb.BaseSurface):
         return flange_array
 
     def extend_surface_with_flange(self,
-                           convexity_parameter = 5.0,
-                           reorient = False,
-                           reorient_max_dip = None,
-                           flange_point_count = 11,
-                           flange_radial_factor = 10.0,
-                           flange_radial_distance = None,
-                           flange_inner_ring = False,
-                           saucer_parameter = None,
-                           make_clockwise = False,
-                           retriangulate = False):
+                                   convexity_parameter = 5.0,
+                                   reorient = False,
+                                   reorient_max_dip = None,
+                                   flange_point_count = 11,
+                                   flange_radial_factor = 10.0,
+                                   flange_radial_distance = None,
+                                   flange_inner_ring = False,
+                                   saucer_parameter = None,
+                                   make_clockwise = False,
+                                   retriangulate = False):
         """Returns a new Surface object where the original surface has been extended with a flange.
         with a Delaunay triangulation of points in a PointSet object.
 
@@ -771,19 +771,11 @@ class Surface(rqsb.BaseSurface):
         prev_t, prev_p = self.triangles_and_points()
         point_set = rqs.PointSet(self.model, crs_uuid = self.crs_uuid, title = self.title, points_array = prev_p)
         if retriangulate:
-            out_surf = Surface(self.model, crs_uuid=self.crs_uuid, title = self.title)
-            return out_surf, out_surf.set_from_point_set(
-                                           point_set,
-                                           convexity_parameter,
-                                           reorient,
-                                           reorient_max_dip,
-                                           True,
-                                           flange_point_count,
-                                           flange_radial_factor,
-                                           flange_radial_distance,
-                                           flange_inner_ring,
-                                           saucer_parameter,
-                                           make_clockwise)
+            out_surf = Surface(self.model, crs_uuid = self.crs_uuid, title = self.title)
+            return out_surf, out_surf.set_from_point_set(point_set, convexity_parameter, reorient, reorient_max_dip,
+                                                         True, flange_point_count, flange_radial_factor,
+                                                         flange_radial_distance, flange_inner_ring, saucer_parameter,
+                                                         make_clockwise)
         else:
             simple_saucer_angle = None
             if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
@@ -801,8 +793,7 @@ class Surface(rqsb.BaseSurface):
                 unit_adjusted_p = p.copy()
                 wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
             if reorient:
-                p_xy, _, reorient_matrix = triangulate.reorient(unit_adjusted_p,
-                                                                max_dip = reorient_max_dip)
+                p_xy, _, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
             else:
                 p_xy = unit_adjusted_p
                 reorient_matrix = None
@@ -815,14 +806,14 @@ class Surface(rqsb.BaseSurface):
                 radius = flange_radial_distance
 
             de, dc = self.distinct_edges_and_counts()  # find the distinct edges and counts
-            unique_edge = de[dc == 1] # find hull edges (edges on only a single triangle)
-            hull_points = p_xy[unique_edge] # find points defining the hull edges
-            hull_centres = np.mean(hull_points, axis=1) # find the centre of each edge
+            unique_edge = de[dc == 1]  # find hull edges (edges on only a single triangle)
+            hull_points = p_xy[unique_edge]  # find points defining the hull edges
+            hull_centres = np.mean(hull_points, axis=1)  # find the centre of each edge
 
-            flange_points = np.empty(shape=(hull_centres.shape), dtype=float) # loop over all the hull centres, generating a flange point and finding the azimuth from the centre to the hull centre point
-            az = np.empty(shape=len(hull_centres), dtype=float)
+            flange_points = np.empty(shape=(hull_centres.shape), dtype=float)  # loop over all the hull centres, generating a flange point and finding the azimuth from the centre to the hull centre point
+            az = np.empty(shape = len(hull_centres), dtype = float)
             for i, c in enumerate(hull_centres):
-                v =  [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
+                v = [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
                 uv = -vec.unit_vector(v)
                 az[i] = vec.azimuth(uv)
                 flange_point = centre_point + radius * uv
@@ -831,39 +822,39 @@ class Surface(rqsb.BaseSurface):
                     flange_point[2] -= z_shift
                 flange_points[i] = flange_point
 
-            sort_az_ind = np.argsort(np.array(az)) # sort by azimuth, to run through the hull points
-            new_points = np.empty(shape=(len(flange_points), 3), dtype=float)
-            new_triangles = np.empty(shape=(len(flange_points)*2, 3), dtype=int)
-            point_offset = len(p_xy) # the indices of the new triangles will begin after this
-            for i, ind in enumerate(sort_az_ind): # loop over each point in azimuth order
+            sort_az_ind = np.argsort(np.array(az))  # sort by azimuth, to run through the hull points
+            new_points = np.empty(shape = (len(flange_points), 3), dtype = float)
+            new_triangles = np.empty(shape = (len(flange_points)*2, 3), dtype = int)
+            point_offset = len(p_xy)  # the indices of the new triangles will begin after this
+            for i, ind in enumerate(sort_az_ind):  # loop over each point in azimuth order
                 new_points[i] = flange_points[ind]
                 this_hull_edge = unique_edge[ind]
 
                 def az_for_point(c):
-                    v =  [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
+                    v = [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
                     uv = -vec.unit_vector(v)
                     return vec.azimuth(uv)
 
                 this_edge_az_sort = np.array([az_for_point(p_xy[this_hull_edge[0]]), az_for_point(p_xy[this_hull_edge[1]])])
                 first, second = np.argsort(this_edge_az_sort)
                 if i != len(sort_az_ind)-1:
-                    new_triangles[2*i] = np.array([this_hull_edge[first],this_hull_edge[second],i+point_offset]) # add a triangle between the two hull points and the flange point
-                    new_triangles[(2*i)+1] = np.array([this_hull_edge[second],i+point_offset, i+point_offset+1]) # for all but the last point, hookup triangle to the next flange point
+                    new_triangles[2*i] = np.array([this_hull_edge[first], this_hull_edge[second], i+point_offset])  # add a triangle between the two hull points and the flange point
+                    new_triangles[(2*i)+1] = np.array([this_hull_edge[second], i+point_offset, i+point_offset+1])  # for all but the last point, hookup triangle to the next flange point
                 else:
-                    new_triangles[2*i] = np.array([this_hull_edge[first],this_hull_edge[second],point_offset]) # add a triangle between the two hull points and the first flange point
-                    new_triangles[(2*i)+1] = np.array([this_hull_edge[second],point_offset,i+point_offset]) # add in the final triangle between the first and last flange points
+                    new_triangles[2*i] = np.array([this_hull_edge[first], this_hull_edge[second], point_offset])  # add a triangle between the two hull points and the first flange point
+                    new_triangles[(2*i)+1] = np.array([this_hull_edge[second], point_offset, i+point_offset])  # add in the final triangle between the first and last flange points
 
-            all_points = np.concatenate((p_xy, new_points)) # concatenate triangle and points arrays
+            all_points = np.concatenate((p_xy, new_points))  # concatenate triangle and points arrays
             all_triangles = np.concatenate((prev_t, new_triangles))
 
-            flange_array = np.zeros(shape = all_triangles.shape[0], dtype=bool)
-            flange_array[len(prev_t):] = True # make a flange bool array, where all new triangles are flange and therefore True
+            flange_array = np.zeros(shape = all_triangles.shape[0], dtype = bool)
+            flange_array[len(prev_t):] = True  # make a flange bool array, where all new triangles are flange and therefore True
 
             assert len(all_points) == (point_offset + len(flange_points)), "New point count should be old point count + flange point count"
             assert len(all_triangles) == (len(prev_t) + 2*len(flange_points)), "New triangle count should be old triangle count + 2 x #flange points"
 
             if saucer_parameter is not None:
-                _adjust_flange_z(self.model, crs.uuid, all_points, len(all_points), all_triangles, flange_array, saucer_parameter) # adjust the flange points if in saucer mode
+                _adjust_flange_z(self.model, crs.uuid, all_points, len(all_points), all_triangles, flange_array, saucer_parameter)  # adjust the flange points if in saucer mode
             if reorient:
                 all_points = vec.rotate_array(reorient_matrix.T, all_points)
             if crs.xy_units != crs.z_units and reorient:
@@ -872,8 +863,8 @@ class Surface(rqsb.BaseSurface):
             if make_clockwise:
                 triangulate.make_all_clockwise_xy(all_triangles, all_points)  # modifies t in situ
 
-            out_surf = Surface(self.model, crs_uuid=self.crs_uuid, title = self.title)
-            out_surf.set_from_triangles_and_points(all_triangles, all_points) # create the new surface
+            out_surf = Surface(self.model, crs_uuid = self.crs_uuid, title = self.title)
+            out_surf.set_from_triangles_and_points(all_triangles, all_points)  # create the new surface
             return out_surf, flange_array
 
 
