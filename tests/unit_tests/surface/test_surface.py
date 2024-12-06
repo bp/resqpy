@@ -1303,9 +1303,3 @@ def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
                                                    [-17.86764418, 7.76400526, -18.029118],
                                                    [-15.03584362, 16.39531138, -18.029118]]),
                                          new_p[len(orig_p):])
-    new_surf.write_hdf5()
-    new_surf.create_xml()
-    model.store_epc()
-
-    new = rq.Model(epc_file="/hpcdata/nee2yd/testers.epc", copy_from=model.epc_file)
-    new.store_epc()
