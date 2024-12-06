@@ -8,6 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+import math as maths
 
 import resqpy.crs as rqc
 import resqpy.lines as rql
@@ -47,7 +48,7 @@ class Surface(rqsb.BaseSurface):
                  originator = None,
                  extra_metadata = {}):
         """Create an empty Surface object (RESQML TriangulatedSetRepresentation).
-        
+
         Optionally populates from xml, point set or mesh.
 
         arguments:
@@ -638,73 +639,185 @@ class Surface(rqsb.BaseSurface):
         assert saucer_parameter is None or 0.0 <= saucer_parameter < 1.0
         crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
         p = point_set.full_array_ref()
-        assert p.ndim >= 2
-        assert p.shape[-1] == 3
-        p = p.reshape((-1, 3))
-        nan_mask = np.isnan(p)
-        if np.any(nan_mask):
-            row_mask = np.logical_not(np.any(nan_mask, axis = -1))
-            log.info(
-                f'removing {len(p) - np.count_nonzero(row_mask)} NaN points from point set {point_set.title} prior to surface triangulation'
-            )
-            p = p[row_mask, :]
-        if crs.xy_units == crs.z_units or not reorient:
-            unit_adjusted_p = p
-        else:
-            unit_adjusted_p = p.copy()
-            wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
-        if reorient:
-            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p,
-                                                                             max_dip = reorient_max_dip)
-        else:
-            p_xy = unit_adjusted_p
-        if extend_with_flange:
-            if not reorient:
-                assert saucer_parameter is None and simple_saucer_angle is None,  \
-                    'flange saucer mode only available with reorientation active'
-                log.warning('extending point set with flange without reorientation')
-            flange_points = triangulate.surrounding_xy_ring(p_xy,
-                                                            count = flange_point_count,
-                                                            radial_factor = flange_radial_factor,
-                                                            radial_distance = flange_radial_distance,
-                                                            inner_ring = flange_inner_ring,
-                                                            saucer_angle = simple_saucer_angle)
-            p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
-            if reorient:
-                # reorient back extenstion points into original p space
-                flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
-                p_e = np.concatenate((unit_adjusted_p, flange_points_reverse_oriented), axis = 0)
-            else:
-                p_e = p_xy_e
-        else:
-            p_xy_e = p_xy
-            p_e = unit_adjusted_p
-            flange_array = None
-        log.debug('number of points going into dt: ' + str(len(p_xy_e)))
-        success = False
-        try:
-            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter, algorithm = "scipy")
-            success = True
-        except AssertionError:
-            pass
-        if not success:
-            log.warning('triangulation failed, trying again with tiny perturbation of points')
-            p_xy_e[:, :2] += (np.random.random((len(p_xy_e), 2)) - 0.5) * 0.001
-            t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter * 1.1)
-        log.debug('number of triangles: ' + str(len(t)))
-        if make_clockwise:
-            triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ
-        if extend_with_flange:
-            flange_array = np.zeros(len(t), dtype = bool)
-            flange_array[:] = np.where(np.any(t >= len(p), axis = 1), True, False)
-            if saucer_parameter is not None:
-                _adjust_flange_z(self.model, self.crs_uuid, p_xy_e, len(p), t, flange_array, saucer_parameter)
-                p_e = vec.rotate_array(reorient_matrix.T, p_xy_e)
-        if crs.xy_units != crs.z_units and reorient:
-            wam.convert_lengths(p_e[:, 2], crs.xy_units, crs.z_units)
+
+        t, p_e, p_xy_e, normal_vector, flange_array = _generate_flange_extended_points_and_triangles(p, crs, self.model, convexity_parameter, reorient, reorient_max_dip, extend_with_flange,
+                                                            flange_point_count, flange_radial_factor, flange_radial_distance, flange_inner_ring,
+                                                            saucer_parameter, make_clockwise, simple_saucer_angle, remove_nans = True)
         self.crs_uuid = point_set.crs_uuid
+        if reorient:
+            self.normal_vector = normal_vector
         self.set_from_triangles_and_points(t, p_e)
         return flange_array
+
+    def extend_surface_with_flange(self,
+                           convexity_parameter = 5.0,
+                           reorient = False,
+                           reorient_max_dip = None,
+                           flange_point_count = 11,
+                           flange_radial_factor = 10.0,
+                           flange_radial_distance = None,
+                           flange_inner_ring = False,
+                           saucer_parameter = None,
+                           make_clockwise = False,
+                           retriangulate = False):
+        """Returns a new Surface object where the original surface has been extended with a flange.
+        with a Delaunay triangulation of points in a PointSet object.
+
+        arguments:
+           convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
+              convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
+              chance of even a slight concavity
+           reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
+              limited to this angle in degrees
+           flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
+              retriangulate is False
+           flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
+              factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
+           flange_radial_distance (float, optional): if present, the minimum absolute distance of flange points from
+              centre of points; units are those of the crs
+           flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
+              is created at a radius just outside that of the furthest flung original point; this improves
+              triangulation of the extended point set when the original has a non-convex hull
+           saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
+              controlling the shift of flange points in a perpendicular direction away from the fault plane;
+              see notes for how this parameter is interpreted
+           make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
+              viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
+              enforced in the reoriented space
+           retriangulate (bool, default False): if True, the surface will be generated with a retriangulation of
+              the existing points. If False, the surface will be generated by adding flange points and triangles directly
+              from the original surface edges, and will no retriangulate the input surface. If False the surface must not
+              contain tears
+
+        returns:
+           a new surface, and a boolean array of length N, where N is the number of triangles on the surface. This boolean
+           array is False on original triangle points, and True for extended flange triangles
+
+        notes:
+           a boolean array is created for the surface, with a value per triangle, set to False (zero) for non-flange
+           triangles and True (one) for flange triangles; this array is suitable for adding as a property for the
+           surface, with indexable element 'faces';
+           when flange extension occurs, the radius is the greater of the values determined from the radial factor
+           and radial distance arguments;
+           the saucer_parameter is interpreted in one of two ways: (1) +ve fractoinal values between zero and one
+           are the fractional distance from the centre of the points to its rim at which to sample the surface for
+           extrapolation and thereby modify the recumbent z of flange points; 0 will usually give shallower and
+           smoother saucer; larger values (must be less than one) will lead to stronger and more erratic saucer
+           shape in flange; (2) other values between -90.0 and 90.0 are interpreted as an angle to apply out of
+           the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
+           +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
+           the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
+           to the average plane of the original points"""
+        prev_t, prev_p = self.triangles_and_points()
+        point_set = rqs.PointSet(self.model, crs_uuid = self.crs_uuid, title = self.title, points_array = prev_p)
+        if retriangulate:
+            out_surf = Surface(self.model, crs_uuid=self.crs_uuid, title = self.title)
+            return out_surf, out_surf.set_from_point_set(
+                                           point_set,
+                                           convexity_parameter,
+                                           reorient,
+                                           reorient_max_dip,
+                                           True,
+                                           flange_point_count,
+                                           flange_radial_factor,
+                                           flange_radial_distance,
+                                           flange_inner_ring,
+                                           saucer_parameter,
+                                           make_clockwise)
+        else:
+            simple_saucer_angle = None
+            if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
+                assert -90.0 < saucer_parameter < 90.0, f'simple saucer angle parameter must be less than 90 degrees; too big: {saucer_parameter}'
+                simple_saucer_angle = saucer_parameter
+                saucer_parameter = None
+            assert saucer_parameter is None or 0.0 <= saucer_parameter < 1.0
+            crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
+            assert prev_p.ndim >= 2
+            assert prev_p.shape[-1] == 3
+            p = prev_p.reshape((-1, 3))
+            if crs.xy_units == crs.z_units or not reorient:
+                unit_adjusted_p = p
+            else:
+                unit_adjusted_p = p.copy()
+                wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+            if reorient:
+                p_xy, _, reorient_matrix = triangulate.reorient(unit_adjusted_p,
+                                                                max_dip = reorient_max_dip)
+            else:
+                p_xy = unit_adjusted_p
+                reorient_matrix = None
+
+            centre_point = np.nanmean(p_xy.reshape((-1, 3)), axis = 0) # work out the radius for the flange points
+            p_radius_v = np.nanmax(np.abs(p.reshape((-1, 3)) - np.expand_dims(centre_point, axis = 0)), axis = 0)[:2]
+            p_radius = maths.sqrt(np.sum(p_radius_v * p_radius_v))
+            radius = p_radius * flange_radial_factor
+            if flange_radial_distance is not None and flange_radial_distance > radius:
+                radius = flange_radial_distance
+
+            de, dc = self.distinct_edges_and_counts()  # find the distinct edges and counts
+            unique_edge = de[dc == 1] # find hull edges (edges on only a single triangle)
+            hull_points = p_xy[unique_edge] # find points defining the hull edges
+            hull_centres = np.mean(hull_points, axis=1) # find the centre of each edge
+
+            flange_points = np.empty(shape=(hull_centres.shape), dtype=float) # loop over all the hull centres, generating a flange point and finding the azimuth from the centre to the hull centre point
+            az = np.empty(shape=len(hull_centres), dtype=float)
+            for i, c in enumerate(hull_centres):
+                v =  [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
+                uv = -vec.unit_vector(v)
+                az[i] = vec.azimuth(uv)
+                flange_point = centre_point + radius * uv
+                if simple_saucer_angle is not None:
+                    z_shift = radius * maths.tan(vec.radians_from_degrees(simple_saucer_angle))
+                    flange_point[2] -= z_shift
+                flange_points[i] = flange_point
+
+            sort_az_ind = np.argsort(np.array(az)) # sort by azimuth, to run through the hull points
+            new_points = np.empty(shape=(len(flange_points), 3), dtype=float)
+            new_triangles = np.empty(shape=(len(flange_points)*2, 3), dtype=int)
+            point_offset = len(p_xy) # the indices of the new triangles will begin after this
+            for i, ind in enumerate(sort_az_ind): # loop over each point in azimuth order
+                new_points[i] = flange_points[ind]
+                this_hull_edge = unique_edge[ind]
+
+                def az_for_point(c):
+                    v =  [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
+                    uv = -vec.unit_vector(v)
+                    return vec.azimuth(uv)
+
+                this_edge_az_sort = np.array([az_for_point(p_xy[this_hull_edge[0]]), az_for_point(p_xy[this_hull_edge[1]])])
+                first, second = np.argsort(this_edge_az_sort)
+                if i != len(sort_az_ind)-1:
+                    new_triangles[2*i] = np.array([this_hull_edge[first],this_hull_edge[second],i+point_offset]) # add a triangle between the two hull points and the flange point
+                    new_triangles[(2*i)+1] = np.array([this_hull_edge[second],i+point_offset, i+point_offset+1]) # for all but the last point, hookup triangle to the next flange point
+                else:
+                    new_triangles[2*i] = np.array([this_hull_edge[first],this_hull_edge[second],point_offset]) # add a triangle between the two hull points and the first flange point
+                    new_triangles[(2*i)+1] = np.array([this_hull_edge[second],point_offset,i+point_offset]) # add in the final triangle between the first and last flange points
+
+            all_points = np.concatenate((p_xy, new_points)) # concatenate triangle and points arrays
+            all_triangles = np.concatenate((prev_t, new_triangles))
+
+            flange_array = np.zeros(shape = all_triangles.shape[0], dtype=bool)
+            flange_array[len(prev_t):] = True # make a flange bool array, where all new triangles are flange and therefore True
+
+            assert len(all_points) == (point_offset + len(flange_points)), "New point count should be old point count + flange point count"
+            assert len(all_triangles) == (len(prev_t) + 2*len(flange_points)), "New triangle count should be old triangle count + 2 x #flange points"
+
+            if saucer_parameter is not None:
+                _adjust_flange_z(self.model, crs.uuid, all_points, len(all_points), all_triangles, flange_array, saucer_parameter) # adjust the flange points if in saucer mode
+            if reorient:
+                all_points = vec.rotate_array(reorient_matrix.T, all_points)
+            if crs.xy_units != crs.z_units and reorient:
+                wam.convert_lengths(all_points[:, 2], crs.xy_units, crs.z_units)
+
+            if make_clockwise:
+                triangulate.make_all_clockwise_xy(all_triangles, all_points)  # modifies t in situ
+
+            out_surf = Surface(self.model, crs_uuid=self.crs_uuid, title = self.title)
+            out_surf.set_from_triangles_and_points(all_triangles, all_points) # create the new surface
+            return out_surf, flange_array
+
 
     def make_all_clockwise_xy(self, reorient = False):
         """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
@@ -845,7 +958,7 @@ class Surface(rqsb.BaseSurface):
 
     def set_to_multi_cell_faces_from_corner_points(self, cp, quad_triangles = True):
         """Populates this (empty) surface to represent faces of a set of cells.
-        
+
         From corner points of shape (N, 2, 2, 2, 3).
         """
         assert cp.size % 24 == 0
@@ -881,7 +994,7 @@ class Surface(rqsb.BaseSurface):
 
     def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0, quad_triangles = False):
         """Populate this (empty) surface with a patch of two triangles.
-        
+
         Triangles define a flat, horizontal plane at a given depth.
 
         arguments:
@@ -985,7 +1098,7 @@ class Surface(rqsb.BaseSurface):
 
     def vertical_rescale_points(self, ref_depth = None, scaling_factor = 1.0):
         """Modify the z values of points by rescaling.
-        
+
         Stretches the distance from reference depth by scaling factor.
         """
         if scaling_factor == 1.0:
@@ -1170,11 +1283,11 @@ class Surface(rqsb.BaseSurface):
         return resampled
 
     def resample_surface_unique_edges(self):
-        """Returns a new surface, with the same model, title and crs as the original surface, but with additional refined points along original surface tears and edges. 
-        
+        """Returns a new surface, with the same model, title and crs as the original surface, but with additional refined points along original surface tears and edges.
+
         Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
 
-        returns: 
+        returns:
             resqpy.surface.Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
         """
         _, op = self.triangles_and_points()
@@ -1454,3 +1567,197 @@ def _adjust_flange_z(model, crs_uuid, p_xy_e, flange_start_index, t, flange_arra
         assert 0.0 < f < 1.0
         z = (rim_xyz[2] - start_xyz[2]) / f + start_xyz[2]
         p_xy_e[flange_pi, 2] = z
+
+
+
+def _flange_extended_points(p_xy, unit_adjusted_p, reorient, saucer_parameter, reorient_matrix, flange_point_count, flange_radial_factor, flange_radial_distance, flange_inner_ring, simple_saucer_angle):
+    """Calculates flange extension points for a given points array, returning these extended points and the original pointset
+    """
+    if not reorient:
+        assert saucer_parameter is None and simple_saucer_angle is None,  \
+            'flange saucer mode only available with reorientation active'
+        log.warning('extending point set with flange without reorientation')
+    flange_points = triangulate.surrounding_xy_ring(p_xy,
+                                                    count = flange_point_count,
+                                                    radial_factor = flange_radial_factor,
+                                                    radial_distance = flange_radial_distance,
+                                                    inner_ring = flange_inner_ring,
+                                                    saucer_angle = simple_saucer_angle)
+    p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
+    if reorient:
+        # reorient back extension points into original p space
+        flange_points_reoriented = vec.rotate_array(reorient_matrix.T, flange_points)
+        p_e = np.concatenate((unit_adjusted_p, flange_points_reoriented), axis = 0)
+    else:
+        p_e = p_xy_e
+        flange_points_reoriented = flange_points
+    return p_e, p_xy_e, flange_points_reoriented
+
+def _delauney_triangulation_from_points(p_xy_e, convexity_parameter):
+    """Tries to triangulate the input points using delauney triangulation. If the initial attempt fails, a small perturbation is applied to the points before trying again.
+
+        arguments:
+            p_xy_e (np.array): numpy array of shape (N, 3) containing points which may have been reoriented to the surface normal direction
+            convexity_parameter (float): controls how likely the resulting triangulation is to be convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little chance of even a slight concavity
+
+        returns:
+            triangles generated as part of the retriangulation, as shape (N, 3) array, where N is the number of triangles, and each value references an index in the points array
+            points used in the triangles, which may be slightly different from the input array containing points which may have been reoriented to the surface normal direction if perturbation has been applied
+    """
+    success = False
+    try:
+        t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter, algorithm = "scipy")
+        success = True
+    except AssertionError:
+        pass
+    if not success:
+        log.warning('triangulation failed, trying again with tiny perturbation of points')
+        p_xy_e[:, :2] += (np.random.random((len(p_xy_e), 2)) - 0.5) * 0.001
+        t = triangulate.dt(p_xy_e[:, :2], container_size_factor = convexity_parameter * 1.1)
+    log.debug('number of triangles: ' + str(len(t)))
+
+    return t, p_xy_e
+
+def _generate_flange_extended_points_and_triangles(p,
+                                 crs,
+                                 model,
+                                 convexity_parameter = 5.0,
+                                 reorient = False,
+                                 reorient_max_dip = None,
+                                 extend_with_flange = False,
+                                 flange_point_count = 11,
+                                 flange_radial_factor = 10.0,
+                                 flange_radial_distance = None,
+                                 flange_inner_ring = False,
+                                 saucer_parameter = None,
+                                 make_clockwise = False,
+                                 simple_saucer_angle = None,
+                                 remove_nans = True):
+    """Generates extended flange points and triangles for a provided array of points.
+
+        arguments:
+           p (array): the array of points to be triangulated to form a surface
+           model (resqpy.model.Model): the model for the input pointset
+           convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
+              convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
+              chance of even a slight concavity
+           reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
+              limited to this angle in degrees
+           extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
+              points before the triangulation, effectively extending the surface with a flange
+           flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
+              extend_with_flange is False
+           flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
+              factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
+           flange_radial_distance (float, optional): if present, the minimum absolute distance of flange points from
+              centre of points; units are those of the crs
+           flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
+              is created at a radius just outside that of the furthest flung original point; this improves
+              triangulation of the extended point set when the original has a non-convex hull
+           saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
+              controlling the shift of flange points in a perpendicular direction away from the fault plane;
+              see notes for how this parameter is interpreted
+           make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
+              viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
+              enforced in the reoriented space
+           simple_saucer_angle ():
+           remove_nans (bool): if True, nans in the original pointset will be removed, default True
+
+        returns:
+            the triangles for the new extended surface, the points array with additional points, the points array
+            with additional points in reoriented space, the normal vector used for reorientation, a boolean
+            array of length number of triangles defining where triangles are part of the extended flange (True) or
+            part of the original surface (False)
+        """
+
+    p_e, p_xy_e, _, reorient_matrix, normal_vector = _generate_flange_extended_points(p, crs, reorient, reorient_max_dip, extend_with_flange, flange_point_count, flange_radial_factor, flange_radial_distance, flange_inner_ring, saucer_parameter, simple_saucer_angle, remove_nans)
+
+    t, p_xy_e = _delauney_triangulation_from_points(p_xy_e, convexity_parameter) # generate the triangles from the points
+    if make_clockwise:
+        triangulate.make_all_clockwise_xy(t, p_e)  # modifies t in situ
+    flange_array = None
+    if extend_with_flange:
+        flange_array = np.zeros(len(t), dtype = bool)
+        flange_array[:] = np.where(np.any(t >= len(p), axis = 1), True, False)
+        if saucer_parameter is not None:
+            _adjust_flange_z(model, crs.uuid, p_xy_e, len(p), t, flange_array, saucer_parameter)
+            p_e = vec.rotate_array(reorient_matrix.T, p_xy_e)
+    if crs.xy_units != crs.z_units and reorient:
+        wam.convert_lengths(p_e[:, 2], crs.xy_units, crs.z_units)
+    return t, p_e, p_xy_e, normal_vector, flange_array
+
+def _generate_flange_extended_points(p,
+                                crs,
+                                reorient = False,
+                                reorient_max_dip = None,
+                                extend_with_flange = False,
+                                flange_point_count = 11,
+                                flange_radial_factor = 10.0,
+                                flange_radial_distance = None,
+                                flange_inner_ring = False,
+                                saucer_parameter = None,
+                                simple_saucer_angle = None,
+                                remove_nans = True):
+    """Generates extended flange extended points for a provided array of points.
+
+        arguments:
+           p (array): the array of points to be triangulated to form a surface
+           crs (resqpy.crs.Crs): the crs to use for the points
+           reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+           reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
+              limited to this angle in degrees
+           extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
+              points before the triangulation, effectively extending the surface with a flange
+           flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
+              extend_with_flange is False
+           flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
+              factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
+           flange_radial_distance (float, optional): if present, the minimum absolute distance of flange points from
+              centre of points; units are those of the crs
+           flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
+              is created at a radius just outside that of the furthest flung original point; this improves
+              triangulation of the extended point set when the original has a non-convex hull
+           saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
+              controlling the shift of flange points in a perpendicular direction away from the fault plane;
+              see notes for how this parameter is interpreted
+           simple_saucer_angle ():
+           remove_nans (bool): if True, nans in the original pointset will be removed, default True
+
+        returns:
+            the points array with additional points, the points array with additional points in reoriented space, the
+            flange points array, the matrix used for reorientation, the surface normal vector
+    """
+    assert p.ndim >= 2
+    assert p.shape[-1] == 3
+    p = p.reshape((-1, 3))
+    nan_mask = np.isnan(p)
+    if remove_nans and np.any(nan_mask):
+        row_mask = np.logical_not(np.any(nan_mask, axis = -1))
+        log.info(
+            f'removing {len(p) - np.count_nonzero(row_mask)} NaN points from point set prior to surface triangulation'
+        )
+        p = p[row_mask, :]
+    if crs.xy_units == crs.z_units or not reorient:
+        unit_adjusted_p = p
+    else:
+        unit_adjusted_p = p.copy()
+        wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+    if reorient:
+        p_xy, normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p,
+                                                                        max_dip = reorient_max_dip)
+    else:
+        p_xy = unit_adjusted_p
+        reorient_matrix = None
+        normal_vector = None
+    if extend_with_flange:
+        p_e, p_xy_e, flange_points = _flange_extended_points(p_xy, unit_adjusted_p, reorient, saucer_parameter, reorient_matrix, flange_point_count, flange_radial_factor, flange_radial_distance, flange_inner_ring, simple_saucer_angle)
+    else:
+        p_xy_e = p_xy
+        p_e = unit_adjusted_p
+        flange_points = None
+    log.debug('number of points going into dt: ' + str(len(p_xy_e)))
+
+    return p_e, p_xy_e, flange_points, reorient_matrix, normal_vector
