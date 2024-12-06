@@ -848,7 +848,7 @@ class Surface(rqsb.BaseSurface):
                          i + point_offset])  # add a triangle between the two hull points and the flange point
                     new_triangles[(2 * i) + 1] = np.array(
                         [this_hull_edge[second], i + point_offset,
-                         i+point_offset + 1])  # for all but the last point, hookup triangle to the next flange point
+                         i + point_offset + 1])  # for all but the last point, hookup triangle to the next flange point
                 else:
                     new_triangles[2 * i] = np.array(
                         [this_hull_edge[first], this_hull_edge[second],
@@ -861,12 +861,14 @@ class Surface(rqsb.BaseSurface):
             all_triangles = np.concatenate((prev_t, new_triangles))
 
             flange_array = np.zeros(shape = all_triangles.shape[0], dtype = bool)
-            flange_array[len(prev_t):] = True  # make a flange bool array, where all new triangles are flange and therefore True
+            flange_array[
+                len(prev_t):] = True  # make a flange bool array, where all new triangles are flange and therefore True
 
             assert len(all_points) == (
                 point_offset + len(flange_points)), "New point count should be old point count + flange point count"
             assert len(all_triangles) == (
-                len(prev_t) + 2 * len(flange_points)), "New triangle count should be old triangle count + 2 x #flange points"
+                len(prev_t) +
+                2 * len(flange_points)), "New triangle count should be old triangle count + 2 x #flange points"
 
             if saucer_parameter is not None:
                 _adjust_flange_z(self.model, crs.uuid, all_points, len(all_points), all_triangles, flange_array,
