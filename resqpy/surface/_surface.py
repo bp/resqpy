@@ -736,7 +736,8 @@ class Surface(rqsb.BaseSurface):
                 centre of points; units are those of the crs
             flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
                 is created at a radius just outside that of the furthest flung original point; this improves
-                triangulation of the extended point set when the original has a non-convex hull
+                triangulation of the extended point set when the original has a non-convex hull. Ignored if retriangulate
+                is False
             saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
                 controlling the shift of flange points in a perpendicular direction away from the fault plane;
                 see notes for how this parameter is interpreted
@@ -831,7 +832,6 @@ class Surface(rqsb.BaseSurface):
             for i, ind in enumerate(sort_az_ind):  # loop over each point in azimuth order
                 new_points[i] = flange_points[ind]
                 this_hull_edge = unique_edge[ind]
-
                 def az_for_point(c):
                     v = [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
                     uv = -vec.unit_vector(v)
@@ -840,7 +840,10 @@ class Surface(rqsb.BaseSurface):
                 this_edge_az_sort = np.array(
                     [az_for_point(p_xy[this_hull_edge[0]]),
                      az_for_point(p_xy[this_hull_edge[1]])])
-                first, second = np.argsort(this_edge_az_sort)
+                if np.min(this_edge_az_sort) < az[ind] < np.max(this_edge_az_sort):
+                    first, second = np.argsort(this_edge_az_sort)
+                else:
+                    second, first = np.argsort(this_edge_az_sort)
                 if i != len(sort_az_ind) - 1:
                     new_triangles[2 * i] = np.array(
                         [this_hull_edge[first], this_hull_edge[second],
@@ -851,7 +854,7 @@ class Surface(rqsb.BaseSurface):
                 else:
                     new_triangles[2 * i] = np.array(
                         [this_hull_edge[first], this_hull_edge[second],
-                         point_offset])  # add a triangle between the two hull points and the first flange point
+                         i + point_offset])  # add a triangle between the two hull points and the first flange point
                     new_triangles[(2 * i) + 1] = np.array(
                         [this_hull_edge[second], point_offset,
                          i + point_offset])  # add in the final triangle between the first and last flange points
