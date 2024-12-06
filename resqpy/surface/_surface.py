@@ -718,10 +718,9 @@ class Surface(rqsb.BaseSurface):
                                    saucer_parameter = None,
                                    make_clockwise = False,
                                    retriangulate = False):
-        """Returns a new Surface object where the original surface has been extended with a flange.
-           with a Delaunay triangulation of points in a PointSet object.
+        """Returns a new Surface object where the original surface has been extended with a flange with a Delaunay triangulation of points in a PointSet object.
 
-            arguments:
+        arguments:
             convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
                 convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
                 chance of even a slight concavity
@@ -749,11 +748,11 @@ class Surface(rqsb.BaseSurface):
                 from the original surface edges, and will no retriangulate the input surface. If False the surface must not
                 contain tears
 
-            returns:
+        returns:
             a new surface, and a boolean array of length N, where N is the number of triangles on the surface. This boolean
             array is False on original triangle points, and True for extended flange triangles
 
-            notes:
+        notes:
             a boolean array is created for the surface, with a value per triangle, set to False (zero) for non-flange
             triangles and True (one) for flange triangles; this array is suitable for adding as a property for the
             surface, with indexable element 'faces';
