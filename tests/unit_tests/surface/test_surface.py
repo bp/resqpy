@@ -1315,24 +1315,23 @@ def test_extended_surface_with_flange_extension_retriangulate(example_model_and_
     orig_surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
     assert orig_surf is not None
     orig_surf.set_from_point_set(ps,
-                            reorient = True,
-                            reorient_max_dip = None,
-                            extend_with_flange = False,
-                            make_clockwise = False)
+                                 reorient = True,
+                                 reorient_max_dip = None,
+                                 extend_with_flange = False,
+                                 make_clockwise = False)
     orig_surf.write_hdf5()
     orig_surf.create_xml()
 
     # flange extension with simple saucer
-    new_surf, flange_bool = orig_surf.extend_surface_with_flange(
-        reorient = True,
-        reorient_max_dip = None,
-        flange_point_count = 12,
-        flange_radial_factor = 2.0,
-        flange_radial_distance = 2000.0,
-        flange_inner_ring = True,
-        saucer_parameter = -60.0,
-        make_clockwise = False,
-        retriangulate = True)
+    new_surf, flange_bool = orig_surf.extend_surface_with_flange(reorient = True,
+                                                                 reorient_max_dip = None,
+                                                                 flange_point_count = 12,
+                                                                 flange_radial_factor = 2.0,
+                                                                 flange_radial_distance = 2000.0,
+                                                                 flange_inner_ring = True,
+                                                                 saucer_parameter = -60.0,
+                                                                 make_clockwise = False,
+                                                                 retriangulate = True)
     new_surf.write_hdf5()
     new_surf.create_xml()
 
