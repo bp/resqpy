@@ -1248,7 +1248,7 @@ def test_extended_surface_with_flange_extension(example_model_and_crs):
     np.testing.assert_array_almost_equal(
         np.array([[5, 28.07078471], [26.81071628, 12.43307607], [27.71578211, 1.25570298], [24.45543821, -7.28011087],
                   [5, -17.98745138], [-16.42279299, -3.40843501], [-17.86764418, 7.76400526],
-                  [-15.03584362, 16.39531138]]), new_p[len(orig_p):,:2])
+                  [-15.03584362, 16.39531138]]), new_p[len(orig_p):, :2])
 
 def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
     model, crs = example_model_and_crs
