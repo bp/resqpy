@@ -1291,3 +1291,58 @@ def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
                   [5, -17.98745138, -18.029118], [-16.42279299, -3.40843501, -18.029118],
                   [-17.86764418, 7.76400526, -18.029118], [-15.03584362, 16.39531138, -18.029118]]),
         new_p[len(orig_p):])
+
+
+def test_extended_surface_with_flange_extension_retriangulate(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # number of random points to use
+    n = 20
+
+    # create a set of random points
+    x = np.random.random(n) * 1000.0 - 500.0
+    y = np.random.random(n) * 1000.0 - 500.0
+    z = np.random.random(n)  #  note: triangulation does not use z values
+    p = np.stack((x, y, z), axis = -1)
+    centre = np.mean(p, axis = 0)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    orig_surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert orig_surf is not None
+    orig_surf.set_from_point_set(ps,
+                            reorient = True,
+                            reorient_max_dip = None,
+                            extend_with_flange = False,
+                            make_clockwise = False)
+    orig_surf.write_hdf5()
+    orig_surf.create_xml()
+
+    # flange extension with simple saucer
+    new_surf, flange_bool = orig_surf.extend_surface_with_flange(
+        reorient = True,
+        reorient_max_dip = None,
+        flange_point_count = 12,
+        flange_radial_factor = 2.0,
+        flange_radial_distance = 2000.0,
+        flange_inner_ring = True,
+        saucer_parameter = -60.0,
+        make_clockwise = False,
+        retriangulate = True)
+    new_surf.write_hdf5()
+    new_surf.create_xml()
+
+    assert new_surf.node_count() == 56
+    _, p = new_surf.triangles_and_points()
+    min_p = np.min(p, axis = 0)
+    max_p = np.max(p, axis = 0)
+    assert -2010.0 <= min_p[0] - centre[0] < -1900.0
+    assert -2010.0 <= min_p[1] - centre[1] < -1900.0
+    assert 1900.0 < max_p[0] - centre[0] <= 2010.0
+    assert 1900.0 < max_p[1] - centre[1] <= 2010.0
+    assert 0.0 <= min_p[2] <= 1.0
+    assert 3464.0 < max_p[2] < 3465.5
