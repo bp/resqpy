@@ -1210,13 +1210,14 @@ def test_edge_lengths(example_model_and_crs):
     lengths = surf.edge_lengths(required_uom = 'cm')
     assert_array_almost_equal(lengths, np.array([(300.0, 400.0, 500.0), (500.0, 300.0, 400.0)], dtype = float))
 
+
 def test_extended_surface_with_flange_extension(example_model_and_crs):
     model, crs = example_model_and_crs
 
     # create a set of points (must have a convex hull)
-    x = np.array([-1,-1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
+    x = np.array([-1, -1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
     y = np.array([-1.1, -0.5, 0, 0.5, 1, 0.5, 1.1, 0.5, 0, -0.5, -1, 0], dtype = float) + 5
-    z = np.zeros(shape=(12), dtype=float) + 5
+    z = np.zeros(shape = (12), dtype = float) + 5
     p = np.stack((x, y, z), axis = -1)
 
     # make a PointSet object
@@ -1227,10 +1228,7 @@ def test_extended_surface_with_flange_extension(example_model_and_crs):
     # try out flange extension
     surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
     assert surf is not None
-    surf.set_from_point_set(ps,
-                            reorient = False,
-                            reorient_max_dip = None,
-                            extend_with_flange = False)
+    surf.set_from_point_set(ps, reorient = False, reorient_max_dip = None, extend_with_flange = False)
     surf.write_hdf5()
     surf.create_xml()
     orig_t, orig_p = surf.triangles_and_points()
@@ -1247,23 +1245,18 @@ def test_extended_surface_with_flange_extension(example_model_and_crs):
     assert not np.any(flange_bool[:len(orig_t)])
     assert np.all(np.isin(orig_t, new_t))
 
-    np.testing.assert_array_almost_equal(np.array([[5, 28.07078471],
-                                                   [26.81071628, 12.43307607],
-                                                   [27.71578211, 1.25570298],
-                                                   [24.45543821, -7.28011087],
-                                                   [5, -17.98745138],
-                                                   [-16.42279299, -3.40843501],
-                                                   [-17.86764418, 7.76400526],
-                                                   [-15.03584362, 16.39531138]]),
-                                         new_p[len(orig_p):,:2])
+    np.testing.assert_array_almost_equal(
+        np.array([[5, 28.07078471], [26.81071628, 12.43307607], [27.71578211, 1.25570298], [24.45543821, -7.28011087],
+                  [5, -17.98745138], [-16.42279299, -3.40843501], [-17.86764418, 7.76400526],
+                  [-15.03584362, 16.39531138]]), new_p[len(orig_p):,:2])
 
 def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
     model, crs = example_model_and_crs
 
     # create a set of points (must have a convex hull)
-    x = np.array([-1,-1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
+    x = np.array([-1, -1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
     y = np.array([-1.1, -0.5, 0, 0.5, 1, 0.5, 1.1, 0.5, 0, -0.5, -1, 0], dtype = float) + 5
-    z = np.zeros(shape=(12), dtype=float) + 5
+    z = np.zeros(shape = (12), dtype = float) + 5
     p = np.stack((x, y, z), axis = -1)
 
     # make a PointSet object
@@ -1274,10 +1267,7 @@ def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
     # try out flange extension
     surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
     assert surf is not None
-    surf.set_from_point_set(ps,
-                            reorient = False,
-                            reorient_max_dip = None,
-                            extend_with_flange = False)
+    surf.set_from_point_set(ps, reorient = False, reorient_max_dip = None, extend_with_flange = False)
     surf.write_hdf5()
     surf.create_xml()
     orig_t, orig_p = surf.triangles_and_points()
@@ -1294,12 +1284,9 @@ def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
     assert not np.any(flange_bool[:len(orig_t)])
     assert np.all(np.isin(orig_t, new_t))
 
-    np.testing.assert_array_almost_equal(np.array([[5, 28.07078471, -18.029118],
-                                                   [26.81071628, 12.43307607, -18.029118],
-                                                   [27.71578211, 1.25570298, -18.029118],
-                                                   [24.45543821, -7.28011087, -18.029118],
-                                                   [5, -17.98745138, -18.029118],
-                                                   [-16.42279299, -3.40843501, -18.029118],
-                                                   [-17.86764418, 7.76400526, -18.029118],
-                                                   [-15.03584362, 16.39531138, -18.029118]]),
-                                         new_p[len(orig_p):])
+    np.testing.assert_array_almost_equal(
+        np.array([[5, 28.07078471, -18.029118], [26.81071628, 12.43307607, -18.029118],
+                  [27.71578211, 1.25570298, -18.029118], [24.45543821, -7.28011087, -18.029118],
+                  [5, -17.98745138, -18.029118], [-16.42279299, -3.40843501, -18.029118],
+                  [-17.86764418, 7.76400526, -18.029118], [-15.03584362, 16.39531138, -18.029118]]),
+        new_p[len(orig_p):])
