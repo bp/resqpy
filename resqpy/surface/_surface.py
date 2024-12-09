@@ -832,6 +832,7 @@ class Surface(rqsb.BaseSurface):
             for i, ind in enumerate(sort_az_ind):  # loop over each point in azimuth order
                 new_points[i] = flange_points[ind]
                 this_hull_edge = unique_edge[ind]
+
                 def az_for_point(c):
                     v = [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
                     uv = -vec.unit_vector(v)
