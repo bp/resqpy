@@ -1250,6 +1250,7 @@ def test_extended_surface_with_flange_extension(example_model_and_crs):
                   [5, -17.98745138], [-16.42279299, -3.40843501], [-17.86764418, 7.76400526],
                   [-15.03584362, 16.39531138]]), new_p[len(orig_p):, :2])
 
+
 def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
     model, crs = example_model_and_crs
 
