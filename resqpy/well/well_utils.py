@@ -50,6 +50,7 @@ def load_lattice_array(object, node, array_attribute, trajectory):
 
     :meta private:
     """
+
     def check_md(md: float, trajectory) -> bool:
         xyz = np.array(trajectory.xyz_for_md(md))
         return isinstance(xyz, np.ndarray) and xyz.shape == (3,)
@@ -57,10 +58,10 @@ def load_lattice_array(object, node, array_attribute, trajectory):
     if array_attribute is not None and getattr(object, array_attribute, None) is not None:
         return
 
-    start_value = rqet.find_tag_float(node, "StartValue", must_exist=True)
-    offset = rqet.find_tag(node, "Offset", must_exist=True)
-    step_value = rqet.find_tag_float(offset, "Value", must_exist=True)
-    step_count = rqet.find_tag_int(offset, "Count", must_exist=True)
+    start_value = rqet.find_tag_float(node, "StartValue", must_exist = True)
+    offset = rqet.find_tag(node, "Offset", must_exist = True)
+    step_value = rqet.find_tag_float(offset, "Value", must_exist = True)
+    step_count = rqet.find_tag_int(offset, "Count", must_exist = True)
     if step_count > 0:
         step_mds = start_value + np.arange(step_count) * step_value
         valid_mds = [md for md in step_mds if check_md(md, trajectory)]
