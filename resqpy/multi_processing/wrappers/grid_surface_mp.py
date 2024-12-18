@@ -213,7 +213,7 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
         surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surface.set_from_point_set(pset,
                                                  convexity_parameter = 2.0,
-                                                 reorient = True,
+                                                 reorient = reorient,
                                                  extend_with_flange = extend_fault_representation,
                                                  flange_inner_ring = flange_inner_ring,
                                                  saucer_parameter = saucer_parameter,
