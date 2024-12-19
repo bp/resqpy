@@ -2,10 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_almost_equal
+from lxml import etree
 
 import resqpy.olio.xml_et as rqet
 import resqpy.well
-from resqpy.well.well_utils import load_hdf5_array, extract_xyz, find_entry_and_exit, _as_optional_array, _pl, well_names_in_cellio_file
+from resqpy.well.well_utils import load_hdf5_array, load_lattice_array, extract_xyz, find_entry_and_exit, _as_optional_array, _pl, well_names_in_cellio_file
 from resqpy.grid import RegularGrid
 
 
@@ -51,6 +52,34 @@ def test_load_hdf5_array(example_model_with_well):
     # -------- Assert ---------
     np.testing.assert_equal(survey.__dict__['measured_depths'], array_data['measured_depths'])
     assert expected_result is None
+
+
+def test_load_lattice_array(example_model_with_well):
+    # Load example model from a fixture
+    model, well_interp, datum, traj = example_model_with_well
+    mds = traj.measured_depths[:3]
+
+    lattice_array_step_start = mds[0]
+    lattice_array_step_value = (mds[1] - lattice_array_step_start) / 2
+    lattice_array_step_count = 3
+    expected_mds = lattice_array_step_start + np.arange(lattice_array_step_count) * lattice_array_step_value
+
+    # Construct a NodeMd element defined as DoubleLatticeArray
+    node_md_xml_string = f"""
+    <NodeMd type="DoubleLatticeArray">
+        <StartValue>{lattice_array_step_start}</StartValue>
+        <Offset>
+            <Value>{lattice_array_step_value}</Value>
+            <Count>{lattice_array_step_count}</Count>
+        </Offset>
+    </NodeMd>
+    """
+    mds_node = etree.fromstring(node_md_xml_string)
+    target_object = well_interp
+
+    expected_result = load_lattice_array(target_object, mds_node, "node_mds", traj)
+    assert expected_result is None
+    np.testing.assert_equal(target_object.__dict__["node_mds"], expected_mds)
 
 
 def test_extract_xyz(example_model_with_well):
