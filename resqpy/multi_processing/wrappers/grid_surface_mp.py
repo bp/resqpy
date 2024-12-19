@@ -43,6 +43,7 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
                                                     raw_bisector: bool = False,
                                                     use_pack: bool = False,
                                                     flange_radius = None,
+                                                    reorient = True,
                                                     n_threads = 20) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
@@ -96,6 +97,8 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
            packed format, which will only be readable by resqpy based applications
         flange_radius (float, optional): the radial distance to use for outer flange extension points; if None,
            a large value will be calculated from the grid size; units are xy units of grid crs
+        reorient (bool, default True):  if True, the points are reoriented to minimise the
+              z range prior to retriangulation (ie. z axis is approximate normal to plane of points), to enhace the triangulation
         n_threads (int, default 20): the number of parallel threads to use in numba points in triangles function
 
     returns:
@@ -176,7 +179,7 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
         surf = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surf.set_from_point_set(pset,
                                               convexity_parameter = 2.0,
-                                              reorient = True,
+                                              reorient = reorient,
                                               extend_with_flange = extend_fault_representation,
                                               flange_inner_ring = flange_inner_ring,
                                               saucer_parameter = saucer_parameter,
@@ -207,15 +210,24 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
         pset = rqs.PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
         if extend_fault_representation and not surf_title.endswith('extended'):
             surf_title += ' extended'
-        surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
-        flange_bool = surface.set_from_point_set(pset,
-                                                 convexity_parameter = 2.0,
-                                                 reorient = True,
-                                                 extend_with_flange = extend_fault_representation,
-                                                 flange_inner_ring = flange_inner_ring,
-                                                 saucer_parameter = saucer_parameter,
-                                                 flange_radial_distance = flange_radius,
-                                                 make_clockwise = False)
+        if saucer_parameter is not None and not reorient:
+            surface, flange_bool = surface.extend_surface_with_flange(
+                convexity_parameter = 2.0,
+                reorient = reorient,
+                saucer_parameter = saucer_parameter,
+                flange_radial_distance = flange_radius,
+                make_clockwise = False)
+            surface.title = surf_title
+        else:
+            surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
+            flange_bool = surface.set_from_point_set(pset,
+                                                    convexity_parameter = 2.0,
+                                                    reorient = reorient,
+                                                    extend_with_flange = extend_fault_representation,
+                                                    flange_inner_ring = flange_inner_ring,
+                                                    saucer_parameter = saucer_parameter,
+                                                    flange_radial_distance = flange_radius,
+                                                    make_clockwise = False)
         del pset
         extended = extend_fault_representation
         retriangulated = True
