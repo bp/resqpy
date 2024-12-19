@@ -1284,7 +1284,6 @@ def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
     assert np.all(flange_bool[len(orig_t):])
     assert not np.any(flange_bool[:len(orig_t)])
     assert np.all(np.isin(orig_t, new_t))
-    print (new_p[len(orig_p):])
     np.testing.assert_array_almost_equal(
         np.array([[5, 28.07078471, 28.02911804], [26.81071628, 12.43307607, 28.02911804],
                   [27.71578211, 1.25570298, 28.02911804], [24.45543821, -7.28011087, 28.02911804],
