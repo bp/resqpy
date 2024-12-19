@@ -445,7 +445,12 @@ def extract_stratigraphy(grid):
                                 object = grid,
                                 array_attribute = 'stratigraphic_units',
                                 dtype = 'int')
-    assert len(grid.stratigraphic_units) == grid.nk_plus_k_gaps
+    if (len(grid.stratigraphic_units) != grid.nk_plus_k_gaps):
+        log.warning(
+            "Number of stratigraphic units (%d) does not equal the number of layers plus gaps (%d)",
+            len(grid.stratigraphic_units),
+            grid.nk_plus_k_gaps,
+        )
 
 
 def extract_children(grid):
