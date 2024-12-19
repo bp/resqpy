@@ -794,9 +794,10 @@ class Surface(rqsb.BaseSurface):
                 unit_adjusted_p = p.copy()
                 wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
             if reorient:
-                p_xy, _, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
+                p_xy, normal, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
             else:
                 p_xy = unit_adjusted_p
+                normal = self.normal
                 reorient_matrix = None
 
             centre_point = np.nanmean(p_xy.reshape((-1, 3)), axis = 0)  # work out the radius for the flange points
@@ -822,7 +823,10 @@ class Surface(rqsb.BaseSurface):
                 flange_point = centre_point + radius * uv
                 if simple_saucer_angle is not None:
                     z_shift = radius * maths.tan(vec.radians_from_degrees(simple_saucer_angle))
-                    flange_point[2] -= z_shift
+                    if reorient:
+                        flange_point[2] -= z_shift
+                    else:
+                        flange_point += (vec.unit_vector(normal_vector) * z_shift)
                 flange_points[i] = flange_point
 
             sort_az_ind = np.argsort(np.array(az))  # sort by azimuth, to run through the hull points
