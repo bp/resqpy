@@ -673,7 +673,7 @@ class Surface(rqsb.BaseSurface):
                                                                                   retriangulate = False)
                     et, ep = extended_surf.triangles_and_points()
                     self.set_from_triangles_and_points(et, ep)
-                    return flange array
+                    return flange_array
                 log.warning('extending point set with flange without reorientation')
             flange_points = triangulate.surrounding_xy_ring(p_xy,
                                                             count = flange_point_count,
