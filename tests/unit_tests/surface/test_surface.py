@@ -1343,4 +1343,4 @@ def test_extended_surface_with_flange_extension_retriangulate(example_model_and_
     assert 1900.0 < max_p[0] - centre[0] <= 2010.0
     assert 1900.0 < max_p[1] - centre[1] <= 2010.0
     assert 0.0 <= min_p[2] <= 1.0
-    assert 3457.0 < max_p[2] < 3471.0 # widening range to account for potential dip in the random z points
+    assert 3457.0 < max_p[2] < 3471.0  # widening range to account for potential dip in the random z points
