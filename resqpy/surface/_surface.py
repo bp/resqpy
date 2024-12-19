@@ -671,7 +671,7 @@ class Surface(rqsb.BaseSurface):
                         reorient = False,
                         flange_radial_factor = flange_radial_factor,
                         flange_radial_distance = flange_radial_distance,
-                        saucer_parameter = simple_saucer_angle, 
+                        saucer_parameter = simple_saucer_angle,
                         make_clockwise = make_clockwise,
                         retriangulate = False)
                     et, ep = extended_surf.triangles_and_points()
