@@ -664,7 +664,7 @@ class Surface(rqsb.BaseSurface):
                 if saucer_parameter is not None or simple_saucer_angle is not None:
                     log.warning('extending point set with flange without reorientation, with a saucer - non-retriangulation option will be used')
                     surf = rqs.Surface(self.model, title = self.title, point_set = point_set)
-                    extended_surf, flange_array = surf.extend_surface_with_flange(convexivity_parameter = convexivity_parameter,
+                    extended_surf, flange_array = surf.extend_surface_with_flange(convexity_parameter = convexity_parameter,
                                                                                   reorient = False,
                                                                                   flange_radial_factor = flange_radial_factor,
                                                                                   flange_radial_distance = flange_radial_distance,
@@ -837,7 +837,7 @@ class Surface(rqsb.BaseSurface):
                     if reorient:
                         flange_point[2] -= z_shift
                     else:
-                        flange_point += (vec.unit_vector(normal_vector) * z_shift)
+                        flange_point += (vec.unit_vector(normal) * z_shift)
                 flange_points[i] = flange_point
 
             sort_az_ind = np.argsort(np.array(az))  # sort by azimuth, to run through the hull points
