@@ -661,8 +661,19 @@ class Surface(rqsb.BaseSurface):
             p_xy = unit_adjusted_p
         if extend_with_flange:
             if not reorient:
-                assert saucer_parameter is None and simple_saucer_angle is None,  \
-                    'flange saucer mode only available with reorientation active'
+                if saucer_parameter is not None or simple_saucer_angle is not None:
+                    log.warning('extending point set with flange without reorientation, with a saucer - non-retriangulation option will be used')
+                    surf = rqs.Surface(self.model, title = self.title, point_set = point_set)
+                    extended_surf, flange_array = surf.extend_surface_with_flange(convexivity_parameter = convexivity_parameter,
+                                                                                  reorient = False,
+                                                                                  flange_radial_factor = flange_radial_factor,
+                                                                                  flange_radial_distance = flange_radial_distance,
+                                                                                  saucer_parameter = simple_saucer_angle, 
+                                                                                  make_clockwise = make_clockwise,
+                                                                                  retriangulate = False)
+                    et, ep = extended_surf.triangles_and_points()
+                    self.set_from_triangles_and_points(et, ep)
+                    return flange array
                 log.warning('extending point set with flange without reorientation')
             flange_points = triangulate.surrounding_xy_ring(p_xy,
                                                             count = flange_point_count,
