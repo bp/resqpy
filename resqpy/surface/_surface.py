@@ -811,7 +811,7 @@ class Surface(rqsb.BaseSurface):
                 p_xy, normal, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
             else:
                 p_xy = unit_adjusted_p
-                normal = self.normal
+                normal = self.normal()
                 reorient_matrix = None
 
             centre_point = np.nanmean(p_xy.reshape((-1, 3)), axis = 0)  # work out the radius for the flange points
