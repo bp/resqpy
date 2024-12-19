@@ -354,7 +354,7 @@ def test_find_faces_to_represent_surface_extended_bisector_use_pack(small_grid_a
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_noreorient(
-    small_grid_and_surface: Tuple[RegularGrid, Surface]):
+        small_grid_and_surface: Tuple[RegularGrid, Surface]):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -400,7 +400,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_no
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_reorient(
-    small_grid_and_surface: Tuple[RegularGrid, Surface]):
+        small_grid_and_surface: Tuple[RegularGrid, Surface]):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
