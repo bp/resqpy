@@ -160,7 +160,7 @@ def test_surface_from_point_set_with_flange_extension(example_model_and_crs):
                             flange_radial_distance = None,
                             flange_inner_ring = False,
                             saucer_parameter = None,
-                            make_clockwise = False)
+                            make_clockwise = True)
     surf.write_hdf5()
     surf.create_xml()
     assert surf.node_count() == 35
