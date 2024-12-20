@@ -210,23 +210,15 @@ def find_faces_to_represent_surface_regular_wrapper(index: int,
         pset = rqs.PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
         if extend_fault_representation and not surf_title.endswith('extended'):
             surf_title += ' extended'
-        if saucer_parameter is not None and not reorient:
-            surface, flange_bool = surface.extend_surface_with_flange(convexity_parameter = 2.0,
-                                                                      reorient = reorient,
-                                                                      saucer_parameter = saucer_parameter,
-                                                                      flange_radial_distance = flange_radius,
-                                                                      make_clockwise = False)
-            surface.title = surf_title
-        else:
-            surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
-            flange_bool = surface.set_from_point_set(pset,
-                                                     convexity_parameter = 2.0,
-                                                     reorient = reorient,
-                                                     extend_with_flange = extend_fault_representation,
-                                                     flange_inner_ring = flange_inner_ring,
-                                                     saucer_parameter = saucer_parameter,
-                                                     flange_radial_distance = flange_radius,
-                                                     make_clockwise = False)
+        surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
+        flange_bool = surface.set_from_point_set(pset,
+                                                 convexity_parameter = 2.0,
+                                                 reorient = reorient,
+                                                 extend_with_flange = extend_fault_representation,
+                                                 flange_inner_ring = flange_inner_ring,
+                                                 saucer_parameter = saucer_parameter,
+                                                 flange_radial_distance = flange_radius,
+                                                 make_clockwise = False)
         del pset
         extended = extend_fault_representation
         retriangulated = True
