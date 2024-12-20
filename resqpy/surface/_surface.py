@@ -655,15 +655,14 @@ class Surface(rqsb.BaseSurface):
             unit_adjusted_p = p.copy()
             wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
         # reorient the points to the fault normal vector
-        p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p,
-                                                                             max_dip = reorient_max_dip)
+        p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
         if extend_with_flange:
             flange_points, radius = triangulate.surrounding_xy_ring(p_xy,
-                                                            count = flange_point_count,
-                                                            radial_factor = flange_radial_factor,
-                                                            radial_distance = flange_radial_distance,
-                                                            inner_ring = flange_inner_ring,
-                                                            saucer_angle = 0)
+                                                                    count = flange_point_count,
+                                                                    radial_factor = flange_radial_factor,
+                                                                    radial_distance = flange_radial_distance,
+                                                                    inner_ring = flange_inner_ring,
+                                                                    saucer_angle = 0)
             flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
             if reorient:
                 p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
