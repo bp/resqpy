@@ -664,10 +664,10 @@ class Surface(rqsb.BaseSurface):
                                                             radial_distance = flange_radial_distance,
                                                             inner_ring = flange_inner_ring,
                                                             saucer_angle = 0)
+            flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
             if reorient:
                 p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
             else:
-                flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
                 p_xy_e = np.concatenate((unit_adjusted_p, flange_points_reverse_oriented), axis = 0)
 
         else:
