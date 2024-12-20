@@ -649,7 +649,7 @@ class Surface(rqsb.BaseSurface):
                 f'removing {len(p) - np.count_nonzero(row_mask)} NaN points from point set {point_set.title} prior to surface triangulation'
             )
             p = p[row_mask, :]
-        if crs.xy_units == crs.z_units or not reorient:
+        if crs.xy_units == crs.z_units:
             unit_adjusted_p = p
         else:
             unit_adjusted_p = p.copy()
@@ -662,7 +662,7 @@ class Surface(rqsb.BaseSurface):
                                                                     radial_factor = flange_radial_factor,
                                                                     radial_distance = flange_radial_distance,
                                                                     inner_ring = flange_inner_ring,
-                                                                    saucer_angle = 0)
+                                                                    saucer_angle = 0.0)
             flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
             if reorient:
                 p_xy_e = np.concatenate((p_xy, flange_points), axis = 0)
