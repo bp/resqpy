@@ -884,7 +884,7 @@ def surrounding_xy_ring(p,
             assert abs(saucer_angle) < 90.0
             z_shift = radius * maths.tan(vec.radians_from_degrees(saucer_angle))
             ring[:, 2] -= z_shift
-        return ring
+        return ring, radius
 
     assert p.shape[-1] == 3
     assert radial_factor >= 1.0
@@ -899,7 +899,7 @@ def surrounding_xy_ring(p,
         inner_radius = p_radius * 1.1
         assert radius > inner_radius
         in_ring = make_ring(2 * count, centre, inner_radius, saucer_angle)
-        return np.concatenate((in_ring, ring), axis = 0)
+        return np.concatenate((in_ring, ring), axis = 0), radius
     return ring, radius
 
 
