@@ -688,7 +688,7 @@ class Surface(rqsb.BaseSurface):
                 z_shift = radius * maths.tan(vec.radians_from_degrees(simple_saucer_angle))
                 flange_points[:, 2] -= z_shift
                 flange_points_reverse_oriented = vec.rotate_array(reorient_matrix.T, flange_points)
-            if crs.xy_units != crs.z_units and reorient:
+            if crs.xy_units != crs.z_units:
                 wam.convert_lengths(flange_points_reverse_oriented[:, 2], crs.xy_units, crs.z_units)
             p_e = np.concatenate((p, flange_points_reverse_oriented))
         else:
