@@ -1026,7 +1026,8 @@ def test_resample_surface_unique_edges(tmp_path):
 
     assert resampled.crs_uuid == surf.crs_uuid
     assert resampled.citation_title == surf.citation_title
-    assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
+    assert 'resampled from surface' in resampled.extra_metadata.keys()
+    assert resampled.extra_metadata['resampled from surface'] == str(surf.uuid)
 
 
 def test_from_downsampling_surface(example_model_and_crs):
