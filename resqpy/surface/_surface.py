@@ -620,23 +620,17 @@ class Surface(rqsb.BaseSurface):
            suitable for adding as a property for the surface, with indexable element 'faces';
            when flange extension occurs, the radius is the greater of the values determined from the radial factor
            and radial distance arguments;
-           the saucer_parameter is interpreted in one of two ways: (1) +ve fractoinal values between zero and one
-           are the fractional distance from the centre of the points to its rim at which to sample the surface for
-           extrapolation and thereby modify the recumbent z of flange points; 0 will usually give shallower and
-           smoother saucer; larger values (must be less than one) will lead to stronger and more erratic saucer
-           shape in flange; (2) other values between -90.0 and 90.0 are interpreted as an angle to apply out of
-           the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
-           +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
-           the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
-           to the average plane of the original points
+           the saucer_parameter must be between -90.0 and 90.0, and is interpreted as an angle to apply out of
+           the plane of the original points, to give a simple saucer shape; +ve angles result in the shift being in 
+           the direction of the -ve z hemisphere; -ve angles result in the shift being in the +ve z hemisphere; in 
+           either case the direction of the shift is perpendicular to the average plane of the original points
         """
 
         simple_saucer_angle = None
-        if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
+        if saucer_parameter is not None:
             assert -90.0 < saucer_parameter < 90.0, f'simple saucer angle parameter must be less than 90 degrees; too big: {saucer_parameter}'
             simple_saucer_angle = saucer_parameter
             saucer_parameter = None
-        assert saucer_parameter is None, 'saucer_parameter no longer supported, use simple_saucer_angle'
         crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
         p = point_set.full_array_ref()
         assert p.ndim >= 2
