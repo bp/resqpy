@@ -125,6 +125,75 @@ class Surface(rqsb.BaseSurface):
         self._load_normal_vector_from_extra_metadata()
 
     @classmethod
+    def from_list_of_patches(cls, model, patch_list, title, crs_uuid = None, extra_metadata = None):
+        """Create a Surface from a prepared list of TriangulatedPatch objects.
+
+        arguments:
+            - model (Model): the model to which the surface will be associated
+            - patch_list (list of TriangulatedPatch): the list of patches to be combined to form the surface
+            - title (str): the citation title for the new surface
+            - crs_uuid (uuid, optional): the uuid of a crs in model which the points are deemed to be in
+            - extra_metadata (dict of (str: str), optional): extra metadata to add to the new surface
+
+        returns:
+            - new Surface comprised of a patch for each entry in the patch list
+
+        notes:
+            - the triangulated patch objects are used directly in the surface
+            - the patches should not have had their hdf5 data written yet
+            - the patch index values will be set, with any previous values ignored
+            - the patches will be hijacked to the target model if their model is different
+            - each patch will have its points converted in situ into the surface crs
+            - if the crs_uuid argument is None, the crs_uuid is taken from the first patch
+        """
+        assert len(patch_list) > 0, 'attempting to create Surface from empty patch list'
+        if crs_uuid is None:
+            crs_uuid = patch_list[0].crs_uuid
+            if model.uuid(uuid = crs_uuid) is None:
+                model.copy_uuid_from_other_model(patch_list[0].model, crs_uuid)
+        surf = cls(model, title = title, crs_uuid = crs_uuid, extra_metadata = extra_metadata)
+        surf.patch_list = patch_list
+        surf.crs_uuid = crs_uuid
+        crs = rqc.Crs(model, uuid = crs_uuid)
+        for i, patch in enumerate(surf.patch_list):
+            assert patch.points is not None, f'points missing in patch {i} when making surface {title}'
+            patch.index = i
+            patch._set_t_type()
+            if not bu.matching_uuids(patch.crs_uuid, crs_uuid):
+                p_crs = rqc.Crs(patch.model, uuid = patch.crs_uuid)
+                p_crs.convert_array_to(crs, patch.points)
+            patch.model = model
+        return surf
+
+    @classmethod
+    def from_list_of_patches_of_triangles_and_points(cls, model, t_p_list, title, crs_uuid, extra_metadata = None):
+        """Create a Surface from a prepared list of pairs of (triangles, points).
+
+        arguments:
+            - model (Model): the model to which the surface will be associated
+            - t_p_list (list of (numpy int array, numpy float array)): the list of patches of triangles and points;
+              the int arrays have shape (N, 3) being the triangle vertex indices of points; the float array has
+              shape (M, 3) being the xyx values for the points, in the crs identified by crs_uuid
+            - title (str): the citation title for the new surface
+            - crs_uuid (uuid): the uuid of a crs in model which the points are deemed to be in
+            - extra_metadata (dict of (str: str), optional): extra metadata to add to the new surface
+
+        returns:
+            - new Surface comprised of a patch for each entry in the list of pairs of triangles and points data
+
+        note:
+            - each entry in the t_p_list will have its own patch in the resulting surface, indexed in order of list
+        """
+        assert t_p_list, f'no triangles and points pairs in list when generating surface: {title}'
+        assert crs_uuid is not None
+        patch_list = []
+        for i, (t, p) in enumerate(t_p_list):
+            patch = rqs.TriangulatedPatch(model, patch_index = i, crs_uuid = crs_uuid)
+            patch.set_from_triangles_and_points(t, p)
+            patch_list.append(patch)
+        return cls.from_list_of_patches(model, patch_list, title, crs_uuid = crs_uuid, extra_metadata = extra_metadata)
+
+    @classmethod
     def from_tri_mesh(cls, tri_mesh, exclude_nans = False):
         """Create a Surface from a TriMesh.
 
@@ -1175,7 +1244,10 @@ class Surface(rqsb.BaseSurface):
         Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
 
         returns: 
-            resqpy.surface.Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
+            new Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
+            
+        note:
+            this method involves a tr-triangulation
         """
         _, op = self.triangles_and_points()
         ref = self.resampled_surface()  # resample the original surface
