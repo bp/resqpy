@@ -34,14 +34,15 @@ class AnyTimeSeries(BaseResqpy):
             dt_text = rqet.find_tag_text(child, 'DateTime')
             assert dt_text, 'missing DateTime field in xml for time series'
             year_offset = rqet.find_tag_int(child, 'YearOffset')
-            if year_offset is not None:
-                assert self.timeframe == 'geologic'
+            if self.timeframe == 'geologic' and year_offset is not None:
                 if year_offset > 0:
                     log.warning(f'positive year offset in xml indicates future geological time: {year_offset}')
                 self.timestamps.append(year_offset)  # todo: trim and check timestamp
-            else:
-                assert self.timeframe == 'human'
+            elif self.timeframe == 'human' and not year_offset:
+                # year_offset can be 0 for "human" time frames, indicating None.
                 self.timestamps.append(dt_text)  # todo: trim and check timestamp
+            else:
+                raise AssertionError(f'Invalid combination of timeframe {self.timeframe} and year_offset {year_offset}')
             self.timestamps.sort()
 
     def is_equivalent(self, other_ts):

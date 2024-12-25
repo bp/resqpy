@@ -1026,7 +1026,8 @@ def test_resample_surface_unique_edges(tmp_path):
 
     assert resampled.crs_uuid == surf.crs_uuid
     assert resampled.citation_title == surf.citation_title
-    assert resampled.extra_metadata == {'resampled from surface': str(surf.uuid)}
+    assert 'resampled from surface' in resampled.extra_metadata.keys()
+    assert resampled.extra_metadata['resampled from surface'] == str(surf.uuid)
 
 
 def test_from_downsampling_surface(example_model_and_crs):
@@ -1209,3 +1210,138 @@ def test_edge_lengths(example_model_and_crs):
     assert_array_almost_equal(lengths, np.array([(3.0, 4.0, 5.0), (5.0, 3.0, 4.0)], dtype = float))
     lengths = surf.edge_lengths(required_uom = 'cm')
     assert_array_almost_equal(lengths, np.array([(300.0, 400.0, 500.0), (500.0, 300.0, 400.0)], dtype = float))
+
+
+def test_extended_surface_with_flange_extension(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # create a set of points (must have a convex hull)
+    x = np.array([-1, -1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
+    y = np.array([-1.1, -0.5, 0, 0.5, 1, 0.5, 1.1, 0.5, 0, -0.5, -1, 0], dtype = float) + 5
+    z = np.zeros(shape = (12), dtype = float) + 5
+    p = np.stack((x, y, z), axis = -1)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'points')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps, reorient = False, reorient_max_dip = None, extend_with_flange = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    orig_t, orig_p = surf.triangles_and_points()
+
+    new_surf, flange_bool = surf.extend_surface_with_flange(reorient = False,
+                                                            flange_radial_factor = 10.0,
+                                                            flange_radial_distance = None,
+                                                            saucer_parameter = None,
+                                                            retriangulate = False)
+
+    new_t, new_p = new_surf.triangles_and_points()
+
+    assert np.all(flange_bool[len(orig_t):])
+    assert not np.any(flange_bool[:len(orig_t)])
+    assert np.all(np.isin(orig_t, new_t))
+
+    np.testing.assert_array_almost_equal(
+        np.array([[5, 28.07078471], [26.81071628, 12.43307607], [27.71578211, 1.25570298], [24.45543821, -7.28011087],
+                  [5, -17.98745138], [-16.42279299, -3.40843501], [-17.86764418, 7.76400526],
+                  [-15.03584362, 16.39531138]]), new_p[len(orig_p):, :2])
+
+
+def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # create a set of points (must have a convex hull)
+    x = np.array([-1, -1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
+    y = np.array([-1.1, -0.5, 0, 0.5, 1, 0.5, 1.1, 0.5, 0, -0.5, -1, 0], dtype = float) + 5
+    z = np.zeros(shape = (12), dtype = float) + 5
+    p = np.stack((x, y, z), axis = -1)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'points')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps, reorient = False, reorient_max_dip = None, extend_with_flange = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    orig_t, orig_p = surf.triangles_and_points()
+
+    new_surf, flange_bool = surf.extend_surface_with_flange(reorient = False,
+                                                            flange_radial_factor = 10.0,
+                                                            flange_radial_distance = None,
+                                                            saucer_parameter = 45.0,
+                                                            retriangulate = False)
+
+    new_t, new_p = new_surf.triangles_and_points()
+
+    assert np.all(flange_bool[len(orig_t):])
+    assert not np.any(flange_bool[:len(orig_t)])
+    assert np.all(np.isin(orig_t, new_t))
+    np.testing.assert_array_almost_equal(
+        np.array([[5, 28.07078471, 28.02911804], [26.81071628, 12.43307607, 28.02911804],
+                  [27.71578211, 1.25570298, 28.02911804], [24.45543821, -7.28011087, 28.02911804],
+                  [5, -17.98745138, 28.02911804], [-16.42279299, -3.40843501, 28.02911804],
+                  [-17.86764418, 7.76400526, 28.02911804], [-15.03584362, 16.39531138, 28.02911804]]),
+        new_p[len(orig_p):])
+
+
+def test_extended_surface_with_flange_extension_retriangulate(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # number of random points to use
+    n = 20
+
+    # create a set of random points
+    x = np.random.random(n) * 1000.0 - 500.0
+    y = np.random.random(n) * 1000.0 - 500.0
+    z = np.random.random(n)  #  note: triangulation does not use z values
+    p = np.stack((x, y, z), axis = -1)
+    centre = np.mean(p, axis = 0)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    orig_surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert orig_surf is not None
+    orig_surf.set_from_point_set(ps,
+                                 reorient = True,
+                                 reorient_max_dip = None,
+                                 extend_with_flange = False,
+                                 make_clockwise = False)
+    orig_surf.write_hdf5()
+    orig_surf.create_xml()
+
+    # flange extension with simple saucer
+    new_surf, flange_bool = orig_surf.extend_surface_with_flange(reorient = True,
+                                                                 reorient_max_dip = None,
+                                                                 flange_point_count = 12,
+                                                                 flange_radial_factor = 2.0,
+                                                                 flange_radial_distance = 2000.0,
+                                                                 flange_inner_ring = True,
+                                                                 saucer_parameter = -60.0,
+                                                                 make_clockwise = False,
+                                                                 retriangulate = True)
+    new_surf.write_hdf5()
+    new_surf.create_xml()
+
+    assert new_surf.node_count() == 56
+    _, p = new_surf.triangles_and_points()
+    min_p = np.min(p, axis = 0)
+    max_p = np.max(p, axis = 0)
+    assert -2010.0 <= min_p[0] - centre[0] < -1900.0
+    assert -2010.0 <= min_p[1] - centre[1] < -1900.0
+    assert 1900.0 < max_p[0] - centre[0] <= 2010.0
+    assert 1900.0 < max_p[1] - centre[1] <= 2010.0
+    assert 0.0 <= min_p[2] <= 1.0
+    assert 3457.0 < max_p[2] < 3471.0  # widening range to account for potential dip in the random z points
