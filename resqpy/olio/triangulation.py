@@ -48,7 +48,7 @@ def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = None):
-    # returns Delauney triangulation of po and list of hull point indices, using a simple algorithm
+    # returns Delaunay triangulation of po and list of hull point indices, using a simple algorithm
 
     def flip(ei):
         nonlocal fm, e, t, te, p, nt, p_i, ne
@@ -234,7 +234,7 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
 
 
 def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_size_factor = 100.0, return_hull = False):
-    """Returns the Delauney Triangulation of 2D point set p.
+    """Returns the Delaunay Triangulation of 2D point set p.
 
     arguments:
        p (numpy float array of shape (N, 2): the x,y coordinates of the points
@@ -253,7 +253,7 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
 
     returns:
        numpy int array of shape (M, 3) - being the indices into the first axis of p of the 3 points
-          per triangle in the Delauney Triangulation - and if return_hull is True, another int array
+          per triangle in the Delaunay Triangulation - and if return_hull is True, another int array
           of shape (B,) - being indices into p of the clockwise ordered points on the boundary of
           the triangulation
 
@@ -261,7 +261,7 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
        the plot_fn, progress_fn and container_size_factor arguments are only used by the 'simple' algorithm;
        if points p are 3D, the projection onto the xy plane is used for the triangulation
     """
-    assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delauney Triangulation'
+    assert p.ndim == 2 and p.shape[1] >= 2, 'bad points shape for 2D Delaunay Triangulation'
 
     if not algorithm:
         algorithm = 'scipy'
@@ -274,7 +274,7 @@ def dt(p, algorithm = "scipy", plot_fn = None, progress_fn = None, container_siz
                                    progress_fn = progress_fn,
                                    container_size_factor = container_size_factor)
     else:
-        raise Exception(f'unrecognised Delauney Triangulation algorithm name: {algorithm}')
+        raise Exception(f'unrecognised Delaunay Triangulation algorithm name: {algorithm}')
 
     assert tri.ndim == 2 and tri.shape[1] == 3
 
@@ -304,11 +304,11 @@ def ccc(p1, p2, p3):
 
 
 def voronoi(p, t, b, aoi: rql.Polyline):
-    """Returns dual Voronoi diagram for a Delauney triangulation.
+    """Returns dual Voronoi diagram for a Delaunay triangulation.
 
     arguments:
-       p (numpy float array of shape (N, 2)): seed points used in the Delauney triangulation
-       t (numpy int array of shape (M, 3)): the Delauney triangulation of p as returned by dt()
+       p (numpy float array of shape (N, 2)): seed points used in the Delaunay triangulation
+       t (numpy int array of shape (M, 3)): the Delaunay triangulation of p as returned by dt()
        b (numpy int array of shape (B,)): clockwise sorted list of indices into p of the boundary
           points of the triangulation t
        aoi (lines.Polyline): area of interest; a closed clockwise polyline that must strictly contain
@@ -329,7 +329,7 @@ def voronoi(p, t, b, aoi: rql.Polyline):
 
     # this code assumes that the Voronoi polygon for a seed point visits the circumcentres of
     # all the triangles that make use of the point – currently understood to be always the case
-    # for a Delauney triangulation
+    # for a Delaunay triangulation
 
     def __aoi_intervening_nodes(aoi_count, c_count, seg_a, seg_c):
         nodes = []
@@ -582,7 +582,7 @@ def voronoi(p, t, b, aoi: rql.Polyline):
 
     # check for concavities in hull
     if not hull.is_convex():
-        log.warning('Delauney triangulation is not convex; Voronoi diagram construction might fail')
+        log.warning('Delaunay triangulation is not convex; Voronoi diagram construction might fail')
 
     # compute circumcircle centres
     c = np.zeros((t.shape[0], 2))
@@ -750,7 +750,7 @@ def reorient(points, rough = True, max_dip = None, use_linalg = True, sample = 5
     notes:
        the original points array is not modified by this function;
        implicit xy & z units for points are assumed to be the same;
-       the function may typically be called prior to the Delauney triangulation, which uses an xy projection to
+       the function may typically be called prior to the Delaunay triangulation, which uses an xy projection to
        determine the triangulation;
        the numpy linear algebra option seems to be memory intensive, not recommended;
        downsampling will occur (for normal vector determination) when the number of points exceeds double that
