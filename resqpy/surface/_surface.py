@@ -471,9 +471,10 @@ class Surface(rqsb.BaseSurface):
     def change_crs(self, required_crs):
         """Changes the crs of the surface, also sets a new uuid if crs changed.
 
-        note:
+        notes:
            this method is usually used to change the coordinate system for a temporary resqpy object;
-           to add as a new part, call write_hdf5() and create_xml() methods
+           to add as a new part, call write_hdf5() and create_xml() methods;
+           patches are maintained by this method
         """
 
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)

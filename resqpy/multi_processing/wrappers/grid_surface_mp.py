@@ -46,7 +46,10 @@ def find_faces_to_represent_surface_regular_wrapper(
         flange_radius: Optional[float] = None,
         reorient: bool = True,
         n_threads: int = 20,
-        patchwork: bool = False) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
+        patchwork: bool = False,
+        grid_patching_property_uuid: Optional[Union[UUID, str]] = None,
+        surface_patching_property_uuid: Optional[Union[UUID,
+                                                       str]] = None) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     arguments:
@@ -103,7 +106,14 @@ def find_faces_to_represent_surface_regular_wrapper(
            z range prior to retriangulation (ie. z axis is approximate normal to plane of points), to enhace the triangulation
         n_threads (int, default 20): the number of parallel threads to use in numba points in triangles function
         patchwork (bool, default False): if True and grid bisector is included in return properties, a compostite
-           4D bisector is separated into a set of conventional cells properties, one for each patch of the surface
+           bisector is generated, based on individual ones for each patch of the surface; the following two
+           arguments must be set if patchwork is True
+        grid_patching_property_uuid (uuid, optional): required if patchwork is True, the uuid of a discrete or
+           categorical cells property on the grid which will be used to determine which patch of the surface is
+           relevant to a cell
+        surface_patching_property_uuid (uuid, optional): required if patchwork is True, the uuid of a discrete or
+           categorical property on the patches of the surface, identifying the value of the grid patching property
+           that each patch relates to
 
     returns:
         Tuple containing:
@@ -124,9 +134,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
         +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
         the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
-        to the average plane of the original points; patchwork is not compatible with re-triangulation;
-        grid bisector properties for patchwork use a facet of 'qualifier' and facet values of 'patch N' where
-        N is a patch number
+        to the average plane of the original points; patchwork is not compatible with re-triangulation
     """
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
@@ -155,6 +163,9 @@ def find_faces_to_represent_surface_regular_wrapper(
         flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
     s_model = rq.Model(surface_epc, quiet = True)
     model.copy_uuid_from_other_model(s_model, uuid = str(surface_uuid))
+    if surface_patching_property_uuid is not None:
+        model.copy_uuid_from_other_model(s_model, uuid = surface_patching_property_uuid)
+        uuid_list.append(surface_patching_property_uuid)
     repr_type = model.type_of_part(model.part(uuid = surface_uuid), strip_obj = True)
     assert repr_type in ['TriangulatedSetRepresentation', 'PointSetRepresentation']
     assert repr_type == 'TriangulatedSetRepresentation' or not patchwork,  \
@@ -263,6 +274,20 @@ def find_faces_to_represent_surface_regular_wrapper(
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
+    patch_indices = None
+    if patchwork:  # generate a patch indices array over grid cells based on supplied patching properties
+        assert grid_patching_property_uuid is not None and surface_patching_property_uuid is not None
+        g_patching_array = rqp.Property(g_model, uuid = grid_patching_property_uuid).array_ref()
+        assert g_patching_array.shape == tuple(grid.extent_kji)
+        s_patches_array = rqp.Property(model, uuid = surface_patching_property_uuid).array_ref()
+        patch_count = surface.number_of_patches()
+        assert s_patches_array.shape == (patch_count,)
+        p_dtype = (np.int8 if s_patches_array.shape[0] < 128 else np.int32)
+        patch_indices = np.full(g_patching_array.shape, -1, dtype = p_dtype)
+        for patch in range(patch_count):
+            gp = s_patches_array[patch]
+            patch_indices[(g_patching_array == gp).astype(bool)] = patch
+
     returns = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
                                                                      surface,
                                                                      name,
@@ -276,7 +301,7 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                      raw_bisector = raw_bisector,
                                                                      n_batches = n_threads,
                                                                      packed_bisectors = use_pack,
-                                                                     patchwork = patchwork)
+                                                                     patch_indices = patch_indices)
 
     success = False
 
@@ -367,34 +392,18 @@ def find_faces_to_represent_surface_regular_wrapper(
                 if grid_pc is None:
                     grid_pc = rqp.PropertyCollection()
                     grid_pc.set_support(support = grid)
-                assert array.ndim == (4 if patchwork else (2 if is_curtain else 3))
-                if patchwork:
-                    assert array.shape[0] == surface.number_of_patches(),  \
-                        f'composite grid bisector wrong shape for {surface.title}'
-                    for patch in range(array.shape[0]):
-                        grid_pc.add_cached_array_to_imported_list(
-                            array[patch],
-                            f'patchwork from find_faces function for {surface.title}',
-                            f'{surface.title} patch {patch} {p_name}',
-                            discrete = True,
-                            property_kind = 'grid bisector',
-                            facet_type = 'qualifier',
-                            facet = f'patch {patch}',
-                            realization = realisation,
-                            indexable_element = 'columns' if is_curtain else 'cells',
-                            pre_packed = False if is_curtain else use_pack)
-                else:
-                    grid_pc.add_cached_array_to_imported_list(array,
-                                                              f"from find_faces function for {surface.title}",
-                                                              f'{surface.title} {p_name}',
-                                                              discrete = True,
-                                                              property_kind = "grid bisector",
-                                                              facet_type = 'direction',
-                                                              facet = 'raw' if raw_bisector else
-                                                              ('vertical' if is_curtain else 'sloping'),
-                                                              realization = realisation,
-                                                              indexable_element = "columns" if is_curtain else "cells",
-                                                              pre_packed = False if is_curtain else use_pack)
+                assert array.ndim == (2 if is_curtain else 3)
+                grid_pc.add_cached_array_to_imported_list(array,
+                                                          f"from find_faces function for {surface.title}",
+                                                          f'{surface.title} {p_name}',
+                                                          discrete = True,
+                                                          property_kind = "grid bisector",
+                                                          facet_type = 'direction',
+                                                          facet = 'raw' if raw_bisector else
+                                                          ('vertical' if is_curtain else 'sloping'),
+                                                          realization = realisation,
+                                                          indexable_element = "columns" if is_curtain else "cells",
+                                                          pre_packed = False if is_curtain else use_pack)
             elif p_name == 'grid shadow':
                 if grid_pc is None:
                     grid_pc = rqp.PropertyCollection()
