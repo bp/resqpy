@@ -388,6 +388,39 @@ class Surface(rqsb.BaseSurface):
             ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches')
         return self.patch_list[patch].triangles_and_points(copy = copy)
 
+    def patch_index_for_triangle_index(self, triangle_index):
+        """Returns the patch index for a triangle index (as applicable to triangles_and_points() triangles)."""
+        if triangle_index is None or triangle_index < 0:
+            return None
+        self.extract_patches(self.root)
+        if not self.patch_list:
+            return None
+        for i, patch in enumerate(self.patch_list):
+            triangle_index -= patch.triangle_count
+            if triangle_index < 0:
+                return i
+        return None
+
+    def patch_indices_for_triangle_indices(self, triangle_indices, lazy = True):
+        """Returns array of patch indices for array of triangle indices (as applicable to triangles_and_points() triangles)."""
+        self.extract_patches(self.root)
+        if not self.patch_list:
+            return np.full(triangle_indices.shape, -1, dtype = np.int8)
+        patch_count = len(self.patch_list)
+        dtype = (np.int8 if patch_count < 127 else np.int32)
+        if lazy and patch_count == 1:
+            return np.ones(triangle_indices.shape, dtype = np.int8)
+        patch_limits = np.zeros(patch_count, dtype = np.int32)
+        t_count = 0
+        for p_i in range(patch_count):
+            t_count += self.patch_list[p_i].triangle_count
+            patch_limits[p_i] = t_count
+        patches = np.empty(triangle_indices.shape, dtype = dtype)
+        patches[:] = np.digitize(triangle_indices, patch_limits, right = False)
+        if not lazy:
+            patches[np.logical_or(triangle_indices < 0, patches == patch_count)] = -1
+        return patches
+
     def decache_triangles_and_points(self):
         """Removes the cached composite triangles and points arrays."""
         self.points = None
