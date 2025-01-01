@@ -715,7 +715,7 @@ class Surface(rqsb.BaseSurface):
 
         returns:
            if extend_with_flange is True, numpy bool array with a value per triangle indicating flange triangles;
-           if extent_with_flange is False, None
+           if extend_with_flange is False, None
 
         notes:
            if extend_with_flange is True, then a boolean array is created for the surface, with a value per triangle,

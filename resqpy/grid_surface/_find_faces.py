@@ -1255,9 +1255,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # add extra dimension to bisector array (at axis 0) for patches
             pb_shape = tuple([n_patches] + list(grid.extent_kji))
             if packed_bisectors:
-                bisector = np.zeros(_shape_packed(grid.extent_kji), dtype = np.uint8)
+                bisector = np.ones(_shape_packed(grid.extent_kji), dtype = np.uint8)
             else:
-                bisector = np.zeros(tuple(grid.extent_kji), dtype = np.bool_)
+                bisector = np.ones(tuple(grid.extent_kji), dtype = np.bool_)
             # populate 4D bisector with an axis zero slice for each patch
             for patch in range(n_patches):
                 mask = (patch_indices == patch)
