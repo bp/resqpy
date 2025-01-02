@@ -105,8 +105,9 @@ def gather_ensemble(case_epc_list,
                     for part in grid_relatives:
                         if 'Property' in part:
                             prop_root = case_model.root_for_part(part)
-                            forceable = (shared_time_series and ('Categorical' not in part) and rqet.find_nested_tags(
-                                prop_root, ['PropertyKind', 'LocalPropertyKind']) is None)
+                            forceable = (
+                                shared_time_series and ('Categorical' not in part) and
+                                rqet.find_nested_tags(prop_root, ['PropertyKind', 'LocalPropertyKind']) is None)
                             composite_model.copy_part_from_other_model(case_model,
                                                                        part,
                                                                        realization = r,
