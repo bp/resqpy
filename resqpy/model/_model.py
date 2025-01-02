@@ -1340,7 +1340,8 @@ class Model():
            an hdf5 file name is cached once determined for a given ext uuid; to clear the cache,
            call the h5_clear_filename_cache() method
         """
-
+        if isinstance(override, bool):
+            warnings.warn(f'DEPRECATED: boolean override argument to Model.h5_file_name(), use string instead')
         return m_h._h5_file_name(self, uuid = uuid, override = override, file_must_exist = file_must_exist)
 
     def h5_access(self, uuid = None, mode = 'r', override = 'default', file_path = None):
@@ -1366,7 +1367,8 @@ class Model():
            an exception will be raised if the hdf5 file cannot be opened; note that sometimes another
            piece of code accessing the file might cause a 'resource unavailable' exception
         """
-
+        if isinstance(override, bool):
+            warnings.warn(f'DEPRECATED: boolean override argument to Model.h5_access(), use string instead')
         return m_h._h5_access(self, uuid = uuid, mode = mode, override = override, file_path = file_path)
 
     def h5_release(self):

@@ -80,18 +80,6 @@ class MdDatum(BaseResqpy):
             assert md_reference in valid_md_reference_list
             assert len(location) == 3
 
-    def _load_from_xml(self):
-        md_datum_root = self.root
-        assert md_datum_root is not None
-        location_node = rqet.find_tag(md_datum_root, 'Location')
-        self.location = (rqet.find_tag_float(location_node,
-                                             'Coordinate1'), rqet.find_tag_float(location_node, 'Coordinate2'),
-                         rqet.find_tag_float(location_node, 'Coordinate3'))
-        self.md_reference = rqet.node_text(rqet.find_tag(md_datum_root, 'MdReference')).strip().lower()
-        assert self.md_reference in valid_md_reference_list
-        self.crs_uuid = self.extract_crs_uuid()
-
-    # todo: the following function is almost identical to one in the grid module: it should be made common and put in model.py
 
     def extract_crs_uuid(self):
         """Returns uuid for coordinate reference system, as stored in reference node of this md datum's xml tree."""
@@ -103,13 +91,6 @@ class MdDatum(BaseResqpy):
         self.crs_uuid = bu.uuid_from_string(uuid_str)
         return self.crs_uuid
 
-    def create_part(self):
-        """Creates xml for this md datum object and adds to parent model as a part; returns root node for part."""
-
-        # note: deprecated, call create_xml() directly
-        assert self.root is None
-        assert self.location is not None
-        self.create_xml(add_as_part = True)
 
     def create_xml(self, add_as_part = True, add_relationships = True, title = None, originator = None):
         """Creates xml for a measured depth datum element; crs node must already exist; optionally adds as part.
@@ -156,6 +137,7 @@ class MdDatum(BaseResqpy):
 
         return datum
 
+
     def is_equivalent(self, other):
         """Implements equals operator, comparing metadata items deemed significant."""
 
@@ -164,3 +146,15 @@ class MdDatum(BaseResqpy):
         if self.md_reference != other.md_reference or not np.allclose(self.location, other.location):
             return False
         return bu.matching_uuids(self.crs_uuid, other.crs_uuid)
+
+
+    def _load_from_xml(self):
+        md_datum_root = self.root
+        assert md_datum_root is not None
+        location_node = rqet.find_tag(md_datum_root, 'Location')
+        self.location = (rqet.find_tag_float(location_node,
+                                             'Coordinate1'), rqet.find_tag_float(location_node, 'Coordinate2'),
+                         rqet.find_tag_float(location_node, 'Coordinate3'))
+        self.md_reference = rqet.node_text(rqet.find_tag(md_datum_root, 'MdReference')).strip().lower()
+        assert self.md_reference in valid_md_reference_list
+        self.crs_uuid = self.extract_crs_uuid()

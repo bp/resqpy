@@ -29,7 +29,6 @@ class Polyline(rql_c._BasePolyline):
             self,
             parent_model,
             uuid = None,
-            set_bool = None,  #: DEPRECATED
             set_coord = None,
             set_crs = None,
             is_closed = None,
@@ -43,7 +42,6 @@ class Polyline(rql_c._BasePolyline):
             parent_model (model.Model object): the model which the new PolylineRepresentation belongs to
             uuid (uuid.UUID, optional): the uuid of an existing RESQML PolylineRepresentation from which
                 to initialise the resqpy Polyline
-            set_bool (boolean, optional): DEPRECATED: synonym for is_closed argument
             set_coord (numpy float array, optional): an ordered set of xyz values used to define a new polyline;
                 last dimension of array must have extent 3; ignored if uuid is not None
             set_crs (uuid.UUID, optional): the uuid of a crs to be used when initialising from coordinates;
@@ -65,10 +63,6 @@ class Polyline(rql_c._BasePolyline):
         """
 
         self.model = parent_model
-        if set_bool is not None:
-            warnings.warn('DEPRECATED: use is_closed argument instead of set_bool, in Polyline initialisation')
-            if is_closed is None:
-                is_closed = set_bool
         self.isclosed = is_closed
         self.nodepatch = None
         self.crs_uuid = set_crs
@@ -466,22 +460,20 @@ class Polyline(rql_c._BasePolyline):
         if cache and self.centre is not None:
             return self.centre
         assert mode in ['weighted', 'sampled']
-        if mode == 'sampled':  # this mode is deprecated as it simply approximates the weighted mode
-            sample_points = self.equidistant_points(n, in_xy = in_xy)
-            centre = np.mean(sample_points, axis = 0)
-        else:  # 'weighted'
-            sum = np.zeros(3)
-            seg_count = len(self.coordinates) - 1
-            if self.isclosed:
-                seg_count += 1
-            d = 2 if in_xy else 3
-            p1 = np.zeros(3)
-            p2 = np.zeros(3)
-            for seg_index in range(seg_count):
-                successor = (seg_index + 1) % len(self.coordinates)
-                p1[:d], p2[:d] = self.coordinates[seg_index, :d], self.coordinates[successor, :d]
-                sum += (p1 + p2) * vu.naive_length(p2 - p1)
-            centre = sum / (2.0 * self.full_length(in_xy = in_xy))
+        if mode != 'weighted':  # ignore any other mode, ie. sampled
+            warnings.warn('DEPRECATED: weighted mode is only mode now supported for Polyline.balanced_centre()')
+        sum = np.zeros(3)
+        seg_count = len(self.coordinates) - 1
+        if self.isclosed:
+            seg_count += 1
+        d = 2 if in_xy else 3
+        p1 = np.zeros(3)
+        p2 = np.zeros(3)
+        for seg_index in range(seg_count):
+            successor = (seg_index + 1) % len(self.coordinates)
+            p1[:d], p2[:d] = self.coordinates[seg_index, :d], self.coordinates[successor, :d]
+            sum += (p1 + p2) * vu.naive_length(p2 - p1)
+        centre = sum / (2.0 * self.full_length(in_xy = in_xy))
         if cache:
             self.centre = centre
         return centre

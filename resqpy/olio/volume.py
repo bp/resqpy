@@ -77,26 +77,6 @@ def tetra_cell_volume(cp, centre = None, off_hand = False):
     return v / 6.0
 
 
-def tetra_volumes_slow(cp, centres = None, off_hand = False):
-    """Returns volume array for all hexahedral cells assuming bilinear faces, using loop over cells."""
-
-    # NB: deprecated, superceded by much faster function below
-    # todo: handle NaNs
-    # Pagoda style corner point data
-    assert cp.ndim == 7
-
-    flat = cp.reshape(-1, 2, 2, 2, 3)
-    cells = flat.shape[0]
-    if centres is None:
-        centres = np.mean(flat, axis = (1, 2, 3))
-    else:
-        centres = centres.reshape((-1, 3))
-    volumes = np.zeros(cells)
-    for cell in range(cells):
-        volumes[cell] = tetra_cell_volume(flat[cell], centre = centres[cell], off_hand = off_hand)
-    return volumes.reshape(cp.shape[0:3])
-
-
 def tetra_volumes(cp, centres = None, off_hand = False):
     """Returns volume array for all hexahedral cells assuming bilinear faces, using numpy operations.
 
