@@ -511,8 +511,8 @@ class _GridFromCp:
                 assert len(where_defined) == 3 and len(where_defined[0]) > 0, 'no extant cell geometries'
                 sample_kji0 = (where_defined[0][0], where_defined[1][0], where_defined[2][0])
             sample_cp = self.__cp_array[sample_kji0]
-            self.__cell_ijk_lefthanded = (vec.clockwise(sample_cp[0, 0, 0], sample_cp[0, 1, 0], sample_cp[0, 0, 1]) >=
-                                          0.0)
+            self.__cell_ijk_lefthanded =  \
+                (vec.clockwise(sample_cp[0, 0, 0], sample_cp[0, 1, 0], sample_cp[0, 0, 1]) >= 0.0)
             if not self.grid.k_direction_is_down:
                 self.__cell_ijk_lefthanded = not self.__cell_ijk_lefthanded
             if self.__crs.is_right_handed_xyz():
