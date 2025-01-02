@@ -868,10 +868,11 @@ def surrounding_xy_ring(p,
           being an angle to determine a z offset for the ring(s); a +ve angle results in a -ve z shift
 
     returns:
-       numpy float array of shape (N, 3) being xyz points in surrounding ring(s); z is set constant to
-       mean value of z in p (optionally adjussted based on saucer_angle);
-       N is count if inner_ring is False, 3 * count if True
-       radius used for ring of additional points
+       (numpy float array, float) pair:
+       - numpy float array of shape (N, 3) being xyz points in surrounding ring(s); z is set constant to
+         mean value of z in p (optionally adjussted based on saucer_angle);
+         N is count if inner_ring is False, 3 * count if True
+       - radius used for ring of additional points
     """
 
     def make_ring(count, centre, radius, saucer_angle):
