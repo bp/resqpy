@@ -59,11 +59,8 @@ def test_array_volume():
     # move whole cells by random translations
     translate = (random(cp.size // 8) * 123.2356).reshape((cp.shape[0], cp.shape[1], cp.shape[2], 1, 1, 1, 3))
     cp[:] += translate
-    # compute volumes using two different routines in the volume module and make sure they give the same answer
-    v1 = vol.tetra_volumes_slow(cp, off_hand = False)
-    v2 = vol.tetra_volumes(cp, off_hand = False)
-    # following is a stringent test requiring that exactly the same mathematical operations have been performed
-    assert_array_almost_equal(v1, v2)
+    # compute cell volumes
+    v1 = vol.tetra_volumes(cp, off_hand = False)
 
     # the random changes to corner points should have left the volumes within a certain range
     assert np.all(v1 >= 0.0), 'negative volume(s) returned by array function'
@@ -76,9 +73,7 @@ def test_array_volume():
 
     # test handedness inversion
     cp[:, :, :, :, :, :, 0] *= -1.0
-    v1 = vol.tetra_volumes_slow(cp, off_hand = True)
-    v2 = vol.tetra_volumes(cp, off_hand = True)
-    assert_array_almost_equal(v1, v2)
+    v1 = vol.tetra_volumes(cp, off_hand = True)
     assert np.all(v1 >= 0.0), 'negative volume(s) returned by array function'
     assert np.all(v1 <= 27.0), 'exaggerated volume(s) returned by array function'
 

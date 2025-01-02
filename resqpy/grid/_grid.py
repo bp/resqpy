@@ -680,13 +680,7 @@ class Grid(BaseResqpy):
         return _create_grid_xml(self, ijk, ext_uuid, add_as_part, add_relationships, write_active, write_geometry,
                                 use_lattice, use_parametric_lines)
 
-    def x_section_points(self, axis, ref_slice0 = 0, plus_face = False, masked = False):
-        """Deprecated: please use `unsplit_x_section_points` instead."""
-        warnings.warn('Deprecated: please use `unsplit_x_section_points` instead.', DeprecationWarning)
-
-        return unsplit_x_section_points(self, axis, ref_slice0 = ref_slice0, plus_face = plus_face, masked = masked)
-
-    # The implementations of the below functions have been moved to separate modules.
+    # the implementations of the functions below have been moved to separate modules
 
     def cell_geometry_is_defined(self, cell_kji0 = None, cell_geometry_is_defined_root = None, cache_array = True):
         """Returns True if the geometry of the specified cell is defined.

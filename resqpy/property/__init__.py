@@ -8,7 +8,8 @@ __all__ = [
     'reformat_column_edges_from_resqml_format', 'same_property_kind', 'selective_version_of_collection',
     'supported_local_property_kind_list', 'supported_property_kind_list', 'supported_facet_type_list',
     'expected_facet_type_dict', 'create_transmisibility_multiplier_property_kind',
-    'property_kind_and_facet_from_keyword', 'guess_uom', 'property_parts', 'property_part', 'make_aps_key'
+    'property_kind_and_facet_from_keyword', 'guess_uom', 'property_parts', 'property_part', 'make_aps_key',
+    'establish_zone_property_kind'
 ]
 
 from .property_common import property_collection_for_keyword,  \
@@ -27,7 +28,7 @@ from .property_common import property_collection_for_keyword,  \
     guess_uom,  \
     property_parts,  \
     property_part
-from .property_kind import PropertyKind, create_transmisibility_multiplier_property_kind
+from .property_kind import PropertyKind, create_transmisibility_multiplier_property_kind, establish_zone_property_kind
 from .string_lookup import StringLookup
 from .property_collection import PropertyCollection
 from .attribute_property_set import AttributePropertySet, ApsProperty, make_aps_key

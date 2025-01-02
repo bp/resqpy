@@ -558,6 +558,8 @@ def find_faces_to_represent_surface_regular_dense_optimised(grid,
         to a grid connection set; use the non-dense version of the function for a reduced memory footprint;
         this function is DEPRECATED pending proving of newer find_faces_to_represent_surface_regular_optimised()
     """
+    warnings.warn('DEPRECATED: grid_surface.find_faces_to_represent_surface_regular_dense_optimised() function; ' +
+                  'use find_faces_to_represent_surface_regular_optimised() instead')
 
     assert isinstance(grid, grr.RegularGrid)
     assert grid.is_aligned
@@ -1421,6 +1423,7 @@ def bisector_from_faces(  # type: ignore
           assigned to either the True or False part
         - this function is DEPRECATED, use newer indices based approach instead: bisector_from_face_indices()
     """
+    warnings.warn('DEPRECATED: grid_surface.bisector_from_faces() function; use bisector_from_face_indices() instead')
     assert len(grid_extent_kji) == 3
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)

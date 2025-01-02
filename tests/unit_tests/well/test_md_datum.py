@@ -17,7 +17,7 @@ def test_MdDatum(example_model_and_crs):
     uuid = datum.uuid
 
     # Save to disk and reload
-    datum.create_part()
+    datum.create_xml()
     model.store_epc()
 
     del model, crs, datum
