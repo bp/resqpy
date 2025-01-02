@@ -80,7 +80,6 @@ class MdDatum(BaseResqpy):
             assert md_reference in valid_md_reference_list
             assert len(location) == 3
 
-
     def extract_crs_uuid(self):
         """Returns uuid for coordinate reference system, as stored in reference node of this md datum's xml tree."""
 
@@ -90,7 +89,6 @@ class MdDatum(BaseResqpy):
         uuid_str = rqet.find_tag(crs_root, 'UUID').text
         self.crs_uuid = bu.uuid_from_string(uuid_str)
         return self.crs_uuid
-
 
     def create_xml(self, add_as_part = True, add_relationships = True, title = None, originator = None):
         """Creates xml for a measured depth datum element; crs node must already exist; optionally adds as part.
@@ -137,7 +135,6 @@ class MdDatum(BaseResqpy):
 
         return datum
 
-
     def is_equivalent(self, other):
         """Implements equals operator, comparing metadata items deemed significant."""
 
@@ -146,7 +143,6 @@ class MdDatum(BaseResqpy):
         if self.md_reference != other.md_reference or not np.allclose(self.location, other.location):
             return False
         return bu.matching_uuids(self.crs_uuid, other.crs_uuid)
-
 
     def _load_from_xml(self):
         md_datum_root = self.root

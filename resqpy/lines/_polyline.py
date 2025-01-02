@@ -25,17 +25,16 @@ class Polyline(rql_c._BasePolyline):
 
     resqml_type = 'PolylineRepresentation'
 
-    def __init__(
-            self,
-            parent_model,
-            uuid = None,
-            set_coord = None,
-            set_crs = None,
-            is_closed = None,
-            title = None,
-            rep_int_root = None,
-            originator = None,
-            extra_metadata = None):
+    def __init__(self,
+                 parent_model,
+                 uuid = None,
+                 set_coord = None,
+                 set_crs = None,
+                 is_closed = None,
+                 title = None,
+                 rep_int_root = None,
+                 originator = None,
+                 extra_metadata = None):
         """Initialises a new polyline object.
 
         arguments:

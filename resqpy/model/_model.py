@@ -1341,7 +1341,7 @@ class Model():
            call the h5_clear_filename_cache() method
         """
         if isinstance(override, bool):
-            warnings.warn(f'DEPRECATED: boolean override argument to Model.h5_file_name(), use string instead')
+            warnings.warn('DEPRECATED: boolean override argument to Model.h5_file_name(); use string instead')
         return m_h._h5_file_name(self, uuid = uuid, override = override, file_must_exist = file_must_exist)
 
     def h5_access(self, uuid = None, mode = 'r', override = 'default', file_path = None):
@@ -1368,7 +1368,7 @@ class Model():
            piece of code accessing the file might cause a 'resource unavailable' exception
         """
         if isinstance(override, bool):
-            warnings.warn(f'DEPRECATED: boolean override argument to Model.h5_access(), use string instead')
+            warnings.warn('DEPRECATED: boolean override argument to Model.h5_access(); use string instead')
         return m_h._h5_access(self, uuid = uuid, mode = mode, override = override, file_path = file_path)
 
     def h5_release(self):

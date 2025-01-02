@@ -1,8 +1,8 @@
 """The Grid Module."""
 
 __all__ = [
-    'Grid', 'RegularGrid', 'extract_grid_parent', 'find_cell_for_x_sect_xz',
-    'grid_flavour', 'is_regular_grid', 'any_grid'
+    'Grid', 'RegularGrid', 'extract_grid_parent', 'find_cell_for_x_sect_xz', 'grid_flavour', 'is_regular_grid',
+    'any_grid'
 ]
 
 from ._grid import Grid
