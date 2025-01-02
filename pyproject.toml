@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Development Status :: 5 - Production/Stable",
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Filesystems",
@@ -39,7 +40,7 @@ include = ["data/*.json"]
 #   - https://semver.org/
 # See here for "caret" style dependency specifications:
 #   - https://python-poetry.org/docs/dependency-specification/
-python = ">= 3.9, < 3.12"
+python = ">= 3.9, < 3.13"
 numpy = "^1.24"
 pandas = "^2.2"
 h5py = "^3.7"
