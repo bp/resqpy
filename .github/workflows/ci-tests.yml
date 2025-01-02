@@ -52,7 +52,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
       - name: Downgrade numpy and pandas
         # Use caret-style requirements (~) to fix minor version but allow patches
         run: |
-          poetry add numpy@~1.24 pandas@~2.2
+          poetry add numpy@~1.26 pandas@~2.2
           poetry show
 
       - name: Run pytest
