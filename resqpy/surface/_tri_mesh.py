@@ -219,6 +219,7 @@ class TriMesh(rqs.Mesh):
             base edge towards point 2; f1 is component towards point 1; f0 is component towards point 0;
             the trilinear coordinates sum to one and can be used as weights to interpolate z values at points
         """
+        assert xy_array.ndim > 1 and 2 <= xy_array.shape[-1] <= 3
         x = xy_array[..., 0].copy()
         y = xy_array[..., 1].copy()
         if self.origin is not None:
@@ -236,7 +237,7 @@ class TriMesh(rqs.Mesh):
         mask = np.logical_or(mask, np.logical_or(i < 0, i >= self.ni - 1))
         fx = ip - i.astype(float)
         i *= 2
-        am = np.where(fx > 1.0 - fy)
+        am = (fx > 1.0 - fy).astype(bool)
         i[am] += 1
         fx[am] -= 1.0 - fy[am]
         fy[am] = 1.0 - fy[am]
@@ -275,6 +276,7 @@ class TriMesh(rqs.Mesh):
             of three vertices of triangles containing xy points; float triplets contain corresponding weights (summing to
             one per triangle) which can be used to interpolate z values at points xy_array
         """
+        assert xy_array.ndim > 1 and 2 <= xy_array.shape[-1] <= 3
         tji, tc = self.tji_tc_for_xy_array(xy_array)
         ji = self.tri_nodes_for_tji_array(tji)
         return (ji, tc)

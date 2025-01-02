@@ -509,6 +509,8 @@ def _supporting_shape_surface(support, indexable_element):
         shape_list = [support.triangle_count()]
     elif indexable_element == 'nodes':
         shape_list = [support.node_count()]
+    elif indexable_element == 'patches':
+        shape_list = [len(support.patch_list)]
     return shape_list
 
 
