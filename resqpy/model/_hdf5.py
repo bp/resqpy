@@ -262,11 +262,11 @@ def _h5_array_element(model,
         if dtype is None:
             return result
         if result.size == 1:
-            if dtype is float or (isinstance(dtype, str) and dtype.startswith('float')):
+            if dtype is float or (isinstance(dtype, str) and ('float' in dtype)):
                 return float(result)
-            elif dtype is int or (isinstance(dtype, str) and dtype.startswith('int')):
+            elif dtype is int or (isinstance(dtype, str) and ('int' in dtype)):
                 return int(result)
-            elif dtype is bool or (isinstance(dtype, str) and dtype.startswith('bool')):
+            elif dtype is bool or (isinstance(dtype, str) and ('bool' in dtype)):
                 return bool(result)
         return np.array(result, dtype = dtype)
 
@@ -284,6 +284,14 @@ def _h5_overwrite_array_slice(model, h5_key_pair, slice_tuple, array_slice):
     h5_root = _h5_access(model, h5_key_pair[0], mode = 'a')
     dset = h5_root[h5_key_pair[1]]
     dset[slice_tuple] = array_slice
+
+
+def _h5_overwrite_array(model, h5_key_pair, array):
+    """Overwrites (updates) the whole of an hdf5 array."""
+
+    h5_root = _h5_access(model, h5_key_pair[0], mode = 'a')
+    dset = h5_root[h5_key_pair[1]]
+    dset[...] = array
 
 
 def h5_clear_filename_cache(model):

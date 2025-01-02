@@ -14,7 +14,7 @@ import resqpy.olio.triangulation as tri
 
 import pytest
 
-# Integration tests for surface classes
+# Unit tests for surface classes
 
 
 def test_surface(tmp_model):
@@ -59,6 +59,15 @@ def test_faces_for_surface(tmp_model):
     assert surf is not None
     assert surf.node_count() == 4
     assert surf.triangle_count() == 2
+    assert_array_almost_equal(surf.normal(), (-0.707107, 0.0, 0.707107))
+    surf.write_hdf5()
+    surf.create_xml()
+    surf = rqs.Surface(tmp_model, uuid = surf.uuid)
+    assert surf is not None
+    assert surf.node_count() == 4
+    assert surf.triangle_count() == 2
+    assert surf.normal_vector is not None
+    assert_array_almost_equal(surf.normal_vector, (-0.707107, 0.0, 0.707107))
     for mode in ['staffa', 'regular', 'auto']:
         gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
         assert gcs is not None
@@ -213,9 +222,9 @@ def test_surface_from_point_set_with_nan_removal(example_model_and_crs):
     p = np.stack((x, y, z), axis = -1)
 
     # set a few nans
-    p[5, 1] = np.NaN
-    p[7, :] = np.NaN
-    p[13, 0] = np.NaN
+    p[5, 1] = np.nan
+    p[7, :] = np.nan
+    p[13, 0] = np.nan
 
     # make a PointSet object
     ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
@@ -786,220 +795,6 @@ def test_pointset_minimum_xy_area_rectangle(example_model_and_crs):
     assert 56.9 < theta < 63.1
 
 
-def test_tripatch_set_to_triangle(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_to_triangle(corners)
-
-    # Assert
-    assert tripatch is not None
-    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2]]))
-    assert_array_almost_equal(tripatch.points, corners)
-
-
-def test_tripatch_verticalscale(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    corners = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_to_triangle(corners)
-
-    # Assert
-    assert tripatch is not None
-    # Scale without a reference depth initially
-    tripatch.vertical_rescale_points(0, 10)
-    assert_array_almost_equal(tripatch.points[:, 2], np.array([0, 10, 10]))
-    # Scale with a reference depth
-    tripatch.vertical_rescale_points(5, 2)
-    assert_array_almost_equal(tripatch.points[:, 2], np.array([-5, 15, 15]))
-
-
-def test_tripatch_set_from_irregularmesh(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 4
-    assert tripatch.points.shape == (4, 3)
-    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
-    assert_array_almost_equal(tripatch.points[3], mesh_xyz[1, 1])
-    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2]]))
-
-
-def test_tripatch_columnfromindex(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = False)
-    assert tripatch is not None
-    j0, i0 = tripatch.column_from_triangle_index(0)
-    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 3]))
-
-    # Assert
-    assert j0 == 0
-    assert i0 == 0
-    assert_array_almost_equal(j1, np.array([0, 0]))
-    assert_array_almost_equal(i1, np.array([0, 1]))
-
-
-def test_tripatch_columnfromindex_quad(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, 1], [2, 1, 1]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
-    assert tripatch is not None
-    j0, i0 = tripatch.column_from_triangle_index(0)
-    j1, i1 = tripatch.column_from_triangle_index(np.array([0, 7]))
-    j2, i2 = tripatch.column_from_triangle_index(8)
-    j3, i3 = tripatch.column_from_triangle_index(np.array([0, 8]))
-
-    # Assert
-    assert j0 == 0
-    assert i0 == 0
-    assert_array_almost_equal(j1, np.array([0, 0]))
-    assert_array_almost_equal(i1, np.array([0, 1]))
-    assert j2 is None
-    assert i2 is None
-    assert j3 is None
-    assert i3 is None
-
-
-def test_tripatch_set_from_irregularmesh_quad(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_irregular_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 5
-    assert tripatch.points.shape == (5, 3)
-    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
-    assert_array_almost_equal(tripatch.points[3], mesh_xyz[1, 1])
-    assert_array_almost_equal(tripatch.triangles, np.array([[4, 0, 1], [4, 1, 3], [4, 3, 2], [4, 2, 0]]))
-
-
-def test_tripatch_set_from_sparse(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[0, 0, 1], [1, 0, 1], [2, 0, 2]], [[0, 1, 1], [1, 1, np.nan], [2, 1, 1]],
-                         [[0, 2, 1], [1, 2, 1], [2, 2, 1]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_sparse_mesh(mesh_xyz = mesh_xyz)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 8
-    assert tripatch.points.shape == (8, 3)
-    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0])
-    assert_array_almost_equal(tripatch.points[7], mesh_xyz[2, 2])
-    assert_array_almost_equal(tripatch.triangles[0], np.array([1, 3, 0]))
-    assert_array_almost_equal(tripatch.triangles[3], np.array([4, 6, 7]))
-
-
-def test_tripatch_set_from_torn(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, np.nan]]],
-                          [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 8
-    assert tripatch.points.shape == (8, 3)
-    assert tripatch.ni == 2
-    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0, 0, 0])
-    assert_array_almost_equal(tripatch.points[2], mesh_xyz[0, 0, 1, 0])
-    assert_array_almost_equal(tripatch.triangles, np.array([[0, 1, 2], [3, 1, 2], [4, 5, 6], [7, 5, 6]]))
-
-
-def test_tripatch_set_from_torn_quad(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    mesh_xyz = np.array([[[[[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, np.nan]]],
-                          [[[1, 0, 1], [2, 0, 1]], [[1, 1, np.nan], [2, 1, 1]]]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_from_torn_mesh(mesh_xyz = mesh_xyz, quad_triangles = True)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 10
-    assert tripatch.points.shape == (10, 3)
-    assert tripatch.ni == 2
-    assert_array_almost_equal(tripatch.points[0], mesh_xyz[0, 0, 0, 0])
-    assert_array_almost_equal(tripatch.points[2], mesh_xyz[0, 0, 1, 0])
-    assert_array_almost_equal(
-        tripatch.triangles,
-        np.array([[8, 0, 1], [8, 1, 3], [8, 3, 2], [8, 2, 0], [9, 4, 5], [9, 5, 7], [9, 7, 6], [9, 6, 4]]))
-
-
-def test_tripatch_set_cellface_corp(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_to_cell_faces_from_corner_points(cp = cp)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 14
-    assert tripatch.points.shape == (14, 3)
-    assert_array_almost_equal(tripatch.points[0], cp[0, 0, 0])
-    assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
-    assert_array_almost_equal(tripatch.triangles[0], np.array([8, 0, 1]))
-    assert_array_almost_equal(tripatch.triangles[-1], np.array([13, 3, 7]))
-
-
-def test_tripatch_set_cellface_corp_quadfalse(example_model_and_crs):
-    # Arrange
-    model, crs = example_model_and_crs
-    cp = np.array([[[[0, 0, 0], [0, 1, 0]], [[1, 1, 0], [1, 0, 0]]], [[[0, 0, 1], [0, 1, 1]], [[1, 1, 1], [1, 0, 1]]]])
-
-    # Act
-    tripatch = rqs.TriangulatedPatch(parent_model = model)
-    tripatch.set_to_cell_faces_from_corner_points(cp = cp, quad_triangles = False)
-
-    # Assert
-    assert tripatch is not None
-    assert tripatch.node_count == 8
-    assert tripatch.points.shape == (8, 3)
-    assert_array_almost_equal(tripatch.points[0], cp[0, 0, 0])
-    assert_array_almost_equal(tripatch.points[2], cp[0, 1, 0])
-    assert_array_almost_equal(tripatch.triangles[0], np.array([0, 3, 1]))
-    assert_array_almost_equal(tripatch.triangles[-1], np.array([7, 1, 3]))
-
-
 def test_surface_normal_vectors(tmp_model):
     # Arrange
     points = np.array([[1.0, 1.0, 1.0], [2.0, 0.0, 1.0], [2.0, 2.0, 1.0], [3.0, 1.0, 2.0]])
@@ -1185,6 +980,56 @@ def test_resampling(tmp_path):
     assert resampled_name.extra_metadata == {'resampled from surface': str(surf.uuid)}
 
 
+def test_resample_surface_unique_edges(tmp_path):
+    # Arrange
+    model = rq.new_model(f"{tmp_path}\test.epc")
+    crs = rqc.Crs(model, title = 'crs example')
+    crs.create_xml()
+    model.store_epc()
+
+    x = np.linspace(1, 5, 5)
+    y = np.linspace(1, 5, 5)
+    xs, ys = np.meshgrid(x, y)
+    zs = np.random.randint(low = 5, high = 10, size = xs.shape)
+    points = np.array([xs, ys, zs], dtype = float).T
+
+    pointset = rqs.PointSet(model, title = 'points', crs_uuid = crs.uuid, points_array = points)
+    surf = rqs.Surface(model, title = 'surface', crs_uuid = crs.uuid, point_set = pointset)
+
+    surf.write_hdf5()
+    surf.create_xml()
+    model.store_epc()
+    ot, op = surf.triangles_and_points()
+
+    # Act
+    resampled = surf.resample_surface_unique_edges()
+    resampled.write_hdf5()
+    resampled.create_xml()
+    model.store_epc()
+
+    # Assert
+    reload = rq.Model(model.epc_file)
+    resampled = rqs.Surface(reload, resampled.uuid)
+    assert resampled is not None
+
+    coords = np.array([[2.5, 2.5], [3.4, 3.4], [4.6, 4.6]])
+    np.testing.assert_array_almost_equal(surf.sample_z_at_xy_points(coords), resampled.sample_z_at_xy_points(coords))
+    rt, rp = resampled.triangles_and_points()
+
+    assert len(rt) == 112
+    assert np.min(rp[:, 0]) == np.min(op[:, 0])
+    assert np.max(rp[:, 0]) == np.max(op[:, 0])
+    assert np.min(rp[:, 1]) == np.min(op[:, 1])
+    assert np.max(rp[:, 1]) == np.max(op[:, 1])
+    assert np.min(rp[:, 2]) == np.min(op[:, 2])
+    assert np.max(rp[:, 2]) == np.max(op[:, 2])
+
+    assert resampled.crs_uuid == surf.crs_uuid
+    assert resampled.citation_title == surf.citation_title
+    assert 'resampled from surface' in resampled.extra_metadata.keys()
+    assert resampled.extra_metadata['resampled from surface'] == str(surf.uuid)
+
+
 def test_from_downsampling_surface(example_model_and_crs):
     model, crs = example_model_and_crs
     z_values = np.random.random((20, 25)) * 100.0 + 950.0
@@ -1264,8 +1109,8 @@ def test_from_downsampling_surface_different_model(example_model_and_crs):
 def test_from_tri_mesh_excluding_nans(example_model_and_crs):
     model, crs = example_model_and_crs
     z_values = np.random.random((4, 5)) * 100.0 + 950.0
-    z_values[0, 0] = np.NaN
-    z_values[2, 2] = np.NaN
+    z_values[0, 0] = np.nan
+    z_values[2, 2] = np.nan
     trim = rqs.TriMesh(model,
                        t_side = 100.0,
                        nj = 4,
@@ -1310,6 +1155,50 @@ def test_set_to_split_surface(example_model_and_crs):
     split_surf.create_xml()
 
 
+def test_set_to_triangle(example_model_and_crs):
+
+    def check_one(s):
+        assert s is not None
+        assert s.number_of_patches() == 1
+        t, p = s.triangles_and_points()
+        assert t.shape == (1, 3)
+        assert p.shape == (3, 3)
+        assert_array_almost_equal(s.edge_lengths(), np.array([(3.0, 5.0, 4.0)], dtype = float))
+
+    model, crs = example_model_and_crs
+    vertices = np.array([(1.0, 1.0, 1.0), (4.0, 1.0, 1.0), (1.0, 5.0, 1.0)], dtype = float)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pythagorean')
+    surf.set_to_triangle(vertices)
+    surf.write_hdf5()
+    surf.create_xml()
+    check_one(surf)
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    check_one(surf)
+
+
+def test_vertical_rescale_points(example_model_and_crs):
+    model, crs = example_model_and_crs
+    vertices = np.array([(1.0, 1.0, 1.0), (4.0, 1.0, 2.0), (1.0, 5.0, 3.0)], dtype = float)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pythagorean')
+    surf.set_to_triangle(vertices)
+    surf.vertical_rescale_points(ref_depth = 0.0, scaling_factor = 3.0)
+    surf.write_hdf5()
+    surf.create_xml()
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    t, p = surf.triangles_and_points()
+    assert np.all(t.flatten() == (0, 1, 2))
+    assert_array_almost_equal(p[:, 2], (3.0, 6.0, 9.0))
+    vertices = np.array([(1.0, 1.0, 1.0), (4.0, 1.0, 2.0), (1.0, 5.0, 3.0)], dtype = float)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pythagorean')
+    surf.set_to_triangle(vertices)
+    surf.vertical_rescale_points(ref_depth = -2.0, scaling_factor = 2.0)
+    surf.write_hdf5()
+    surf.create_xml()
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    t, p = surf.triangles_and_points()
+    assert_array_almost_equal(p[:, 2], (4.0, 6.0, 8.0))
+
+
 def test_edge_lengths(example_model_and_crs):
     model, crs = example_model_and_crs
     surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'pair')
@@ -1321,3 +1210,138 @@ def test_edge_lengths(example_model_and_crs):
     assert_array_almost_equal(lengths, np.array([(3.0, 4.0, 5.0), (5.0, 3.0, 4.0)], dtype = float))
     lengths = surf.edge_lengths(required_uom = 'cm')
     assert_array_almost_equal(lengths, np.array([(300.0, 400.0, 500.0), (500.0, 300.0, 400.0)], dtype = float))
+
+
+def test_extended_surface_with_flange_extension(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # create a set of points (must have a convex hull)
+    x = np.array([-1, -1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
+    y = np.array([-1.1, -0.5, 0, 0.5, 1, 0.5, 1.1, 0.5, 0, -0.5, -1, 0], dtype = float) + 5
+    z = np.zeros(shape = (12), dtype = float) + 5
+    p = np.stack((x, y, z), axis = -1)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'points')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps, reorient = False, reorient_max_dip = None, extend_with_flange = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    orig_t, orig_p = surf.triangles_and_points()
+
+    new_surf, flange_bool = surf.extend_surface_with_flange(reorient = False,
+                                                            flange_radial_factor = 10.0,
+                                                            flange_radial_distance = None,
+                                                            saucer_parameter = None,
+                                                            retriangulate = False)
+
+    new_t, new_p = new_surf.triangles_and_points()
+
+    assert np.all(flange_bool[len(orig_t):])
+    assert not np.any(flange_bool[:len(orig_t)])
+    assert np.all(np.isin(orig_t, new_t))
+
+    np.testing.assert_array_almost_equal(
+        np.array([[5, 28.07078471], [26.81071628, 12.43307607], [27.71578211, 1.25570298], [24.45543821, -7.28011087],
+                  [5, -17.98745138], [-16.42279299, -3.40843501], [-17.86764418, 7.76400526],
+                  [-15.03584362, 16.39531138]]), new_p[len(orig_p):, :2])
+
+
+def test_extended_surface_with_flange_extension_saucer(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # create a set of points (must have a convex hull)
+    x = np.array([-1, -1.5, -2, -1.5, -1, 0, 1, 1.5, 2, 1.5, 1, 0], dtype = float) + 5
+    y = np.array([-1.1, -0.5, 0, 0.5, 1, 0.5, 1.1, 0.5, 0, -0.5, -1, 0], dtype = float) + 5
+    z = np.zeros(shape = (12), dtype = float) + 5
+    p = np.stack((x, y, z), axis = -1)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'points')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert surf is not None
+    surf.set_from_point_set(ps, reorient = False, reorient_max_dip = None, extend_with_flange = False)
+    surf.write_hdf5()
+    surf.create_xml()
+    orig_t, orig_p = surf.triangles_and_points()
+
+    new_surf, flange_bool = surf.extend_surface_with_flange(reorient = False,
+                                                            flange_radial_factor = 10.0,
+                                                            flange_radial_distance = None,
+                                                            saucer_parameter = 45.0,
+                                                            retriangulate = False)
+
+    new_t, new_p = new_surf.triangles_and_points()
+
+    assert np.all(flange_bool[len(orig_t):])
+    assert not np.any(flange_bool[:len(orig_t)])
+    assert np.all(np.isin(orig_t, new_t))
+    np.testing.assert_array_almost_equal(
+        np.array([[5, 28.07078471, 28.02911804], [26.81071628, 12.43307607, 28.02911804],
+                  [27.71578211, 1.25570298, 28.02911804], [24.45543821, -7.28011087, 28.02911804],
+                  [5, -17.98745138, 28.02911804], [-16.42279299, -3.40843501, 28.02911804],
+                  [-17.86764418, 7.76400526, 28.02911804], [-15.03584362, 16.39531138, 28.02911804]]),
+        new_p[len(orig_p):])
+
+
+def test_extended_surface_with_flange_extension_retriangulate(example_model_and_crs):
+    model, crs = example_model_and_crs
+
+    # number of random points to use
+    n = 20
+
+    # create a set of random points
+    x = np.random.random(n) * 1000.0 - 500.0
+    y = np.random.random(n) * 1000.0 - 500.0
+    z = np.random.random(n)  #  note: triangulation does not use z values
+    p = np.stack((x, y, z), axis = -1)
+    centre = np.mean(p, axis = 0)
+
+    # make a PointSet object
+    ps = rqs.PointSet(model, crs_uuid = crs.uuid, points_array = p, title = 'random points in square')
+    ps.write_hdf5()
+    ps.create_xml()
+
+    # try out flange extension
+    orig_surf = rqs.Surface(model, crs_uuid = ps.crs_uuid, title = 'surface from ' + str(ps.title))
+    assert orig_surf is not None
+    orig_surf.set_from_point_set(ps,
+                                 reorient = True,
+                                 reorient_max_dip = None,
+                                 extend_with_flange = False,
+                                 make_clockwise = False)
+    orig_surf.write_hdf5()
+    orig_surf.create_xml()
+
+    # flange extension with simple saucer
+    new_surf, flange_bool = orig_surf.extend_surface_with_flange(reorient = True,
+                                                                 reorient_max_dip = None,
+                                                                 flange_point_count = 12,
+                                                                 flange_radial_factor = 2.0,
+                                                                 flange_radial_distance = 2000.0,
+                                                                 flange_inner_ring = True,
+                                                                 saucer_parameter = -60.0,
+                                                                 make_clockwise = False,
+                                                                 retriangulate = True)
+    new_surf.write_hdf5()
+    new_surf.create_xml()
+
+    assert new_surf.node_count() == 56
+    _, p = new_surf.triangles_and_points()
+    min_p = np.min(p, axis = 0)
+    max_p = np.max(p, axis = 0)
+    assert -2010.0 <= min_p[0] - centre[0] < -1900.0
+    assert -2010.0 <= min_p[1] - centre[1] < -1900.0
+    assert 1900.0 < max_p[0] - centre[0] <= 2010.0
+    assert 1900.0 < max_p[1] - centre[1] <= 2010.0
+    assert 0.0 <= min_p[2] <= 1.0
+    assert 3457.0 < max_p[2] < 3471.0  # widening range to account for potential dip in the random z points

@@ -33,10 +33,10 @@ def test_unit_vectors():
 
 
 def test_nan_unit_vectors():
-    v_set = np.array([(3.0, 4.0, 0.0), (3.7, -3.7, np.NaN), (0.0, 0.0, 1.0), (0.0, np.NaN, 0.0)])
+    v_set = np.array([(3.0, 4.0, 0.0), (3.7, -3.7, np.nan), (0.0, 0.0, 1.0), (0.0, np.nan, 0.0)])
     one_over_root_three = 1.0 / maths.sqrt(3.0)
-    expected = np.array([(3.0 / 5.0, 4.0 / 5.0, 0.0), (np.NaN, np.NaN, np.NaN), (0.0, 0.0, 1.0),
-                         (np.NaN, np.NaN, np.NaN)])
+    expected = np.array([(3.0 / 5.0, 4.0 / 5.0, 0.0), (np.nan, np.nan, np.nan), (0.0, 0.0, 1.0),
+                         (np.nan, np.nan, np.nan)])
     for v, e in zip(v_set, expected):
         assert_array_almost_equal(vec.unit_vector(v), e)
 
@@ -66,7 +66,7 @@ def test_azimuth():
     for v, e in zip(vectors, expected):
         assert maths.isclose(vec.azimuth(v), e)
         assert maths.isclose(vec.azimuth(v[:2]), e)
-    expected[4] = np.NaN
+    expected[4] = np.nan
     assert_array_almost_equal(vec.azimuths(vectors), expected)
     assert_array_almost_equal(vec.azimuths(vectors[:, :2]), expected)
 
@@ -273,9 +273,11 @@ def test_points_in_triangles_aligned_optimised():
 
     # Act
     triangles_points = vec.points_in_triangles_aligned(nx, ny, dx, dy, triangles)
+    triangles_points_optimised_serial = vec.points_in_triangles_aligned_optimised_serial(nx, ny, dx, dy, triangles)
     triangles_points_optimised = vec.points_in_triangles_aligned_optimised(nx, ny, dx, dy, triangles)
 
     # Assert
+    np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised_serial))
     np.testing.assert_array_almost_equal(sort_array(triangles_points), sort_array(triangles_points_optimised))
 
 
@@ -357,10 +359,10 @@ def test_inclinations():
 
 
 def test_nan_inclinations():
-    v_set = np.array([(3.0, np.NaN, 0.0), (0.0, -3.7, 3.7), (np.NaN, 0.0, 1.0),
+    v_set = np.array([(3.0, np.nan, 0.0), (0.0, -3.7, 3.7), (np.nan, 0.0, 1.0),
                       (100.0 * maths.sqrt(3.0) / 2.0, 0.0, -50.0)],
                      dtype = float)
-    e = np.array([np.NaN, 45.0, np.NaN, 120.0], dtype = float)
+    e = np.array([np.nan, 45.0, np.nan, 120.0], dtype = float)
     inclines = vec.nan_inclinations(v_set)
     assert_array_almost_equal(inclines, e)
 
@@ -387,8 +389,8 @@ def test_points_direction_vector_some_nan():
     p[2, :, 0] = p[0, :, 0] - 100.0
     p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
     p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
-    p[0, 2, :] = np.NaN
-    p[1, 4, :] = np.NaN
+    p[0, 2, :] = np.nan
+    p[1, 4, :] = np.nan
     e_0 = np.nanmean(p[2], axis = 0) - np.nanmean(p[0], axis = 0)
     e_1 = np.nanmean(p[:, 4], axis = 0) - np.nanmean(p[:, 0], axis = 0)
     pdv_0 = vec.points_direction_vector(p, axis = 0)
@@ -404,8 +406,8 @@ def test_points_direction_vector_nan_sloces():
     p[2, :, 0] = p[0, :, 0] - 100.0
     p[:, :, 1] = np.expand_dims(50.0 * np.arange(3).astype(float), axis = -1)
     p[:, :, 2] = p[:, :, 0] + p[:, :, 1]
-    p[0, :, :] = np.NaN
-    p[:, 4, :] = np.NaN
+    p[0, :, :] = np.nan
+    p[:, 4, :] = np.nan
     e_0 = np.nanmean(p[2], axis = 0) - np.nanmean(p[1], axis = 0)
     e_1 = np.nanmean(p[:, 3], axis = 0) - np.nanmean(p[:, 0], axis = 0)
     pdv_0 = vec.points_direction_vector(p, axis = 0)
@@ -564,3 +566,22 @@ def test_triangle_box():
     min_max = vec.triangle_box(triangle)
     assert len(min_max) == 4
     assert_array_almost_equal(min_max, (-2.6, 4.5, -3.1, 7.8))
+
+
+def test_vertical_intercept():
+    xv = np.array((2.0, 10.0), dtype = float)
+    yv = np.array((20.0, 30.0), dtype = float)
+    assert vec.vertical_intercept(-5.0, xv, yv) is None
+    assert np.isnan(vec.vertical_intercept_nan(-5.0, xv[0], xv[1], yv[0], yv[1]))
+    assert vec.vertical_intercept(1.0, xv, yv) is None
+    assert np.isnan(vec.vertical_intercept_nan(1.0, xv[0], xv[1], yv[0], yv[1]))
+    assert vec.vertical_intercept(11.0, xv, yv) is None
+    assert np.isnan(vec.vertical_intercept_nan(11.0, xv[0], xv[1], yv[0], yv[1]))
+    assert np.isclose(vec.vertical_intercept(2.0, xv, yv), 20.0)
+    assert np.isclose(vec.vertical_intercept_nan(2.0, xv[0], xv[1], yv[0], yv[1]), 20.0)
+    assert np.isclose(vec.vertical_intercept(10.0, xv, yv), 30.0)
+    assert np.isclose(vec.vertical_intercept_nan(10.0, xv[0], xv[1], yv[0], yv[1]), 30.0)
+    assert np.isclose(vec.vertical_intercept(4.0, xv, yv), 22.5)
+    assert np.isclose(vec.vertical_intercept_nan(4.0, xv[0], xv[1], yv[0], yv[1]), 22.5)
+    assert np.isclose(vec.vertical_intercept(6.0, xv, yv), 25.0)
+    assert np.isclose(vec.vertical_intercept_nan(6.0, xv[0], xv[1], yv[0], yv[1]), 25.0)

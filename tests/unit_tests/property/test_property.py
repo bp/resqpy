@@ -1155,7 +1155,7 @@ def test_norm_array_ref_log_mask(example_model_with_properties):
 
 
 def test_normalized_part_array_use_logarithm_all_nan():
-    a = np.full((4, 5, 6), np.NaN, dtype = float)
+    a = np.full((4, 5, 6), np.nan, dtype = float)
     b, min_value, max_value = pcga._normalized_part_array_use_logarithm(0.0, a, False)
     assert np.all(np.isnan(b))
     assert np.isnan(min_value) and np.isnan(max_value)
@@ -1170,7 +1170,7 @@ def test_normalized_part_array_use_logarithm_default_min():
 
 
 def test_normalized_part_array_use_logarithm_all_masked():
-    a = np.ma.masked_array(data = [(4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], mask = True, fill_value = np.NaN, dtype = float)
+    a = np.ma.masked_array(data = [(4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], mask = True, fill_value = np.nan, dtype = float)
     _, min_value, max_value = pcga._normalized_part_array_use_logarithm(4.0, a, True)
     assert np.isnan(min_value)
     assert np.isnan(max_value)
@@ -1222,7 +1222,7 @@ def test_create_xml_all_nan_minmax_none(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    array = np.full((3, 5, 5), np.nan, dtype = float)
     support_uuid = model.grid().uuid
     ext_uuid = model.h5_uuid()
 
@@ -1247,7 +1247,7 @@ def test_normalise_all_nan_minmax_none(example_model_with_properties):
     # Arrange
     model = example_model_with_properties
     pc = model.grid().property_collection
-    array = np.full((3, 5, 5), np.NaN, dtype = float)
+    array = np.full((3, 5, 5), np.nan, dtype = float)
     support_uuid = model.grid().uuid
     ext_uuid = model.h5_uuid()
 
@@ -1411,18 +1411,26 @@ def test_property_parts_with_facets(example_model_with_properties):
     assert len(rqp.property_parts(model, obj_type = 'Discrete', property_kind = 'rock permeability')) == 0
     assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = '*')) == 2
     assert len(rqp.property_parts(model, obj_type = 'Continuous', facet_type = 'direction', facet = 'none')) == 3
+    # yapf: disable
     assert rqp.property_part(model,
                              'ContinuousProperty',
                              property_kind = 'rock permeability',
                              facet_type = 'direction',
                              facet = 'I') is not None
-    assert rqp.property_part(model, 'ContinuousProperty', facet_type = 'direction', facet = 'I') is not None
-    assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'rock permeability', facet_type = 'direction',
-        facet = 'J') is None
-    assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'rock permeability', facet_type = 'direction',
-        facet = 'none') is None
+    assert rqp.property_part(model,
+                             'ContinuousProperty',
+                             facet_type = 'direction',
+                             facet = 'I') is not None
+    assert rqp.property_part(model,
+                             obj_type = 'Continuous',
+                             property_kind = 'rock permeability',
+                             facet_type = 'direction',
+                             facet = 'J') is None
+    assert rqp.property_part(model,
+                             obj_type = 'Continuous',
+                             property_kind = 'rock permeability',
+                             facet_type = 'direction',
+                             facet = 'none') is None
     assert rqp.property_part(model,
                              obj_type = 'Continuous',
                              property_kind = 'rock permeability',
@@ -1433,8 +1441,12 @@ def test_property_parts_with_facets(example_model_with_properties):
                              property_kind = 'permeability rock',
                              facet_type = 'direction',
                              facet = 'K') is not None
-    assert rqp.property_part(
-        model, obj_type = 'Continuous', property_kind = 'rock permeability', facet_type = 'what', facet = 'I') is None
+    assert rqp.property_part(model,
+                             obj_type = 'Continuous',
+                             property_kind = 'rock permeability',
+                             facet_type = 'what',
+                             facet = 'I') is None
+    # yapf: enable
 
 
 @pytest.mark.parametrize('facet,expected_none', [('J', [True, False, True]), ('K', [True, True, False]),
@@ -2701,6 +2713,7 @@ def test_polyline_set_support_all_closed(example_model_and_crs):
 
     prop_float = np.array([27.0, -59.3, 49.9, -0.3, 15.3, 11.0, 4.8, 32.2, -5.0, 2.9, -3.3, 7.1], dtype = float)
     prop_int = np.arange(12, dtype = int) + 37
+    per_line_int = np.array([2, 5, 3], dtype = int)
     pc = rqp.PropertyCollection()
     pc.set_support(support = pls)
     pc.add_cached_array_to_imported_list(prop_float,
@@ -2716,18 +2729,30 @@ def test_polyline_set_support_all_closed(example_model_and_crs):
                                          discrete = True,
                                          property_kind = 'discrete test pk',
                                          null_value = -1)  # should default to intervals
+    for ie in ['contacts', 'enumerated elements', 'patches']:
+        pc.add_cached_array_to_imported_list(per_line_int,
+                                             source_info = 'unit test',
+                                             keyword = 'test int per line',
+                                             discrete = True,
+                                             property_kind = 'discrete per line',
+                                             indexable_element = ie,
+                                             null_value = -1)  # should default to intervals
     pc.write_hdf5_for_imported_list()
     pc.create_xml_for_imported_list_and_add_parts_to_model()
 
     pls_reload = rql.PolylineSet(model, uuid = pls.uuid)
     pc_reload = pls_reload.extract_property_collection()
-    assert pc_reload.number_of_parts() == 2
+    assert pc_reload.number_of_parts() == 5
     pf_reload = pc_reload.single_array_ref(continuous = True, indexable = 'nodes')
     pi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'intervals')
     assert pf_reload is not None
     assert pi_reload is not None
     assert_array_almost_equal(pf_reload, prop_float)
     assert np.all(pi_reload == prop_int)
+    for ie in ['contacts', 'enumerated elements', 'patches']:
+        pi_reload = pc_reload.single_array_ref(continuous = False, indexable = ie)
+        assert pi_reload is not None
+        assert np.all(pi_reload == per_line_int)
 
 
 def test_polyline_set_support_all_not_closed(example_model_and_crs):
@@ -3074,3 +3099,10 @@ def test_no_pack_unpack_bits_ni_one(example_model_and_crs):
     b = rqp.Property(model, uuid = bp.uuid).array_ref(dtype = bool)
     assert b is not None and b.shape == shape
     assert np.all(b == brray)
+
+
+def test_specific_property_kinds():
+
+    assert 'density' in rqp.supported_property_kind_list
+    assert 'thermal conductivity' in rqp.supported_property_kind_list
+    assert 'fluid volume' in rqp.supported_property_kind_list

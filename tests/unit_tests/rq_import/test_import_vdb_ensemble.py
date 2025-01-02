@@ -9,6 +9,7 @@ import math as maths
 from inspect import getsourcefile
 from resqpy.rq_import._import_vdb_ensemble import import_vdb_ensemble
 from resqpy.rq_import._import_nexus import import_nexus
+from resqpy.rq_import._import_vdb_all_grids import import_vdb_all_grids
 
 
 def test_default_args(tmp_path):
@@ -249,3 +250,53 @@ def test_split_pillars_false(tmp_path):
 
     # Assert
     assert not grid.has_split_coordinate_lines
+
+
+def test_import_vdb_all_grids(tmp_path):
+    # note: test data vdb is for model with one grid only, so scope of test is limited
+    # Arrange
+    current_filename = os.path.split(getsourcefile(lambda: 0))[0]
+    base_folder = os.path.dirname(os.path.dirname(current_filename))
+    vdb_file = f'{base_folder}/test_data/wren/wren1.vdb'
+    epc_file_root = os.path.join(tmp_path, 'test_all_grids')
+    epc_file = epc_file_root + '.epc'
+
+    # Act
+    import_vdb_all_grids(resqml_file_root = epc_file_root,
+                         extent_ijk = None,
+                         vdb_file = vdb_file,
+                         vdb_static_properties = True,
+                         vdb_recurrent_properties = False,
+                         timestep_selection = 'all',
+                         vdb_property_list = None)
+
+    # Assert
+    model = rq.Model(epc_file)
+    grid = model.grid()
+    pc = grid.extract_property_collection()
+    assert pc.number_of_parts() == 14
+
+
+def test_import_vdb_all_grids_selected_properties(tmp_path):
+    # note: test data vdb is for model with one grid only, so scope of test is limited
+    # Arrange
+    current_filename = os.path.split(getsourcefile(lambda: 0))[0]
+    base_folder = os.path.dirname(os.path.dirname(current_filename))
+    vdb_file = f'{base_folder}/test_data/wren/wren1.vdb'
+    epc_file_root = os.path.join(tmp_path, 'test_all_grids')
+    epc_file = epc_file_root + '.epc'
+
+    # Act
+    import_vdb_all_grids(resqml_file_root = epc_file_root,
+                         extent_ijk = None,
+                         vdb_file = vdb_file,
+                         vdb_static_properties = True,
+                         vdb_recurrent_properties = False,
+                         timestep_selection = 'all',
+                         vdb_property_list = ['BV', 'PVR', 'MDEP', 'KH'])
+
+    # Assert
+    model = rq.Model(epc_file)
+    grid = model.grid()
+    pc = grid.extract_property_collection()
+    assert pc.number_of_parts() == 5  # active property always added

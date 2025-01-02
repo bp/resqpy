@@ -34,7 +34,8 @@ class PrismGrid(rug.UnstructuredGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = {},
+                 load_inactive = True):
         """Creates a new resqpy PrismGrid object (RESQML UnstructuredGrid with cell shape trisngular prism)
 
         arguments:
@@ -50,6 +51,8 @@ class PrismGrid(rug.UnstructuredGrid):
               ignored if uuid is present
            extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
               ignored if uuid is present
+           load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+              populated if a property of kind 'active' is found for the grid
 
         returns:
            a newly created PrismGrid object
@@ -63,7 +66,8 @@ class PrismGrid(rug.UnstructuredGrid):
                          cell_shape = 'prism',
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata)
+                         extra_metadata = extra_metadata,
+                         load_inactive = load_inactive)
 
         if self.root is not None:
             assert grr.grid_flavour(self.root) in ['PrismGrid', 'VerticalPrismGrid']
@@ -110,7 +114,8 @@ class VerticalPrismGrid(PrismGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = {},
+                 load_inactive = True):
         """Creates a new resqpy VerticalPrismGrid object.
 
         arguments:
@@ -126,6 +131,8 @@ class VerticalPrismGrid(PrismGrid):
               ignored if uuid is present
            extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
               ignored if uuid is present
+           load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+              populated if a property of kind 'active' is found for the grid
 
         returns:
            a newly created VerticalPrismGrid object
@@ -139,7 +146,8 @@ class VerticalPrismGrid(PrismGrid):
                          cache_geometry = cache_geometry,
                          title = title,
                          originator = originator,
-                         extra_metadata = extra_metadata)
+                         extra_metadata = extra_metadata,
+                         load_inactive = load_inactive)
 
         if self.root is not None:
             assert grr.grid_flavour(self.root) in ['VerticalPrismGrid', 'PrismGrid']
@@ -335,7 +343,7 @@ class VerticalPrismGrid(PrismGrid):
             if surf == 0:
                 # allow NaN entries to handle unused distant circumcentres in Voronoi graph data
                 # assert not np.any(nan_lines), 'top surface does not cover all column points'
-                single_intersects[nan_lines] = np.NaN
+                single_intersects[nan_lines] = np.nan
             else:
                 single_intersects[nan_lines] = points[surf - 1][nan_lines]
             # populate z values for layer of points

@@ -35,6 +35,39 @@ def load_hdf5_array(object, node, array_attribute, tag = 'Values', dtype = 'floa
                                   array_attribute = array_attribute)
 
 
+def load_lattice_array(object, node, array_attribute, trajectory):
+    """Loads the property array data as an attribute of object, from the lattice array referenced in xml node.
+
+    This loader expects the XML node to be in the form of a lattice array, which is a
+    variant of NodeMd data defined as a series of regularly spaced measured depth values
+    computed from the metadata in the XML (start_value, offset, step_value, step_count).
+    Checks that the computed NodeMds are valid on the trajectory, and only loads those.
+
+    :param: object: The object to load the data into (typically a WellboreFrame)
+    :param: node: The XML node to load the metadata from
+    :param: array_attribute: The name of the attribute on 'object' to load the data into
+    :param: trajectory: The trajectory object to use to check the validity of the data
+
+    :meta private:
+    """
+
+    def check_md(md: float, trajectory) -> bool:
+        xyz = np.array(trajectory.xyz_for_md(md))
+        return isinstance(xyz, np.ndarray) and xyz.shape == (3,)
+
+    if array_attribute is not None and getattr(object, array_attribute, None) is not None:
+        return
+
+    start_value = rqet.find_tag_float(node, "StartValue", must_exist = True)
+    offset = rqet.find_tag(node, "Offset", must_exist = True)
+    step_value = rqet.find_tag_float(offset, "Value", must_exist = True)
+    step_count = rqet.find_tag_int(offset, "Count", must_exist = True)
+    if step_count > 0:
+        step_mds = start_value + np.arange(step_count) * step_value
+        valid_mds = [md for md in step_mds if check_md(md, trajectory)]
+        object.__dict__[array_attribute] = np.array(valid_mds)
+
+
 def extract_xyz(xyz_node):
     """Extracts an x,y,z coordinate from a solitary point xml node.
 

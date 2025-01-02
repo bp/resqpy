@@ -118,7 +118,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
         if xyz is None:
             log.error('failed to lazily find intersection of trajectory with top surface of grid')
             return None
-        cell_kji0 = np.array((0, col_ji0[0], col_ji0[1]), dtype = int)
+        cell_kji0 = np.array((0, col_ji0[0], col_ji0[1]), dtype = np.int32)
         axis = 0
         polarity = 0
 
@@ -133,7 +133,7 @@ def populate_blocked_well_from_trajectory(blocked_well,
         else:
             log.debug(f"skin intersection x,y,z: {xyz}; knot: {entry_knot}; cell kji0: {cell_kji0}; face: "
                       f"{'KJI'[axis]}{'-+'[polarity]}")
-            cell_kji0 = np.array(cell_kji0, dtype = int)
+            cell_kji0 = np.array(cell_kji0, dtype = np.int32)
 
     previous_kji0 = cell_kji0.copy()
     previous_kji0[axis] += polarity * 2 - 1  # note: previous may legitimately be 'beyond' edge of grid
@@ -244,9 +244,9 @@ def populate_blocked_well_from_trajectory(blocked_well,
 
     blocked_well.node_mds = np.array(node_mds_list, dtype = float)
     blocked_well.node_count = node_count
-    blocked_well.grid_indices = np.array(grid_indices_list, dtype = int)
-    blocked_well.cell_indices = np.array(cell_indices_list, dtype = int)
-    blocked_well.face_pair_indices = np.array(face_pairs_list, dtype = int)
+    blocked_well.grid_indices = np.array(grid_indices_list, dtype = np.int32)
+    blocked_well.cell_indices = np.array(cell_indices_list, dtype = np.int64)
+    blocked_well.face_pair_indices = np.array(face_pairs_list, dtype = np.int8)
     blocked_well.cell_count = cell_count
     blocked_well.grid_list = [grid]
 

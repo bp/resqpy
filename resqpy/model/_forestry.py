@@ -200,8 +200,8 @@ def _load_epc(model, epc_file, full_load = True, epc_subdir = None, copy_from = 
 def _add_uuid_soft_relations(model, uuid_int, part):
     if "EpcExternalPart" in part:
         return
-    value = model.rels_forest.get(rqet.rels_part_name_for_part(part))
-    if value is not None:
+    rels_part = rqet.rels_part_name_for_part(part)
+    if rels_part in model.rels_forest:
         rels_root = m_c._root_for_part(model, rqet.rels_part_name_for_part(part), is_rels = True)
         if rels_root is not None:
             for relation_node in rels_root:
@@ -214,9 +214,10 @@ def _add_uuid_soft_relations(model, uuid_int, part):
                 if relation_uuid_str is None:
                     return  # probably HDF5 external resource
                 relation_uuid_int = _hex_to_int(relation_uuid_str)
-                value = model.uuid_rels_dict.get(uuid_int)
-                if value is not None and relation_uuid_int not in value[0] and relation_uuid_int not in value[1]:
-                    value[2].add(relation_uuid_int)
+                rels_sets = model.uuid_rels_dict.get(uuid_int)
+                if rels_sets is not None and relation_uuid_int not in rels_sets[
+                        0] and relation_uuid_int not in rels_sets[1]:
+                    rels_sets[2].add(relation_uuid_int)
 
 
 def _add_uuid_relations(model, uuid_int, part):
@@ -719,9 +720,6 @@ def _copy_relationships_for_present_targets(model, other_model, consolidate, for
                         continue
                 else:
                     continue
-            if not force and resident_related_part in m_c._parts_list_filtered_by_related_uuid(
-                    model, m_c._list_of_parts(model), resident_uuid):
-                continue
             related_node = m_c._root_for_part(model, resident_related_part)
             assert related_node is not None
 

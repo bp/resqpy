@@ -10,8 +10,10 @@ import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.property as rqp
+import resqpy.organize as rqo
 import resqpy.olio.transmission as rqtr
 import resqpy.grid_surface as rqgs
+import resqpy.olio.uuid as bu
 
 
 def test_fault_connection_set(tmp_path):
@@ -120,9 +122,11 @@ def test_fault_connection_set(tmp_path):
     # model.store_epc()
 
     g2_fcs, g2_fa = rqtr.fault_connection_set(g2)
+    g2_fcs_again, _ = rqtr.fault_connection_set(g2)
 
     assert g2_fcs is not None
     assert g2_fa is not None
+    assert g2_fcs_again is not None
 
     # show_fa(g2, g2_fcs, g2_fa)
 
@@ -132,6 +136,17 @@ def test_fault_connection_set(tmp_path):
     # check grid faces property array generation
     g2_fcs.write_hdf5()
     g2_fcs.create_xml()
+    g2_fcs_again.write_hdf5()
+    g2_fcs_again.create_xml()
+    g2_fcs_pc = g2_fcs.extract_property_collection()
+    g2_fcs_pc.add_cached_array_to_imported_list(np.array([True, True], dtype = bool),
+                                                'unit test active',
+                                                'ACTIVE',
+                                                property_kind = 'active',
+                                                discrete = True,
+                                                indexable_element = 'faces')
+    g2_fcs_pc.write_hdf5_for_imported_list()
+    g2_fcs_pc.create_xml_for_imported_list_and_add_parts_to_model()
     gcs_p_a = np.array((37, 51), dtype = int)
     p = rqp.Property.from_array(model,
                                 gcs_p_a,
@@ -143,6 +158,7 @@ def test_fault_connection_set(tmp_path):
                                 discrete = True,
                                 null_value = -1)
     gcs_trm_a = np.array((0.1, 0.5), dtype = float)
+    gcs_trm_b = np.array((0.2, 0.4), dtype = float)
     trm_p = rqp.Property.from_array(model,
                                     gcs_trm_a,
                                     'test',
@@ -152,6 +168,15 @@ def test_fault_connection_set(tmp_path):
                                     indexable_element = 'faces',
                                     discrete = False,
                                     uom = 'Euc')
+    trm_again_p = rqp.Property.from_array(model,
+                                          gcs_trm_b,
+                                          'test',
+                                          'trmult',
+                                          g2_fcs_again.uuid,
+                                          property_kind = 'transmissibility multiplier',
+                                          indexable_element = 'faces',
+                                          discrete = False,
+                                          uom = 'Euc')
     for lazy in [True, False]:
         pk, pj, pi = g2_fcs.grid_face_arrays(property_uuid = p.uuid,
                                              default_value = p.null_value(),
@@ -163,46 +188,60 @@ def test_fault_connection_set(tmp_path):
         assert np.all(pi == -1)
         assert np.count_nonzero(pj > 0) == 2 if lazy else 4
         assert tuple(np.unique(pj)) == (-1, 37, 51)
-    for merge_mode in ['minimum', 'maximum', 'multiply']:
-        for sided in ([False] if merge_mode == 'multiply' else [False, True]):
-            c_trm_k,  c_trm_j,  c_trm_i =  \
-                rqf.combined_tr_mult_from_gcs_mults(model,
-                                                    [trm_p.uuid],
-                                                    merge_mode = merge_mode,
-                                                    sided = sided,
-                                                    fill_value = 1.0)
-            assert all([a is not None for a in (c_trm_k, c_trm_j, c_trm_i)])
-            assert c_trm_k.shape == (3, 2, 2) and c_trm_j.shape == (2, 3, 2) and c_trm_i.shape == (2, 2, 3)
-            assert_array_almost_equal(c_trm_k, 1.0)
-            assert_array_almost_equal(c_trm_i, 1.0)
-            assert np.count_nonzero(c_trm_j < 0.9) == 2 if lazy else 4
-            assert not np.any(np.isnan(c_trm_j))
-            g_trm_k_uuid,  g_trm_j_uuid,  g_trm_i_uuid =  \
-                g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = [g2_fcs.uuid],
-                                                              merge_mode = merge_mode,
-                                                              sided = sided,
-                                                              fill_value = 1.0,
-                                                              composite_property = False)
-            assert g_trm_k_uuid is not None and g_trm_j_uuid is not None and g_trm_i_uuid is not None
-            g_trm_k = rqp.Property(model, uuid = g_trm_k_uuid).array_ref()
-            g_trm_j = rqp.Property(model, uuid = g_trm_j_uuid).array_ref()
-            g_trm_i = rqp.Property(model, uuid = g_trm_i_uuid).array_ref()
-            assert g_trm_k is not None and g_trm_j is not None and g_trm_i is not None
-            assert np.all(g_trm_k == c_trm_k)
-            assert np.all(g_trm_j == c_trm_j)
-            assert np.all(g_trm_i == c_trm_i)
-            g_trm_list = g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = [g2_fcs.uuid],
-                                                                       merge_mode = merge_mode,
-                                                                       sided = sided,
-                                                                       fill_value = 1.0,
-                                                                       composite_property = True)
-            assert len(g_trm_list) == 1
-            g_trm = rqp.Property(model, uuid = g_trm_list[0]).array_ref()
-            assert g_trm.ndim == 1
-            assert g_trm.size == g_trm_k.size + g_trm_j.size + g_trm_i.size
-            assert np.all(g_trm[:g_trm_k.size] == g_trm_k.flat)
-            assert np.all(g_trm[g_trm_k.size:g_trm_k.size + g_trm_j.size] == g_trm_j.flat)
-            assert np.all(g_trm[g_trm_k.size + g_trm_j.size:] == g_trm_i.flat)
+    for pair, gcs_uuid_list, tr_uuid_list in [(False, [g2_fcs.uuid], [trm_p.uuid]),
+                                              (True, [g2_fcs.uuid, g2_fcs_again.uuid], [trm_p.uuid, trm_again_p.uuid])]:
+        for merge_mode in ['minimum', 'maximum', 'multiply']:
+            for sided in ([False] if merge_mode == 'multiply' else [False, True]):
+                c_trm_k,  c_trm_j,  c_trm_i =  \
+                    rqf.combined_tr_mult_from_gcs_mults(model,
+                                                        tr_uuid_list,
+                                                        merge_mode = merge_mode,
+                                                        sided = sided,
+                                                        fill_value = 1.0)
+                assert all([a is not None for a in (c_trm_k, c_trm_j, c_trm_i)])
+                assert c_trm_k.shape == (3, 2, 2) and c_trm_j.shape == (2, 3, 2) and c_trm_i.shape == (2, 2, 3)
+                assert_array_almost_equal(c_trm_k, 1.0)
+                assert_array_almost_equal(c_trm_i, 1.0)
+                assert np.count_nonzero(c_trm_j < 0.9) == 2 if lazy else 4
+                assert not np.any(np.isnan(c_trm_j))
+                unique_c_trm_j = np.unique(c_trm_j)
+                assert len(unique_c_trm_j) == 3
+                if merge_mode == 'minimum':
+                    assert np.isclose(np.min(c_trm_j), 0.1)
+                    assert np.isclose(unique_c_trm_j[1], 0.4 if pair else 0.5)
+                elif merge_mode == 'maximum':
+                    assert np.isclose(np.min(c_trm_j), 0.2 if pair else 0.1)
+                    assert np.isclose(unique_c_trm_j[1], 0.5)
+                else:  # multiply
+                    assert np.isclose(np.min(c_trm_j), 0.02 if pair else 0.1)
+                    assert np.isclose(unique_c_trm_j[1], 0.2 if pair else 0.5)
+                assert np.isclose(unique_c_trm_j[2], 1.0)
+                g_trm_k_uuid,  g_trm_j_uuid,  g_trm_i_uuid =  \
+                    g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = gcs_uuid_list,
+                                                                  merge_mode = merge_mode,
+                                                                  sided = sided,
+                                                                  fill_value = 1.0,
+                                                                  composite_property = False)
+                assert g_trm_k_uuid is not None and g_trm_j_uuid is not None and g_trm_i_uuid is not None
+                g_trm_k = rqp.Property(model, uuid = g_trm_k_uuid).array_ref()
+                g_trm_j = rqp.Property(model, uuid = g_trm_j_uuid).array_ref()
+                g_trm_i = rqp.Property(model, uuid = g_trm_i_uuid).array_ref()
+                assert g_trm_k is not None and g_trm_j is not None and g_trm_i is not None
+                assert np.all(g_trm_k == c_trm_k)
+                assert np.all(g_trm_j == c_trm_j)
+                assert np.all(g_trm_i == c_trm_i)
+                g_trm_list = g2.combined_tr_mult_properties_from_gcs_mults(gcs_uuid_list = gcs_uuid_list,
+                                                                           merge_mode = merge_mode,
+                                                                           sided = sided,
+                                                                           fill_value = 1.0,
+                                                                           composite_property = True)
+                assert len(g_trm_list) == 1
+                g_trm = rqp.Property(model, uuid = g_trm_list[0]).array_ref()
+                assert g_trm.ndim == 1
+                assert g_trm.size == g_trm_k.size + g_trm_j.size + g_trm_i.size
+                assert np.all(g_trm[:g_trm_k.size] == g_trm_k.flat)
+                assert np.all(g_trm[g_trm_k.size:g_trm_k.size + g_trm_j.size] == g_trm_j.flat)
+                assert np.all(g_trm[g_trm_k.size + g_trm_j.size:] == g_trm_i.flat)
 
     # I face split with full juxtaposition of kji0 (1, *, 0) with (0, *, 1)
     # pattern 4, 4 (or 3, 3) diagram 1
@@ -1511,3 +1550,348 @@ def test_gcs_face_surface_normal_vectors(example_model_with_properties):
 
     # Assert
     assert_array_almost_equal(face_surface_normal_vectors, face_surface_normal_vectors_expected)
+
+
+def test_feature_index(tmp_path):
+    epc = os.path.join(tmp_path, 'gcs_with_features.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    grid = grr.RegularGrid(model, extent_kji = (4, 5, 6), crs_uuid = crs.uuid)
+    grid.create_xml()
+    gcs_0 = rqf.GridConnectionSet(model, find_properties = False, grid = grid, title = 'fault zero gcs')
+    gcs_0.set_pairs_from_kelp(
+        kelp_0 = [(2, 0), (2, 1), (2, 2)],  # J face columns
+        kelp_1 = [],  # I face columns
+        feature_name = 'fault zero',
+        create_organizing_objects_where_needed = True)
+    gcs_0.write_hdf5()
+    gcs_0.create_xml()
+    pc = gcs_0.extract_property_collection()
+    a = np.arange(12, dtype = int) + 100
+    pc.add_cached_array_to_imported_list(a,
+                                         'test',
+                                         'this is the property of a gcs',
+                                         discrete = True,
+                                         null_value = -1,
+                                         property_kind = 'kiwi',
+                                         indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list()
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    kiwi_uuids = uuids
+    gcs_1 = rqf.GridConnectionSet(model, find_properties = False, grid = grid, title = 'fault one gcs')
+    gcs_1.set_pairs_from_kelp(
+        kelp_0 = [],  # J face columns
+        kelp_1 = [(2, 2)],  # I face columns
+        feature_name = 'fault one',
+        create_organizing_objects_where_needed = True)
+    gcs_1.write_hdf5()
+    gcs_1.create_xml()
+    pc = gcs_1.extract_property_collection()
+    a = np.arange(4, dtype = int) + 200
+    pc.add_cached_array_to_imported_list(a,
+                                         'test',
+                                         'this is the property of a gcs',
+                                         discrete = True,
+                                         null_value = -1,
+                                         property_kind = 'kiwi',
+                                         indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list()
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    kiwi_uuids += uuids
+    gcs_2 = rqf.GridConnectionSet(model, find_properties = False, grid = grid, title = 'fault two gcs')
+    gcs_2.set_pairs_from_kelp(
+        kelp_0 = [(1, 3), (1, 4), (1, 5)],  # J face columns
+        kelp_1 = [],  # I face columns
+        feature_name = 'fault two',
+        create_organizing_objects_where_needed = True)
+    gcs_2.write_hdf5()
+    gcs_2.create_xml()
+    pc = gcs_2.extract_property_collection()
+    a = np.arange(12, dtype = int) + 300
+    pc.add_cached_array_to_imported_list(a,
+                                         'test',
+                                         'this is the property of a gcs',
+                                         discrete = True,
+                                         null_value = -1,
+                                         property_kind = 'kiwi',
+                                         indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list()
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    kiwi_uuids += uuids
+    model.store_epc()
+    # check that fault interpretations have been generated
+    fi_titles = model.titles(obj_type = 'FaultInterpretation')
+    assert len(fi_titles) == 3
+    assert set(fi_titles) == set(['fault zero', 'fault one', 'fault two'])
+    # check one of the single feature grid connexion sets
+    fi_one_uuid = model.uuid(obj_type = 'FaultInterpretation', title = 'fault one')
+    assert fi_one_uuid is not None
+    gcs_one_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation', related_uuid = fi_one_uuid)
+    assert gcs_one_uuid is not None
+    assert bu.matching_uuids(gcs_one_uuid, gcs_1.uuid)
+    gcs_reload = rqf.GridConnectionSet(model, uuid = gcs_one_uuid)
+    assert gcs_reload is not None
+    assert gcs_reload.number_of_grids() == 1
+    assert gcs_reload.number_of_features() == 1
+    assert gcs_reload.title == 'fault one gcs'
+    assert gcs_reload.list_of_feature_names(strip = False) == ['fault one']
+    # make a composite grid connexion set with 3 features
+    gcs = rqf.GridConnectionSet.from_gcs_uuid_list(model,
+                                                   source_model = model,
+                                                   gcs_uuid_list = [gcs_0.uuid, gcs_1.uuid, gcs_2.uuid],
+                                                   title = 'multi feature fault system',
+                                                   gcs_property_uuid_list_of_lists = [kiwi_uuids])
+    model.store_epc()
+    # above class method includes writing hdf5 and creating xml
+    # reopen the composite grid connexion set
+    gcs = rqf.GridConnectionSet(model, uuid = gcs.uuid)
+    assert gcs is not None
+    gcs.cache_arrays()
+    assert gcs.number_of_grids() == 1
+    assert gcs.number_of_features() == 3
+    assert gcs.count == 28
+    # check that a property exists on the composite gcs
+    pc = gcs.extract_property_collection()
+    # a = np.concatenate((np.arange(12, dtype = int) + 100, np.arange(4, dtype = int) + 200, np.arange(12, dtype = int) + 300))
+    # pc.add_cached_array_to_imported_list(a, 'test', 'this is the property of a gcs', discrete = True, null_value = -1,
+    #                                      property_kind = 'kiwi', indexable_element = 'faces')
+    # pc.write_hdf5_for_imported_list()
+    # uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    # assert len(uuids) == 1
+    assert pc.number_of_parts() == 1
+    kiwi_uuid = model.uuid(obj_type = 'DiscreteProperty', related_uuid = gcs.uuid)
+    assert kiwi_uuid is not None
+    # check features
+    assert gcs.list_of_feature_names(strip = False) == ['fault zero', 'fault one', 'fault two']
+    assert gcs.list_of_fault_names(strip = False) == ['fault zero', 'fault one', 'fault two']
+    index, fi_uuid = gcs.feature_index_and_uuid_for_fault_name('fault two')
+    assert index == 2
+    assert fi_uuid is not None
+    fi = rqo.FaultInterpretation(model, uuid = fi_uuid)
+    assert fi is not None
+    assert fi.title == 'fault two'
+    assert gcs.feature_name_for_feature_index(0, strip = False) == 'fault zero'
+    assert gcs.fault_name_for_feature_index(1, strip = False) == 'fault one'
+    # check a few faces are associated with expected features
+    assert gcs.feature_index_for_cell_face((1, 3, 4), 1, 0) is None
+    assert gcs.feature_index_for_cell_face((2, 2, 2), 2, 1) == 1
+    assert gcs.feature_index_for_cell_face((2, 2, 2), 1, 1) == 0
+    assert gcs.feature_index_for_cell_face((0, 2, 4), 1, 0) == 2
+    # check faces associated with each feature
+    k_faces, j_faces, i_faces = gcs.grid_face_arrays(kiwi_uuid,
+                                                     default_value = -1,
+                                                     feature_index = 2,
+                                                     active_only = False,
+                                                     lazy = False,
+                                                     baffle_uuid = None)
+    assert k_faces is not None and j_faces is not None and i_faces is not None
+    assert k_faces.shape == (5, 5, 6)
+    assert j_faces.shape == (4, 6, 6)
+    assert i_faces.shape == (4, 5, 7)
+    assert np.all(k_faces == -1)
+    assert np.count_nonzero(j_faces >= 0) == 12
+    assert np.all(i_faces == -1)
+    assert np.all(np.logical_or(j_faces < 0, j_faces >= 300))
+    k_faces, j_faces, i_faces = gcs.grid_face_arrays(kiwi_uuid,
+                                                     default_value = -1,
+                                                     feature_index = 1,
+                                                     active_only = False,
+                                                     lazy = False,
+                                                     baffle_uuid = None)
+    assert k_faces is not None and j_faces is not None and i_faces is not None
+    assert k_faces.shape == (5, 5, 6)
+    assert j_faces.shape == (4, 6, 6)
+    assert i_faces.shape == (4, 5, 7)
+    assert np.all(k_faces == -1)
+    assert np.all(j_faces == -1)
+    assert np.count_nonzero(i_faces >= 0) == 4
+    assert np.all(np.logical_or(i_faces < 0, np.logical_and(i_faces >= 200, i_faces < 204)))
+    k_faces, j_faces, i_faces = gcs.grid_face_arrays(kiwi_uuid,
+                                                     default_value = -1,
+                                                     feature_index = 0,
+                                                     active_only = False,
+                                                     lazy = False,
+                                                     baffle_uuid = None)
+    assert k_faces is not None and j_faces is not None and i_faces is not None
+    assert k_faces.shape == (5, 5, 6)
+    assert j_faces.shape == (4, 6, 6)
+    assert i_faces.shape == (4, 5, 7)
+    assert np.all(k_faces == -1)
+    assert np.count_nonzero(j_faces >= 0) == 12
+    assert np.all(i_faces == -1)
+    assert np.all(j_faces < 112)
+
+
+def test_feature_index_bool_pack(tmp_path):
+    epc = os.path.join(tmp_path, 'gcs_with_packed_bool.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    grid = grr.RegularGrid(model, extent_kji = (4, 5, 6), crs_uuid = crs.uuid)
+    grid.create_xml()
+    gcs_0 = rqf.GridConnectionSet(model, find_properties = False, grid = grid, title = 'fault zero gcs')
+    gcs_0.set_pairs_from_kelp(
+        kelp_0 = [(2, 0), (2, 1), (2, 2)],  # J face columns
+        kelp_1 = [],  # I face columns
+        feature_name = 'fault zero',
+        create_organizing_objects_where_needed = True)
+    gcs_0.write_hdf5()
+    gcs_0.create_xml()
+    pc = gcs_0.extract_property_collection()
+    a = np.array([False, True] * 6, dtype = bool)
+    pc.add_cached_array_to_imported_list(a,
+                                         'test',
+                                         'this is a pack boolean',
+                                         discrete = True,
+                                         property_kind = 'flag',
+                                         indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list(dtype = np.uint8, use_pack = True)
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    kiwi_uuids = uuids
+    gcs_1 = rqf.GridConnectionSet(model, find_properties = False, grid = grid, title = 'fault one gcs')
+    gcs_1.set_pairs_from_kelp(
+        kelp_0 = [],  # J face columns
+        kelp_1 = [(2, 2)],  # I face columns
+        feature_name = 'fault one',
+        create_organizing_objects_where_needed = True)
+    gcs_1.write_hdf5()
+    gcs_1.create_xml()
+    pc = gcs_1.extract_property_collection()
+    a = np.array((True, False, True, True), dtype = bool)
+    pc.add_cached_array_to_imported_list(a,
+                                         'test',
+                                         'this is a single element packed bool!',
+                                         discrete = True,
+                                         property_kind = 'flag',
+                                         indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list(dtype = np.uint8, use_pack = True)
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    kiwi_uuids += uuids
+    gcs_2 = rqf.GridConnectionSet(model, find_properties = False, grid = grid, title = 'fault two gcs')
+    gcs_2.set_pairs_from_kelp(
+        kelp_0 = [(1, 3), (1, 4), (1, 5)],  # J face columns
+        kelp_1 = [],  # I face columns
+        feature_name = 'fault two',
+        create_organizing_objects_where_needed = True)
+    gcs_2.write_hdf5()
+    gcs_2.create_xml()
+    pc = gcs_2.extract_property_collection()
+    a = np.array([True] * 8 + [False] * 4, dtype = bool)
+    pc.add_cached_array_to_imported_list(a,
+                                         'test',
+                                         'this is another packed bool',
+                                         discrete = True,
+                                         property_kind = 'flag',
+                                         indexable_element = 'faces')
+    pc.write_hdf5_for_imported_list(dtype = np.uint8, use_pack = True)
+    uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    assert len(uuids) == 1
+    kiwi_uuids += uuids
+    model.store_epc()
+    # check that fault interpretations have been generated
+    fi_titles = model.titles(obj_type = 'FaultInterpretation')
+    assert len(fi_titles) == 3
+    assert set(fi_titles) == set(['fault zero', 'fault one', 'fault two'])
+    # check one of the single feature grid connexion sets
+    fi_one_uuid = model.uuid(obj_type = 'FaultInterpretation', title = 'fault one')
+    assert fi_one_uuid is not None
+    gcs_one_uuid = model.uuid(obj_type = 'GridConnectionSetRepresentation', related_uuid = fi_one_uuid)
+    assert gcs_one_uuid is not None
+    assert bu.matching_uuids(gcs_one_uuid, gcs_1.uuid)
+    gcs_reload = rqf.GridConnectionSet(model, uuid = gcs_one_uuid)
+    assert gcs_reload is not None
+    assert gcs_reload.number_of_grids() == 1
+    assert gcs_reload.number_of_features() == 1
+    assert gcs_reload.title == 'fault one gcs'
+    assert gcs_reload.list_of_feature_names(strip = False) == ['fault one']
+    # make a composite grid connexion set with 3 features
+    gcs = rqf.GridConnectionSet.from_gcs_uuid_list(model,
+                                                   source_model = model,
+                                                   gcs_uuid_list = [gcs_0.uuid, gcs_1.uuid, gcs_2.uuid],
+                                                   title = 'multi feature fault system',
+                                                   gcs_property_uuid_list_of_lists = [kiwi_uuids])
+    model.store_epc()
+    # above class method includes writing hdf5 and creating xml
+    # reopen the composite grid connexion set
+    gcs = rqf.GridConnectionSet(model, uuid = gcs.uuid)
+    assert gcs is not None
+    gcs.cache_arrays()
+    assert gcs.number_of_grids() == 1
+    assert gcs.number_of_features() == 3
+    assert gcs.count == 28
+    # check that a property exists on the composite gcs
+    pc = gcs.extract_property_collection()
+    # a = np.concatenate((np.arange(12, dtype = int) + 100, np.arange(4, dtype = int) + 200, np.arange(12, dtype = int) + 300))
+    # pc.add_cached_array_to_imported_list(a, 'test', 'this is the property of a gcs', discrete = True, null_value = -1,
+    #                                      property_kind = 'kiwi', indexable_element = 'faces')
+    # pc.write_hdf5_for_imported_list()
+    # uuids = pc.create_xml_for_imported_list_and_add_parts_to_model()
+    # assert len(uuids) == 1
+    assert pc.number_of_parts() == 1
+    kiwi_uuid = model.uuid(obj_type = 'DiscreteProperty', related_uuid = gcs.uuid)
+    assert kiwi_uuid is not None
+    # check features
+    assert gcs.list_of_feature_names(strip = False) == ['fault zero', 'fault one', 'fault two']
+    assert gcs.list_of_fault_names(strip = False) == ['fault zero', 'fault one', 'fault two']
+    index, fi_uuid = gcs.feature_index_and_uuid_for_fault_name('fault two')
+    assert index == 2
+    assert fi_uuid is not None
+    fi = rqo.FaultInterpretation(model, uuid = fi_uuid)
+    assert fi is not None
+    assert fi.title == 'fault two'
+    assert gcs.feature_name_for_feature_index(0, strip = False) == 'fault zero'
+    assert gcs.fault_name_for_feature_index(1, strip = False) == 'fault one'
+    # check a few faces are associated with expected features
+    assert gcs.feature_index_for_cell_face((1, 3, 4), 1, 0) is None
+    assert gcs.feature_index_for_cell_face((2, 2, 2), 2, 1) == 1
+    assert gcs.feature_index_for_cell_face((2, 2, 2), 1, 1) == 0
+    assert gcs.feature_index_for_cell_face((0, 2, 4), 1, 0) == 2
+    # check faces associated with each feature
+    k_faces, j_faces, i_faces = gcs.grid_face_arrays(kiwi_uuid,
+                                                     default_value = False,
+                                                     feature_index = 2,
+                                                     active_only = False,
+                                                     lazy = False,
+                                                     baffle_uuid = None,
+                                                     dtype = bool)
+    assert k_faces is not None and j_faces is not None and i_faces is not None
+    assert k_faces.shape == (5, 5, 6)
+    assert j_faces.shape == (4, 6, 6)
+    assert i_faces.shape == (4, 5, 7)
+    assert not np.any(k_faces)
+    assert np.count_nonzero(j_faces) == 8
+    assert not np.any(i_faces)
+    k_faces, j_faces, i_faces = gcs.grid_face_arrays(kiwi_uuid,
+                                                     default_value = False,
+                                                     feature_index = 1,
+                                                     active_only = False,
+                                                     lazy = False,
+                                                     baffle_uuid = None,
+                                                     dtype = bool)
+    assert k_faces is not None and j_faces is not None and i_faces is not None
+    assert k_faces.shape == (5, 5, 6)
+    assert j_faces.shape == (4, 6, 6)
+    assert i_faces.shape == (4, 5, 7)
+    assert not np.any(k_faces)
+    assert not np.any(j_faces)
+    assert np.count_nonzero(i_faces) == 3
+    k_faces, j_faces, i_faces = gcs.grid_face_arrays(kiwi_uuid,
+                                                     default_value = False,
+                                                     feature_index = 0,
+                                                     active_only = False,
+                                                     lazy = False,
+                                                     baffle_uuid = None,
+                                                     dtype = bool)
+    assert k_faces is not None and j_faces is not None and i_faces is not None
+    assert k_faces.shape == (5, 5, 6)
+    assert j_faces.shape == (4, 6, 6)
+    assert i_faces.shape == (4, 5, 7)
+    assert not np.any(k_faces)
+    assert np.count_nonzero(j_faces) == 6
+    assert not np.any(i_faces)

@@ -85,10 +85,10 @@ class PropertyCollection():
         self.realization = realization  # model realization number within an ensemble
         self.null_value = None
         self.imported_list = []
-        # above is list of (uuid, file_name, keyword, cached_name, discrete, uom, time_index, null_value,
+        # above is list of (uuid, source, keyword, cached_name, discrete, uom, time_index, null_value,
         #                   min_value, max_value, property_kind, facet_type, facet, realization,
         #                   indexable_element, count, local_property_kind_uuid, const_value, points,
-        #                   time_series_uuid, string_lookup_uuid)
+        #                   time_series_uuid, string_lookup_uuid, pre_packed)
         self.guess_warning = False
         if support is not None:
             self.model = support.model
@@ -141,20 +141,28 @@ class PropertyCollection():
         else:
             pcs._set_support_uuid_notnone(self, support, support_uuid, model, modify_parts)
 
-    def supporting_shape(self, indexable_element = None, direction = None):
+    def supporting_shape(self,
+                         indexable_element = None,
+                         direction = None,
+                         count = 1,
+                         points = False,
+                         pre_packed = False):
         """Return the shape of the supporting representation with respect to the given indexable element
 
         arguments:
            indexable_element (string, optional): if None, a hard-coded default depending on the supporting representation class
               will be used
            direction (string, optional): must be passed if required for the combination of support class and indexable element;
-              currently only used for Grid faces.
+              currently only used for Grid faces
+           count (int, default 1): the count parameter for the property
+           points (bool, default False): set True if the property is a points property
+           pre_packed (bool, default False): set True if the required shape is for a pre-packed boolean property
 
         returns:
            list of int, being required shape of numpy array, or None if not coded for
 
         note:
-           individual property arrays will only match this shape if they have the same indexable element and a count of one
+           individual property arrays will only match this shape if they have the same indexable element and matching count etc.
         """
 
         # when at global level was causing circular reference loading issues as grid imports this module
@@ -204,6 +212,14 @@ class PropertyCollection():
         else:
             raise Exception(f'unsupported support class {type(support)} for property')
 
+        if pre_packed:
+            shape_list[-1] = (shape_list[-1] - 1) // 8 + 1
+
+        if shape_list is not None:
+            if count > 1:
+                shape_list.append(count)
+            if points:
+                shape_list.append(3)
         return shape_list
 
     def populate_from_property_set(self, property_set_root):
@@ -404,7 +420,8 @@ class PropertyCollection():
           call this method once for each group of differently sized properties; for very large collections
           it might also be necessary to divide the work into smaller groups to reduce memory usage;
           this method does not write to hdf5 nor create xml – use the usual methods for further processing
-          of the imported list
+          of the imported list;
+          does not currently support packed arrays
         """
 
         source = 'sampled'
@@ -743,7 +760,8 @@ class PropertyCollection():
                   title = None,
                   title_mode = None,
                   related_uuid = None,
-                  const_value = None):
+                  const_value = None,
+                  extra = None):
         """Returns a single part selected by those arguments which are not None.
 
            multiple_handling (string, default 'exception'): one of 'exception', 'none', 'first', 'oldest', 'newest'
@@ -782,7 +800,8 @@ class PropertyCollection():
                                                                 title = title,
                                                                 title_mode = title_mode,
                                                                 related_uuid = related_uuid,
-                                                                const_value = const_value)
+                                                                const_value = const_value,
+                                                                extra = extra)
         parts_list = temp_collection.parts()
         if len(parts_list) == 0:
             return None
@@ -815,7 +834,8 @@ class PropertyCollection():
                          title = None,
                          title_mode = None,
                          related_uuid = None,
-                         use_pack = True):
+                         use_pack = True,
+                         extra = None):
         """Returns the array of data for a single part selected by those arguments which are not None.
 
         arguments:
@@ -832,7 +852,7 @@ class PropertyCollection():
 
         Other optional arguments:
         realization, support_uuid, continuous, points, count, indexable, property_kind, facet_type, facet,
-        citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid:
+        citation_title, time_series_uuid, time_index, uom, string_lookup_id, categorical, related_uuid, extra:
 
         For each of these arguments: if None, then all members of collection pass this filter;
         if not None then only those members with the given value pass this filter;
@@ -868,7 +888,8 @@ class PropertyCollection():
                               multiple_handling = multiple_handling,
                               title = title,
                               title_mode = title_mode,
-                              related_uuid = related_uuid)
+                              related_uuid = related_uuid,
+                              extra = extra)
         if part is None:
             return None
         return self.cached_part_array_ref(part,
@@ -1085,17 +1106,17 @@ class PropertyCollection():
         return meta
 
     def null_value_for_part(self, part):
-        """Returns the null value for the (discrete) property part; np.NaN for continuous parts.
+        """Returns the null value for the (discrete) property part; np.nan for continuous parts.
 
         arguments:
            part (string): the part name for which the null value is required
 
         returns:
-           int or np.NaN
+           int or np.nan
         """
 
         if self.continuous_for_part(part):
-            return np.NaN
+            return np.nan
         return self.element_for_part(part, 19)
 
     def continuous_for_part(self, part):
@@ -1299,6 +1320,12 @@ class PropertyCollection():
         """Returns a list of citation titles for the parts in the collection."""
 
         return [self.citation_title_for_part(p) for p in self.parts()]
+
+    def source_for_part(self, part):
+        """Returns the source string from the part's extra metadata, if present, else None."""
+
+        assert self.model is not None
+        return self.model.source_for_part(part)
 
     def time_series_uuid_for_part(self, part):
         """If the property has an associated time series (is not static), returns the uuid for the time series.
@@ -1677,7 +1704,7 @@ class PropertyCollection():
            exclude_inactive (boolean, default True): elements which are flagged as inactive in the supporting representation
               are masked out if this argument is True
            exclude_value (float or int, optional): if present, elements which match this value are masked out; if not None
-              then usually set to np.NaN for continuous data or null_value_for_part() for discrete data
+              then usually set to np.nan for continuous data or null_value_for_part() for discrete data
            points (boolean, default False): if True, the simple array is expected to have an extra dimension of extent 3,
               relative to the inactive attribute of the support
 
@@ -1765,7 +1792,7 @@ class PropertyCollection():
            representation object with the attribute name 'inactive', to multiple properties (this will only work
            if the indexable element is set to the typical value for the class of supporting representation, eg.
            'cells' for grid objects); if exclude_null is set True then null value elements will also be masked out
-           (as long as masked is True); however, it is recommended simply to use np.NaN values in floating point
+           (as long as masked is True); however, it is recommended simply to use np.nan values in floating point
            property arrays if the commonality is not needed;
            set use_pack True if the hdf5 data may have been written with a similar setting
 
@@ -1860,7 +1887,7 @@ class PropertyCollection():
             shape = self.supporting_shape(indexable_element = self.indexable_for_part(part),
                                           direction = pcga._part_direction(self, part))
             assert shape is not None
-            return shape, (float if self.continuous_for_part(part) else int)
+            return tuple(shape), (float if self.continuous_for_part(part) else int)
 
         h5_key_pair = self._shape_and_type_of_part_get_h5keypair(part, part_node, model)
         if h5_key_pair is None:
@@ -1942,7 +1969,7 @@ class PropertyCollection():
               the maximum realization number present and slices for any missing realizations will be filled with fill_value;
               if False, the extent of the first axis will only cpver the number pf realizations actually present (see also notes)
            fill_value (int or float, optional): the value to use for missing realization slices; if None, will default to
-              np.NaN if data is continuous, -1 otherwise; irrelevant if fill_missing is False
+              np.nan if data is continuous, -1 otherwise; irrelevant if fill_missing is False
            indexable_element (string, optional): the indexable element for the properties in the collection; if None, will
               be determined from the data
 
@@ -1962,7 +1989,7 @@ class PropertyCollection():
         r_list, continuous = pcga._realizations_array_ref_initial_checks(self)
 
         if fill_value is None:
-            fill_value = np.NaN if continuous else -1
+            fill_value = np.nan if continuous else -1
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])
 
@@ -1991,7 +2018,7 @@ class PropertyCollection():
               the maximum time index present and slices for any missing indices will be filled with fill_value; if False,
               the extent of the first axis will only cpver the number pf time indices actually present (see also notes)
            fill_value (int or float, optional): the value to use for missing time index slices; if None, will default to
-              np.NaN if data is continuous, -1 otherwise; irrelevant if fill_missing is False
+              np.nan if data is continuous, -1 otherwise; irrelevant if fill_missing is False
            indexable_element (string, optional): the indexable element for the properties in the collection; if None, will
               be determined from the data
 
@@ -2012,7 +2039,7 @@ class PropertyCollection():
         ti_list, continuous = pcga._time_array_ref_initial_checks(self)
 
         if fill_value is None:
-            fill_value = np.NaN if continuous else -1
+            fill_value = np.nan if continuous else -1
 
         if indexable_element is None:
             indexable_element = self.indexable_for_part(self.parts()[0])
@@ -2213,7 +2240,8 @@ class PropertyCollection():
                                           const_value = None,
                                           points = False,
                                           time_series_uuid = None,
-                                          string_lookup_uuid = None):
+                                          string_lookup_uuid = None,
+                                          pre_packed = False):
         """Caches array and adds to the list of imported properties (but not to the collection dict).
 
         arguments:
@@ -2244,6 +2272,7 @@ class PropertyCollection():
               be provided when writing hdf5 and creating xml for the imported list
            string_lookup_uuid (UUID, optional): should be provided for categorical properties, though can alternatively
               be specified when creating xml
+           pre_packed (bool, default False): set to True if the property is boolean and the array is already packed
 
         returns:
            uuid of nascent property object
@@ -2265,6 +2294,7 @@ class PropertyCollection():
         assert (cached_array is not None and const_value is None) or (cached_array is None and const_value is not None)
         assert not points or not discrete
         assert count > 0
+        assert (not pre_packed) or ((cached_array is not None) and (cached_array.dtype == np.uint8))
         rqp_c.check_and_warn_property_kind(property_kind, 'adding property to imported list')
 
         if self.imported_list is None:
@@ -2273,16 +2303,25 @@ class PropertyCollection():
         uuid = bu.new_uuid()
         cached_name = rqp_c._cache_name_for_uuid(uuid)
         if cached_array is not None:
+            direction = facet if facet_type == 'direction' else None
+            shape = self.supporting_shape(indexable_element = indexable_element,
+                                          direction = direction,
+                                          count = count,
+                                          points = points,
+                                          pre_packed = pre_packed)
+            assert shape is not None, f'unsupported indexable element {indexable_element} for supporting representation'
+            assert cached_array.shape == tuple(
+                shape), f'property array has shape {cached_array.shape} when expecting {tuple(shape)}'
             min_value, max_value = pcga._min_max_of_cached_array(self, cached_name, cached_array, null_value, discrete)
         else:
-            if const_value == null_value or (not discrete and np.isnan(const_value)):
+            if const_value == null_value or isinstance(const_value, bool) or (not discrete and np.isnan(const_value)):
                 min_value = max_value = None
             else:
                 min_value = max_value = const_value
         self.imported_list.append(
             (uuid, source_info, keyword, cached_name, discrete, uom, time_index, null_value, min_value, max_value,
              property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
-             const_value, points, time_series_uuid, string_lookup_uuid))
+             const_value, points, time_series_uuid, string_lookup_uuid, pre_packed))
         return uuid
 
     def add_similar_to_imported_list(self,
@@ -2305,6 +2344,7 @@ class PropertyCollection():
                                      points = None,
                                      time_series_uuid = None,
                                      string_lookup_uuid = None,
+                                     pre_packed = False,
                                      similar_model = None,
                                      title = None):
         """Caches array and adds to the list of imported properties using default metadata from a similar property.
@@ -2336,6 +2376,7 @@ class PropertyCollection():
               be provided when writing hdf5 and creating xml for the imported list
            string_lookup_uuid (UUID, optional): should be provided for categorical properties, though can alternatively
               be specified when creating xml
+           pre_packed (bool, default False): set to True if the property is boolean and the cached array is packed
            similar_model (Model, optional): the model where the similar property resides, if not the same as this
               property collection
            title (str, optional): synonym for keyword argument
@@ -2392,6 +2433,7 @@ class PropertyCollection():
         args['string_lookup_uuid'] = get_arg(time_series_uuid, similar.string_lookup_uuid())
         em = similar.extra_metadata if hasattr(similar, 'extra_metadata') else {}
         args['source_info'] = get_arg(source_info, em.get('source'))
+        args['pre_packed'] = pre_packed
 
         return self.add_cached_array_to_imported_list(cached_array, **args)
 
@@ -2439,7 +2481,8 @@ class PropertyCollection():
               as 32 bit; if None, the system default is to write as 32 bit; if True, 32 bit is used; if
               False, 64 bit data is written; ignored if dtype is not None
            use_pack (bool, default False): if True, bool arrays will be packed along their last axis; this
-              will generally result in hdf5 data that is not readable by non-resqpy applications
+              will generally result in hdf5 data that is not readable by non-resqpy applications; leave
+              as False for already packed arrays
            chunks (str, optional): if not None, one of 'auto', 'all', or 'slice', controlling hdf5 chunks
            compression (str, optional): if not None, one of 'gzip' or 'lzf' being the hdf5 compression
               algorithm to be used; gzip gives better compression ratio but is slower
@@ -2467,8 +2510,8 @@ class PropertyCollection():
                 uuid = entry[0]
                 cached_name = entry[3]
             tail = 'points_patch0' if entry[18] else 'values_patch0'
-            if use_pack and (str(dtype).startswith('bool') or
-                             (dtype is None and str(self.__dict__[cached_name].dtype) == 'bool')):
+            if use_pack and ('bool' in str(dtype) or
+                             (dtype is None and 'bool' in str(self.__dict__[cached_name].dtype))):
                 dtype = 'pack'
             h5_reg.register_dataset(uuid, tail, self.__dict__[cached_name], dtype = dtype)
         h5_reg.write(file = file_name, mode = mode, use_int32 = use_int32)
@@ -2595,7 +2638,8 @@ class PropertyCollection():
                    points = False,
                    extra_metadata = {},
                    const_value = None,
-                   expand_const_arrays = False):
+                   expand_const_arrays = False,
+                   pre_packed = False):
         """Create a property xml node for a single property related to a given supporting representation node.
 
         arguments:
@@ -2652,9 +2696,11 @@ class PropertyCollection():
               must cycle fastest in the array, ie. be the last index
            points (bool, default False): if True, this is a points property
            extra_metadata (dictionary, optional): if present, adds extra metadata in the xml
-           const_value (float or int, optional): if present, create xml for a constant array filled with this value
+           const_value (float, int or bool, optional): if present, create xml for a constant array filled with this value
            expand_const_arrays (boolean, default False): if True, the hdf5 write must also have been called with the
               same argument and the xml will treat a constant array as a normal array
+           pre_packed (boolean, default False): if True, the property is a boolean property and the array has already
+              been packed into bits
 
         returns:
            the newly created property xml node
@@ -2682,7 +2728,7 @@ class PropertyCollection():
         direction = None if facet_type is None or facet_type != 'direction' else facet
 
         if self.support is not None:
-            pcxml._check_shape_list(self, indexable_element, direction, property_array, points, count)
+            pcxml._check_shape_list(self, indexable_element, direction, property_array, points, count, pre_packed)
 
         # todo: assertions:
         #    numpy data type matches discrete flag (and assumptions about precision)

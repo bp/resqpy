@@ -8,6 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+import math as maths
 
 import resqpy.crs as rqc
 import resqpy.lines as rql
@@ -47,7 +48,7 @@ class Surface(rqsb.BaseSurface):
                  originator = None,
                  extra_metadata = {}):
         """Create an empty Surface object (RESQML TriangulatedSetRepresentation).
-        
+
         Optionally populates from xml, point set or mesh.
 
         arguments:
@@ -122,6 +123,7 @@ class Surface(rqsb.BaseSurface):
             self.set_from_mesh_file(mesh_file, mesh_format, quad_triangles = quad_triangles)
         elif tsurf_file is not None:
             self.set_from_tsurf_file(tsurf_file)
+        self._load_normal_vector_from_extra_metadata()
 
     @classmethod
     def from_tri_mesh(cls, tri_mesh, exclude_nans = False):
@@ -272,48 +274,97 @@ class Surface(rqsb.BaseSurface):
 
         self.model = parent_model
 
-    def triangles_and_points(self):
-        """Returns arrays representing combination of all the patches in the surface.
+    def number_of_patches(self):
+        """Returns the number of patches present in the surface."""
+
+        self.extract_patches(self.root)
+        return len(self.patch_list)
+
+    def triangles_and_points(self, patch = None, copy = False):
+        """Returns arrays representing one patch or a combination of all the patches in the surface.
+
+        arguments:
+           patch (int, optional): patch index; if None, combined arrays for all patches are returned
+           copy (bool, default False): if True, a copy of the arrays is returned; if False, the cached
+              arrays are returned
 
         returns:
            tuple (triangles, points):
               triangles (int array of shape[:, 3]): integer indices into points array,
-                  being the nodes of the corners of the triangles;
+                 being the nodes of the corners of the triangles;
               points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
 
         :meta common:
         """
 
-        if self.triangles is not None:
-            return (self.triangles, self.points)
         self.extract_patches(self.root)
-        points_offset = 0
-        for triangulated_patch in self.patch_list:
-            (t, p) = triangulated_patch.triangles_and_points()
-            if points_offset == 0:
-                self.triangles = t.copy()
-                self.points = p.copy()
+        if patch is None:
+            if self.triangles is None or self.points is None:
+                if self.triangles is None:
+                    points_offset = 0
+                    for triangulated_patch in self.patch_list:
+                        (t, p) = triangulated_patch.triangles_and_points()
+                        if points_offset == 0:
+                            self.triangles = t
+                            self.points = p
+                        else:
+                            self.triangles = np.concatenate((self.triangles, t.copy() + points_offset))
+                            self.points = np.concatenate((self.points, p))
+                        points_offset += p.shape[0]
+            if copy:
+                return (self.triangles.copy(), self.points.copy())
             else:
-                self.triangles = np.concatenate((self.triangles, t.copy() + points_offset))
-                self.points = np.concatenate((self.points, p.copy()))
-            points_offset += p.shape[0]
-        return (self.triangles, self.points)
+                return (self.triangles, self.points)
+        assert 0 <= patch < len(self.patch_list),  \
+            ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches')
+        return self.patch_list[patch].triangles_and_points(copy = copy)
 
-    def triangle_count(self):
-        """Return the numner of triangles in this surface."""
+    def decache_triangles_and_points(self):
+        """Removes the cached composite triangles and points arrays."""
+        self.points = None
+        self.triangles = None
+
+    def triangle_count(self, patch = None):
+        """Return the numner of triangles in this surface, or in one patch.
+
+        arguments:
+           patch (int, optional): patch index; if None, a combined triangle count for all patches is returned
+
+        returns:
+           int being the number of trianges in the patch (if specified) or in all the patches
+        """
 
         self.extract_patches(self.root)
-        if not self.patch_list:
-            return 0
-        return np.sum([tp.triangle_count for tp in self.patch_list])
+        if patch is None:
+            if not self.patch_list:
+                return 0
+            return np.sum([tp.triangle_count for tp in self.patch_list])
+        assert 0 <= patch < len(self.patch_list),  \
+            ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches in triangle_count')
+        return self.patch_list[patch].triangle_count
 
-    def node_count(self):
-        """Return the number of nodes (points) used in this surface."""
+    def node_count(self, patch = None):
+        """Return the number of nodes (points) used in this surface, or in one patch.
+
+        arguments:
+           patch (int, optional): patch index; if None, a combined node count for all patches is returned
+
+        returns:
+           int being the number of nodes in the patch (if specified) or in all the patches
+
+        note:
+           a multi patch surface might have more than one node colocated; this method will treat such coincident nodes
+           as separate nodes
+        """
 
         self.extract_patches(self.root)
-        if not self.patch_list:
-            return 0
-        return np.sum([tp.node_count for tp in self.patch_list])
+        if patch is None:
+            if not self.patch_list:
+                return 0
+            return np.sum([tp.node_count for tp in self.patch_list])
+        assert 0 <= patch < len(self.patch_list),  \
+            ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches in node_count')
+        return self.patch_list[patch].node_count
 
     def change_crs(self, required_crs):
         """Changes the crs of the surface, also sets a new uuid if crs changed.
@@ -381,7 +432,7 @@ class Surface(rqsb.BaseSurface):
         self.uuid = bu.new_uuid()
 
     def set_to_split_surface(self, large_surface, line, delta_xyz):
-        """Populate this (empty) surface with a version of a larger surface split by an xy line.
+        """Populate this (empty) surface with a version of a larger surface split by a straight xy line.
 
         arguments:
             large_surface (Surface): the larger surface, a copy of which is to be split
@@ -399,13 +450,14 @@ class Surface(rqsb.BaseSurface):
         t, p = large_surface.triangles_and_points()
         assert p.ndim == 2 and p.shape[1] == 3
         pp = np.concatenate((p, line), axis = 0)
-        tp = np.empty(p.shape, dtype = int)
+        t_type = np.int32 if len(pp) <= 2_147_483_647 else np.int64
+        tp = np.empty(p.shape, dtype = t_type)
         tp[:, 0] = len(p)
         tp[:, 1] = len(p) + 1
-        tp[:, 2] = np.arange(len(p), dtype = int)
+        tp[:, 2] = np.arange(len(p), dtype = t_type)
         cw = vec.clockwise_triangles(pp, tp)
-        pai = np.where(cw >= 0.0, True, False)  # bool mask over p
-        pbi = np.where(cw <= 0.0, True, False)  # bool mask over p
+        pai = (cw >= 0.0)  # bool mask over p
+        pbi = (cw <= 0.0)  # bool mask over p
         tap = pai[t]
         tbp = pbi[t]
         ta = np.any(tap, axis = 1)  # bool array over t
@@ -414,11 +466,11 @@ class Surface(rqsb.BaseSurface):
         # here we stick the two halves together into a single patch
         # todo: keep as two patches as required by RESQML business rules
         p_combo = np.empty((0, 3))
-        t_combo = np.empty((0, 3), dtype = int)
+        t_combo = np.empty((0, 3), dtype = t_type)
         for i, tab in enumerate((ta, tb)):
             p_keep = np.unique(t[tab])
             # note new point index for each old point that is being kept
-            p_map = np.full(len(p), -1, dtype = int)
+            p_map = np.full(len(p), -1, dtype = t_type)
             p_map[p_keep] = np.arange(len(p_keep))
             # copy those unique points into a trimmed points array
             points_trimmed = p[p_keep].copy()
@@ -435,16 +487,23 @@ class Surface(rqsb.BaseSurface):
 
         self.set_from_triangles_and_points(t_combo, p_combo)
 
-    def distinct_edges(self):
-        """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles."""
+    def distinct_edges(self, patch = None):
+        """Returns a numpy int array of shape (N, 2) being the ordered node pairs of distinct edges of triangles.
 
-        triangles, _ = self.triangles_and_points()
+        arguments:
+           patch (int, optional): patch index; if None, a combination of edges for all patches is returned
+        """
+
+        triangles, _ = self.triangles_and_points(patch = patch)
         assert triangles is not None
         unique_edges, _ = triangulate.edges(triangles)
         return unique_edges
 
-    def distinct_edges_and_counts(self):
+    def distinct_edges_and_counts(self, patch = None):
         """Returns unique edges as pairs of point indices, and a count of uses of each edge.
+
+        arguments:
+           patch (int, optional): patch index; if None, combined results for all patches are returned
 
         returns:
             numpy int array of shape (N, 2), numpy int array of shape (N,)
@@ -453,25 +512,26 @@ class Surface(rqsb.BaseSurface):
 
         notes:
             first entry in each pair is always the lower of the two point indices;
-            for well formed surfaces, the count should everywhere be zero or one;
+            for well formed surfaces, the count should everywhere be one or two;
             the function does not attempt to detect coincident points
         """
 
-        triangles, _ = self.triangles_and_points()
+        triangles, _ = self.triangles_and_points(patch = patch)
         assert triangles is not None
         return triangulate.edges(triangles)
 
-    def edge_lengths(self, required_uom = None):
+    def edge_lengths(self, required_uom = None, patch = None):
         """Returns float array of shape (N, 3) being triangle edge lengths.
 
         arguments:
             required_uom (str, optional): the required length uom for the resulting edge lengths; default is crs xy units
+            patch (int, optional): patch index; if None, edge lengths for all patches are returned
 
         returns:
             numpy float array of shape (N, 3) where N is the number of triangles
         """
 
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         if required_uom is None:
             required_uom = crs.xy_units
@@ -494,6 +554,20 @@ class Surface(rqsb.BaseSurface):
         self.uuid = bu.new_uuid()
         self.triangles = triangles.copy()
         self.points = points.copy()
+
+    def set_multi_patch_from_triangles_and_points(self, triangles_and_points_list):
+        """Populate this (empty) Surface object from a list of paits: array of triangle corner indices, array of points."""
+
+        self.patch_list = []
+        self.trianges = None
+        self.points = None
+        for patch, entry in enumerate(triangles_and_points_list):
+            assert len(entry) == 2, 'expecting pair of arrays (triangles, points) for each patch'
+            triangles, points = entry
+            tri_patch = rqstp.TriangulatedPatch(self.model, patch_index = patch, crs_uuid = self.crs_uuid)
+            tri_patch.set_from_triangles_and_points(triangles, points)
+            self.patch_list.append(tri_patch)
+        self.uuid = bu.new_uuid()
 
     def set_from_point_set(self,
                            point_set,
@@ -633,6 +707,191 @@ class Surface(rqsb.BaseSurface):
         self.set_from_triangles_and_points(t, p_e)
         return flange_array
 
+    def extend_surface_with_flange(self,
+                                   convexity_parameter = 5.0,
+                                   reorient = False,
+                                   reorient_max_dip = None,
+                                   flange_point_count = 11,
+                                   flange_radial_factor = 10.0,
+                                   flange_radial_distance = None,
+                                   flange_inner_ring = False,
+                                   saucer_parameter = None,
+                                   make_clockwise = False,
+                                   retriangulate = False):
+        """Returns a new Surface object where the original surface has been extended with a flange with a Delaunay triangulation of points in a PointSet object.
+
+        arguments:
+            convexity_parameter (float, default 5.0): controls how likely the resulting triangulation is to be
+                convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
+                chance of even a slight concavity
+            reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
+                z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+            reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
+                limited to this angle in degrees
+            flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
+                retriangulate is False
+            flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
+                factor of the maximum radial distance of the points themselves; ignored if extend_with_flange is False
+            flange_radial_distance (float, optional): if present, the minimum absolute distance of flange points from
+                centre of points; units are those of the crs
+            flange_inner_ring (bool, default False): if True, an inner ring of points, with double flange point counr,
+                is created at a radius just outside that of the furthest flung original point; this improves
+                triangulation of the extended point set when the original has a non-convex hull. Ignored if retriangulate
+                is False
+            saucer_parameter (float, optional): if present, and extend_with_flange is True, then a parameter
+                controlling the shift of flange points in a perpendicular direction away from the fault plane;
+                see notes for how this parameter is interpreted
+            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
+                viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
+                enforced in the reoriented space
+            retriangulate (bool, default False): if True, the surface will be generated with a retriangulation of
+                the existing points. If False, the surface will be generated by adding flange points and triangles directly
+                from the original surface edges, and will no retriangulate the input surface. If False the surface must not
+                contain tears
+
+        returns:
+            a new surface, and a boolean array of length N, where N is the number of triangles on the surface. This boolean
+            array is False on original triangle points, and True for extended flange triangles
+
+        notes:
+            a boolean array is created for the surface, with a value per triangle, set to False (zero) for non-flange
+            triangles and True (one) for flange triangles; this array is suitable for adding as a property for the
+            surface, with indexable element 'faces';
+            when flange extension occurs, the radius is the greater of the values determined from the radial factor
+            and radial distance arguments;
+            the saucer_parameter is interpreted in one of two ways: (1) +ve fractoinal values between zero and one
+            are the fractional distance from the centre of the points to its rim at which to sample the surface for
+            extrapolation and thereby modify the recumbent z of flange points; 0 will usually give shallower and
+            smoother saucer; larger values (must be less than one) will lead to stronger and more erratic saucer
+            shape in flange; (2) other values between -90.0 and 90.0 are interpreted as an angle to apply out of
+            the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
+            +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
+            the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
+            to the average plane of the original points
+        """
+        prev_t, prev_p = self.triangles_and_points()
+        point_set = rqs.PointSet(self.model, crs_uuid = self.crs_uuid, title = self.title, points_array = prev_p)
+        if retriangulate:
+            out_surf = Surface(self.model, crs_uuid = self.crs_uuid, title = self.title)
+            return out_surf, out_surf.set_from_point_set(point_set, convexity_parameter, reorient, reorient_max_dip,
+                                                         True, flange_point_count, flange_radial_factor,
+                                                         flange_radial_distance, flange_inner_ring, saucer_parameter,
+                                                         make_clockwise)
+        else:
+            simple_saucer_angle = None
+            if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
+                assert -90.0 < saucer_parameter < 90.0, f'simple saucer angle parameter must be less than 90 degrees; too big: {saucer_parameter}'
+                simple_saucer_angle = saucer_parameter
+                saucer_parameter = None
+            assert saucer_parameter is None or 0.0 <= saucer_parameter < 1.0
+            crs = rqc.Crs(self.model, uuid = point_set.crs_uuid)
+            assert prev_p.ndim >= 2
+            assert prev_p.shape[-1] == 3
+            p = prev_p.reshape((-1, 3))
+            if crs.xy_units == crs.z_units or not reorient:
+                unit_adjusted_p = p
+            else:
+                unit_adjusted_p = p.copy()
+                wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+            if reorient:
+                p_xy, normal, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
+            else:
+                p_xy = unit_adjusted_p
+                normal = self.normal()
+                reorient_matrix = None
+
+            centre_point = np.nanmean(p_xy.reshape((-1, 3)), axis = 0)  # work out the radius for the flange points
+            p_radius_v = np.nanmax(np.abs(p.reshape((-1, 3)) - np.expand_dims(centre_point, axis = 0)), axis = 0)[:2]
+            p_radius = maths.sqrt(np.sum(p_radius_v * p_radius_v))
+            radius = p_radius * flange_radial_factor
+            if flange_radial_distance is not None and flange_radial_distance > radius:
+                radius = flange_radial_distance
+
+            de, dc = self.distinct_edges_and_counts()  # find the distinct edges and counts
+            unique_edge = de[dc == 1]  # find hull edges (edges on only a single triangle)
+            hull_points = p_xy[unique_edge]  # find points defining the hull edges
+            hull_centres = np.mean(hull_points, axis = 1)  # find the centre of each edge
+
+            flange_points = np.empty(
+                shape = (hull_centres.shape), dtype = float
+            )  # loop over all the hull centres, generating a flange point and finding the azimuth from the centre to the hull centre point
+            az = np.empty(shape = len(hull_centres), dtype = float)
+            for i, c in enumerate(hull_centres):
+                v = [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
+                uv = -vec.unit_vector(v)
+                az[i] = vec.azimuth(uv)
+                flange_point = centre_point + radius * uv
+                if simple_saucer_angle is not None:
+                    z_shift = radius * maths.tan(vec.radians_from_degrees(simple_saucer_angle))
+                    if reorient:
+                        flange_point[2] -= z_shift
+                    else:
+                        flange_point += (vec.unit_vector(normal) * z_shift)
+                flange_points[i] = flange_point
+
+            sort_az_ind = np.argsort(np.array(az))  # sort by azimuth, to run through the hull points
+            new_points = np.empty(shape = (len(flange_points), 3), dtype = float)
+            new_triangles = np.empty(shape = (len(flange_points) * 2, 3), dtype = int)
+            point_offset = len(p_xy)  # the indices of the new triangles will begin after this
+            for i, ind in enumerate(sort_az_ind):  # loop over each point in azimuth order
+                new_points[i] = flange_points[ind]
+                this_hull_edge = unique_edge[ind]
+
+                def az_for_point(c):
+                    v = [centre_point[0] - c[0], centre_point[1] - c[1], centre_point[2] - c[2]]
+                    uv = -vec.unit_vector(v)
+                    return vec.azimuth(uv)
+
+                this_edge_az_sort = np.array(
+                    [az_for_point(p_xy[this_hull_edge[0]]),
+                     az_for_point(p_xy[this_hull_edge[1]])])
+                if np.min(this_edge_az_sort) < az[ind] < np.max(this_edge_az_sort):
+                    first, second = np.argsort(this_edge_az_sort)
+                else:
+                    second, first = np.argsort(this_edge_az_sort)
+                if i != len(sort_az_ind) - 1:
+                    new_triangles[2 * i] = np.array(
+                        [this_hull_edge[first], this_hull_edge[second],
+                         i + point_offset])  # add a triangle between the two hull points and the flange point
+                    new_triangles[(2 * i) + 1] = np.array(
+                        [this_hull_edge[second], i + point_offset,
+                         i + point_offset + 1])  # for all but the last point, hookup triangle to the next flange point
+                else:
+                    new_triangles[2 * i] = np.array(
+                        [this_hull_edge[first], this_hull_edge[second],
+                         i + point_offset])  # add a triangle between the two hull points and the first flange point
+                    new_triangles[(2 * i) + 1] = np.array(
+                        [this_hull_edge[second], point_offset,
+                         i + point_offset])  # add in the final triangle between the first and last flange points
+
+            all_points = np.concatenate((p_xy, new_points))  # concatenate triangle and points arrays
+            all_triangles = np.concatenate((prev_t, new_triangles))
+
+            flange_array = np.zeros(shape = all_triangles.shape[0], dtype = bool)
+            flange_array[
+                len(prev_t):] = True  # make a flange bool array, where all new triangles are flange and therefore True
+
+            assert len(all_points) == (
+                point_offset + len(flange_points)), "New point count should be old point count + flange point count"
+            assert len(all_triangles) == (
+                len(prev_t) +
+                2 * len(flange_points)), "New triangle count should be old triangle count + 2 x #flange points"
+
+            if saucer_parameter is not None:
+                _adjust_flange_z(self.model, crs.uuid, all_points, len(all_points), all_triangles, flange_array,
+                                 saucer_parameter)  # adjust the flange points if in saucer mode
+            if reorient:
+                all_points = vec.rotate_array(reorient_matrix.T, all_points)
+            if crs.xy_units != crs.z_units and reorient:
+                wam.convert_lengths(all_points[:, 2], crs.xy_units, crs.z_units)
+
+            if make_clockwise:
+                triangulate.make_all_clockwise_xy(all_triangles, all_points)  # modifies t in situ
+
+            out_surf = Surface(self.model, crs_uuid = self.crs_uuid, title = self.title)
+            out_surf.set_from_triangles_and_points(all_triangles, all_points)  # create the new surface
+            return out_surf, flange_array
+
     def make_all_clockwise_xy(self, reorient = False):
         """Reorders cached triangles data such that all triangles are clockwise when viewed from -ve z axis.
 
@@ -655,7 +914,7 @@ class Surface(rqsb.BaseSurface):
 
         _, p = self.triangles_and_points()
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
-        if crs.xy_units == self.z_units:
+        if crs.xy_units == crs.z_units:
             return p
         unit_adjusted_p = p.copy()
         wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
@@ -772,7 +1031,7 @@ class Surface(rqsb.BaseSurface):
 
     def set_to_multi_cell_faces_from_corner_points(self, cp, quad_triangles = True):
         """Populates this (empty) surface to represent faces of a set of cells.
-        
+
         From corner points of shape (N, 2, 2, 2, 3).
         """
         assert cp.size % 24 == 0
@@ -808,7 +1067,7 @@ class Surface(rqsb.BaseSurface):
 
     def set_to_horizontal_plane(self, depth, box_xyz, border = 0.0, quad_triangles = False):
         """Populate this (empty) surface with a patch of two triangles.
-        
+
         Triangles define a flat, horizontal plane at a given depth.
 
         arguments:
@@ -876,7 +1135,7 @@ class Surface(rqsb.BaseSurface):
             v_index = None
             for line in lines:
                 if "VRTX" in line:
-                    words = line.rstrip().split(" ")
+                    words = line.rstrip().split()
                     v_i = int(words[1])
                     if v_index is None:
                         v_index = v_i
@@ -886,10 +1145,11 @@ class Surface(rqsb.BaseSurface):
                         v_index = v_i
                     vertices.append(words[2:5])
                 elif "TRGL" in line:
-                    triangles.append(line.rstrip().split(" ")[1:4])
+                    triangles.append(line.rstrip().split()[1:4])
         assert len(vertices) >= 3, 'vertices missing'
         assert len(triangles) > 0, 'triangles missing'
-        triangles = np.array(triangles, dtype = int) - index_offset
+        t_type = np.int32 if len(vertices) <= 2_147_483_647 else np.int64
+        triangles = np.array(triangles, dtype = t_type) - index_offset
         vertices = np.array(vertices, dtype = float)
         assert np.all(triangles >= 0) and np.all(triangles < len(vertices)), 'triangle vertex indices out of range'
         self.set_from_triangles_and_points(triangles = triangles, points = vertices)
@@ -911,7 +1171,7 @@ class Surface(rqsb.BaseSurface):
 
     def vertical_rescale_points(self, ref_depth = None, scaling_factor = 1.0):
         """Modify the z values of points by rescaling.
-        
+
         Stretches the distance from reference depth by scaling factor.
         """
         if scaling_factor == 1.0:
@@ -927,10 +1187,10 @@ class Surface(rqsb.BaseSurface):
         for patch in self.patch_list:
             patch.vertical_rescale_points(ref_depth, scaling_factor)
 
-    def line_intersection(self, line_p, line_v, line_segment = False):
+    def line_intersection(self, line_p, line_v, line_segment = False, patch = None):
         """Returns x,y,z of an intersection point of straight line with the surface, or None if no intersection found."""
 
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         tp = p[t]
         intersects = meet.line_triangles_intersects(line_p, line_v, tp, line_segment = line_segment)
         indices = meet.intersects_indices(intersects)
@@ -938,21 +1198,22 @@ class Surface(rqsb.BaseSurface):
             return None
         return intersects[indices[0]]
 
-    def sample_z_at_xy_points(self, points, multiple_handling = 'any'):
+    def sample_z_at_xy_points(self, points, multiple_handling = 'any', patch = None):
         """Returns interpolated z values for an array of xy values.
 
         arguments:
             points (numpy float array of shape (..., 2 or 3)): xy points to sample surface at (z values ignored)
             multiple_handling (str, default 'any'): one of 'any', 'minimum', 'maximum', 'exception'
+            patch (int, optional): patch index; if None, results are for the full surface
 
         returns:
             numpy float array of shape points.shape[:-1] being z values interpolated from the surface z values
 
         notes:
             points must be in the same crs as the surface;
-            NaN will be set for any points that do not intersect with the surface in the xy projection;
-            multiple_handling argument controls behaviour when one sample point intersects surface more than
-            once: 'any' a random one of the intersection z values is returned; 'minimum' or 'maximum': the
+            NaN will be set for any points that do not intersect with the patch or surface in the xy projection;
+            multiple_handling argument controls behaviour when one sample point intersects more than once:
+            'any' a random one of the intersection z values is returned; 'minimum' or 'maximum': the
             numerical min or max of the z values is returned; 'exception': a ValueError is raised
         """
 
@@ -964,10 +1225,10 @@ class Surface(rqsb.BaseSurface):
         else:
             sample_xy = np.zeros((points.size // 2, 3), dtype = float)
             sample_xy[:, :2] = points.reshape((-1, 2))
-        t, p = self.triangles_and_points()
+        t, p = self.triangles_and_points(patch = patch)
         p_list = vec.points_in_triangles_njit(sample_xy, p[t], 1)
         vertical = np.array((0.0, 0.0, 1.0), dtype = float)
-        z = np.full(sample_xy.shape[0], np.NaN, dtype = float)
+        z = np.full(sample_xy.shape[0], np.nan, dtype = float)
         for triangle_index, p_index, _ in p_list:
             # todo: replace following with cheaper trilinear interpolation, given vertical intersection line
             xyz = meet.line_triangle_intersect_numba(sample_xy[p_index], vertical, p[t[triangle_index]], t_tol = 0.05)
@@ -983,17 +1244,18 @@ class Surface(rqsb.BaseSurface):
                 raise ValueError(f'multiple {self.title} surface intersections at xy: {sample_xy[p_index]}')
         return z.reshape(points.shape[:-1])
 
-    def normal_vectors(self, add_as_property: bool = False) -> np.ndarray:
-        """Returns the normal vectors for each triangle in the surface.
-        
+    def normal_vectors(self, add_as_property: bool = False, patch = None) -> np.ndarray:
+        """Returns the normal vectors for each triangle in the patch or surface.
+
         arguments:
-            add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model.
+            add_as_property (bool): if True, face_surface_normal_vectors_array is added as a property to the model
+            patch (int, optional): patch index; if None, normal vectors for triangles in all patches are returned
 
         returns:
-            normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface.
+            normal_vectors_array (np.ndarray): the normal vectors corresponding to each triangle in the surface
         """
         crs = rqc.Crs(self.model, uuid = self.crs_uuid)
-        triangles, points = self.triangles_and_points()
+        triangles, points = self.triangles_and_points(patch = patch)
         if crs.xy_units != crs.z_units:
             points = points.copy()
             wam.convert_lengths(points[:, 2], crs.z_units, crs.xy_units)
@@ -1053,13 +1315,13 @@ class Surface(rqsb.BaseSurface):
         return ep
 
     def resampled_surface(self, title = None):
-        """Creates a new triangulated set which is a resampled version of the current triangulated set. Each existing triangle in the tset is divided equally into 4 new triangles.
-           
+        """Creates a new surface which is a refined version of this surface; each triangle is divided equally into 4 new triangles.
+
         arguments:
-            title (str): a new title for the output triangulated set, if None the title will have the same title as the input triangulated set
-        
+            title (str): title for the output triangulated set, if None the title will be inherited from the input surface
+
         returns:
-            resqpy.surface.Surface object, with extra_metadata ('resampled from surface': <uuid>), where uuid is the origin surface uuid
+            resqpy.surface.Surface object, with extra_metadata ('resampled from surface': uuid), where uuid is for the original surface uuid
         """
         rt, rp = self.triangles_and_points()
         edge1 = np.mean(rp[rt[:]][:, ::2, :], axis = 1)
@@ -1076,8 +1338,9 @@ class Surface(rqsb.BaseSurface):
 
         # TODO: implement alternate solution using edge functions in olio triangulation to optimise
         points_unique, inverse = np.unique(allpoints, axis = 0, return_inverse = True)
-        tris = np.array(tris)
-        tris_unique = np.empty(shape = tris.shape, dtype = int)
+        t_type = np.int32 if len(allpoints) <= 2_147_483_647 else np.int64
+        tris = np.array(tris, dtype = t_type)
+        tris_unique = np.empty(shape = tris.shape, dtype = t_type)
         tris_unique[:, 0] = inverse[tris[:, 0]]
         tris_unique[:, 1] = inverse[tris[:, 1]]
         tris_unique[:, 2] = inverse[tris[:, 2]]
@@ -1091,6 +1354,33 @@ class Surface(rqsb.BaseSurface):
         resampled.set_from_triangles_and_points(tris_unique, points_unique)
 
         return resampled
+
+    def resample_surface_unique_edges(self):
+        """Returns a new surface, with the same model, title and crs as the original surface, but with additional refined points along original surface tears and edges.
+
+        Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
+
+        returns:
+            resqpy.surface.Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
+        """
+        _, op = self.triangles_and_points()
+        ref = self.resampled_surface()  # resample the original surface
+        rt, rp = ref.triangles_and_points()
+        de, dc = ref.distinct_edges_and_counts()  # find the distinct edges and counts for the resampled surface
+        de_edge = de[dc == 1]  # find edges that only appear once - tears or surface edges
+        edge_tri_index = np.sum(np.isin(rt, de_edge), axis = 1) == 2
+        edge_tris = rp[rt[edge_tri_index]]
+        mid = np.mean(rp[de_edge], axis = 1)  # get the midpoint of each surface edge
+        edge_ref_points = np.unique(np.concatenate([op, edge_tris.reshape(-1, 3), mid]), axis = 0)  # combine all points
+
+        points = rqs.PointSet(self.model, points_array = edge_ref_points, title = self.title,
+                              crs_uuid = self.crs_uuid)  # generate a pointset from these points
+
+        output = Surface(self.model, point_set = points,
+                         extra_metadata = {'resampled from surface': str(self.uuid)
+                                          })  # return a surface with generated from these points
+
+        return output
 
     def write_hdf5(self, file_name = None, mode = 'a'):
         """Create or append to an hdf5 file, writing datasets for the triangulated patches after caching arrays.
@@ -1141,7 +1431,12 @@ class Surface(rqsb.BaseSurface):
         if not self.title:
             self.title = 'surface'
 
-        tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator)
+        em = None
+        if self.normal_vector is not None:
+            assert len(self.normal_vector) == 3
+            em = {'normal vector': f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}'}
+
+        tri_rep = super().create_xml(add_as_part = False, title = title, originator = originator, extra_metadata = em)
 
         # todo: if crs_uuid is None, attempt to set to surface patch crs uuid (within patch loop, below)
         if crs_uuid is not None:
@@ -1247,6 +1542,16 @@ class Surface(rqsb.BaseSurface):
 
         return tri_rep
 
+    def _load_normal_vector_from_extra_metadata(self):
+        if self.normal_vector is None and self.extra_metadata is not None:
+            nv_str = self.extra_metadata.get('normal vector')
+            if nv_str is not None:
+                nv_words = nv_str.split(',')
+                assert len(nv_words) == 3, f'failed to convert normal vector string into triplet: {nv_str}'
+                self.normal_vector = np.empty(3, dtype = float)
+                for i in range(3):
+                    self.normal_vector[i] = float(nv_words[i])
+
 
 def distill_triangle_points(t, p):
     """Returns a (triangles, points) pair with points distilled as only those used from p."""
@@ -1255,7 +1560,8 @@ def distill_triangle_points(t, p):
     # find unique points used by triangles
     p_keep = np.unique(t)
     # note new point index for each old point that is being kept
-    p_map = np.full(len(p), -1, dtype = int)
+    t_type = np.int32 if len(p) <= 2_147_483_647 else np.int64
+    p_map = np.full(len(p), -1, dtype = t_type)
     p_map[p_keep] = np.arange(len(p_keep))
     # copy those unique points into a trimmed points array
     points_distilled = p[p_keep]
@@ -1282,8 +1588,9 @@ def nan_removed_triangles_and_points(t, p):
     expanded_mask[:] = np.expand_dims(np.logical_not(t_nan_mask), axis = -1)
     t_filtered = t[expanded_mask].reshape((-1, 3))
     # modified the filtered t values to adjust for the compression of filtered p
-    p_map = np.full(len(p), -1, dtype = int)
-    p_map[p_non_nan_mask] = np.arange(len(p_filtered), dtype = int)
+    t_type = np.int32 if len(p) <= 2_147_483_647 else np.int64
+    p_map = np.full(len(p), -1, dtype = t_type)
+    p_map[p_non_nan_mask] = np.arange(len(p_filtered), dtype = t_type)
     t_filtered = p_map[t_filtered]
     assert t_filtered.ndim == 2 and t_filtered.shape[1] == 3
     assert not np.any(t_filtered < 0) and not np.any(t_filtered >= len(p_filtered))

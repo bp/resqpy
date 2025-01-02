@@ -199,7 +199,7 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                extra_metadata, expand_const_arrays):
     (p_uuid, p_file_name, p_keyword, p_cached_name, p_discrete, p_uom, p_time_index, p_null_value, p_min_value,
      p_max_value, property_kind, facet_type, facet, realization, indexable_element, count, local_property_kind_uuid,
-     const_value, points, p_time_series_uuid, p_string_lookup_uuid) = attributes
+     const_value, points, p_time_series_uuid, p_string_lookup_uuid, pre_packed) = attributes
 
     log.debug('processing imported property ' + str(p_keyword))
     assert not points or not p_discrete
@@ -214,7 +214,7 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
                                                                  p_keyword, p_discrete, string_lookup_uuid, points)
 
     p_array = _process_imported_property_get_p_array(collection, p_cached_name)
-    p_array_bool = None if p_array is None else p_array.dtype in [bool, np.int8]
+    p_array_bool = isinstance(const_value, bool) if p_array is None else p_array.dtype in [bool, np.int8, np.uint8]
 
     add_min_max = pcga._process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid,
                                                                   local_property_kind_uuid, p_array_bool)
@@ -251,7 +251,8 @@ def _process_imported_property(collection, attributes, property_kind_uuid, strin
         find_local_property_kinds = find_local_property_kinds,
         extra_metadata = extra_metadata,
         const_value = const_value,
-        expand_const_arrays = expand_const_arrays)
+        expand_const_arrays = expand_const_arrays,
+        pre_packed = pre_packed)
     if p_node is not None:
         return p_node
     else:

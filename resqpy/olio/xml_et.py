@@ -778,6 +778,18 @@ def load_metadata_from_xml(node):
     return extra_metadata
 
 
+def find_metadata_item_node_in_xml(node, key):
+    """Returns the extra metadata node for a particular key, if present."""
+
+    if node is None:
+        return None
+    meta_nodes = list_of_tag(node, 'ExtraMetadata')
+    for meta in meta_nodes:
+        if find_tag_text(meta, 'Name') == key:
+            return meta
+    return None
+
+
 def create_metadata_xml(node, extra_metadata):
     """Writes the xml for the given metadata dictionary."""
 

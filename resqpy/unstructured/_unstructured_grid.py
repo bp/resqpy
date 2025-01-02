@@ -35,7 +35,8 @@ class UnstructuredGrid(BaseResqpy):
                  cell_shape = 'polyhedral',
                  title = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = {},
+                 load_inactive = True):
         """Create an Unstructured Grid object and optionally populate from xml tree.
 
         arguments:
@@ -55,6 +56,8 @@ class UnstructuredGrid(BaseResqpy):
               ignored if uuid is present
            extra_metadata (dict, optional): dictionary of extra metadata items to add to the grid;
               ignored if uuid is present
+           load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+              populated if a property of kind 'active' is found for the grid
 
         returns:
            a newly created Unstructured Grid object
@@ -103,6 +106,8 @@ class UnstructuredGrid(BaseResqpy):
             self.title = 'ROOT'
 
         if uuid is not None:
+            if load_inactive:
+                self.extract_inactive_mask()
             if geometry_required:
                 assert self.geometry_root is not None, 'unstructured grid geometry not present in xml'
             if cache_geometry and self.geometry_root is not None:
@@ -127,7 +132,6 @@ class UnstructuredGrid(BaseResqpy):
             assert self.node_count > 3
             self.face_count = rqet.find_tag_int(self.geometry_root, 'FaceCount')
             assert self.face_count > 3
-        self.extract_inactive_mask()
         # note: geometry arrays not loaded until demanded; see cache_all_geometry_arrays()
 
     def set_cell_count(self, n: int):

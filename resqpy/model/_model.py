@@ -1108,6 +1108,66 @@ class Model():
 
         return m_c._citation_title_for_part(self, part)
 
+    def source_for_part(self, part):
+        """Returns the source string from the part's extra metadata, if present, else None.
+
+        arguments:
+            part (str): the part for which the source information is required
+
+        returns:
+            str being the text of the source field in the xml extra metadata of the part, or None
+        """
+
+        return m_c._source_for_part(self, part)
+
+    def set_source_for_part(self, part, source):
+        """Sets the source string in the part's extra metadata.
+
+        arguments:
+            part (str): the part for which the source information is to be set
+            source (str): text for the extra metadata source item
+
+        notes:
+            this function adds the source item to the in-memory xml extra metadata;
+            any previous text for the source item (if present) will be replaced;
+            it will be included in the epc if store_epc() is subsequently called
+        """
+
+        m_x._create_source(source, root = m_c._root_for_part(self, part))
+        self.set_modified()
+
+    def source_for_obj(self, obj):
+        """Returns the source string from the object's extra metadata, if present, else None.
+
+        arguments:
+            obj (BaseResqpy): any high level resqpy object (eg. Surface)
+
+        returns:
+            str being the text of the source extra metadata item for the object, or None
+        """
+
+        return m_c._source_for_part(self, obj.part)
+
+    def set_source_for_obj(self, obj, source):
+        """Sets the source string in the object's extra metadata.
+
+        arguments:
+            part (str): the part for which the source information is to be set
+            source (str): text for the extra metadata source item
+
+        notes:
+            this function adds the source item to the in-memory xml extra metadata as well as
+            the object's extra_metadata dictionary
+            any previous text for the source item (if present) will be replaced;
+            it will be included in the epc if store_epc() is subsequently called
+        """
+
+        m_x._create_source(source, root = obj.root)
+        if not hasattr(obj, 'extra_metadata') or obj.extra_metadata is None:
+            obj.extra_metadata = {}
+        obj.extra_metadata['source'] = str(source)
+        self.set_modified()
+
     def root_for_time_series(self, uuid = None):
         """Return root for time series part.
 
@@ -1414,6 +1474,21 @@ class Model():
         """
 
         return m_h._h5_overwrite_array_slice(self, h5_key_pair, slice_tuple, array_slice)
+
+    def h5_overwrite_array(self, h5_key_pair, array):
+        """Overwrites (updates) the whole of an hdf5 array.
+
+        arguments:
+           h5_key_pair (uuid, string): the uuid of the hdf5 ext part and the hdf5 internal path to the
+              required hdf5 array
+           array (numpy array of shape to match existing hdf5 dataset): the data to write
+
+        notes:
+           this method naively updates an hdf5 array without using mpi to look after parallel updates;
+           metadata (such as uuid or property min, max values) is not modified in any way by the method
+        """
+
+        return m_h._h5_overwrite_array(self, h5_key_pair, array)
 
     def h5_clear_filename_cache(self):
         """Clears the cached filenames associated with all ext uuids."""

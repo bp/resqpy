@@ -10,6 +10,7 @@ import math as maths
 import numpy as np
 import pandas as pd
 
+import resqpy.grid as grr
 import resqpy.fault
 import resqpy.olio.read_nexus_fault as rnf
 import resqpy.olio.trademark as tm
@@ -118,7 +119,7 @@ class GridConnectionSet(BaseResqpy):
         self.cell_index_pairs = None  #: shape (count, 2); dtype int; index normalized for flattened array
         self.cell_index_pairs_null_value = -1  #: integer null value for array above
         self.grid_index_pairs = None  #: shape (count, 2); dtype int; optional; used if more than one grid referenced
-        self.face_index_pairs = None  #: shape (count, 2); dtype int32; local to cell, ie. range 0 to 5
+        self.face_index_pairs = None  #: shape (count, 2); dtype int8; local to cell, ie. range 0 to 5
         self.face_index_pairs_null_value = -1  #: integer null value for array above
         # NB face index values 0..5 usually mean [K-, K+, J+, I+, J-, I-] respectively but there is some ambiguity
         #    over I & J in the Energistics RESQML Usage Guide; see comments in DevOps backlog item 269001 for more info
@@ -129,17 +130,18 @@ class GridConnectionSet(BaseResqpy):
         self.feature_list = None  #: ordered list, actually of interpretations, indexed by feature_indices
         # feature list contains tuples: (content_type, uuid, title) for fault features (or other interpretations)
         self.property_collection = None  #: optional property.PropertyCollection
+        self.cell_index_dtype = np.int32  #: set to int64 if any grid is big, otherwise int32
 
         # NB: RESQML documentation is not clear which order is correct; should be kept consistent with same data in property.py
         # face_index_map maps from (axis, p01) to face index value in range 0..5
         # this is the default as indicated on page 139 (but not p. 180) of the RESQML Usage Gude v2.0.1
         # also assumes K is generally increasing downwards
         # see DevOps backlog item 269001 discussion for more information
-        #     self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = int)
-        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = int)  # order: top, base, J-, I+, J+, I-
+        #     self.face_index_map = np.array([[0, 1], [4, 2], [5, 3]], dtype = np.int8)
+        self.face_index_map = np.array([[0, 1], [2, 4], [5, 3]], dtype = np.int8)  # order: top, base, J-, I+, J+, I-
         # and the inverse, maps from 0..5 to (axis, p01)
-        #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = int)
-        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = int)
+        #     self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 1], [2, 1], [1, 0], [2, 0]], dtype = np.int8)
+        self.face_index_inverse_map = np.array([[0, 0], [0, 1], [1, 0], [2, 1], [1, 1], [2, 0]], dtype = np.int8)
         # note: the rework_face_pairs() method, below, overwrites the face indices based on I, J cell indices
         if not title:
             title = feature_name
@@ -196,6 +198,110 @@ class GridConnectionSet(BaseResqpy):
                 self.cache_arrays()
             if find_properties:
                 self.extract_property_collection()
+        self._set_cell_index_dtype()
+
+    @classmethod
+    def from_faces_indices(cls,
+                           grid,
+                           k_faces_kji0,
+                           j_faces_kji0,
+                           i_faces_kji0,
+                           remove_duplicates = True,
+                           k_properties = None,
+                           j_properties = None,
+                           i_properties = None,
+                           feature_name = None,
+                           feature_type = 'fault',
+                           create_organizing_objects_where_needed = True,
+                           title = None,
+                           originator = None,
+                           extra_metadata = None):
+        """Create a GridConnectionSet given a grid and 3 list-like arrays identifying faces by indices.
+        
+        arguments:
+            - grid (Grid): the single grid to be referenced by the grid connection set
+            - k_faces_kji0 (numpy int array of shape (Nk, 3)): indices of cells on negative side of desired K faces
+            - j_faces_kji0 (numpy int array of shape (Nj, 3)): indices of cells on negative side of desired J faces
+            - i_faces_kji0 (numpy int array of shape (Ni, 3)): indices of cells on negative side of desired I faces
+            - remove_duplicates (bool, default True): if True, indices are sorted and duplicates removed
+            - k_properties (list of 1D numpy arrays, optional): if present and remove_duplicates is True, each array
+              is sorted and has elements removed to keep them compatible with the indices
+            - j_properties (list of 1D numpy arrays, optional): if present and remove_duplicates is True, each array
+              is sorted and has elements removed to keep them compatible with the indices
+            - i_properties (list of 1D numpy arrays, optional): if present and remove_duplicates is True, each array
+              is sorted and has elements removed to keep them compatible with the indices
+            - feature_name (string, optional): the feature name to use when setting from faces
+            - feature_type (string, default 'fault'): 'fault', 'horizon' or 'geobody boundary'
+            - create_organizing_objects_where_needed (boolean, default True): if True, a fault interpretation object
+              and tectonic boundary feature object will be created if such objects do not exist for the feature;
+              if False, missing organizational objects will cause an error to be logged
+            - title (str, optional): the citation title to use for a new grid connection set
+            - originator (str, optional): the name of the person creating the new grid connection set, defaults to login id
+            - extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the grid connection set
+
+        returns:
+            - a new GridConnectionSet populated based on the faces indices
+
+        notes:
+            - this method only supports creation of single grid connection sets
+            - the faces indices are for cells on the negative side of the face
+            - the paired cell is implicitly the neighbouring cell in the positive direction of the axis
+            - the indices must therefore not include the last cell in the axis, though this is not checked
+            - if properties are passed, they should be passed in list variables which have their elements
+              replaced; individual property arrays should therefore be extracted from the lists afterwards
+        """
+        assert isinstance(grid, grr.Grid)
+
+        gcs = cls(grid.model, title = title, originator = originator, extra_metadata = extra_metadata)
+
+        gcs._sort_out_organizing_objects(feature_type, feature_name, create_organizing_objects_where_needed)
+
+        nj_ni = grid.nj * grid.ni
+        if k_faces_kji0 is not None and len(k_faces_kji0) > 0:
+            ci = grid.natural_cell_indices(k_faces_kji0)
+            if remove_duplicates:
+                ci = _sort_and_remove_duplicates(ci, k_properties)
+            cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
+            cip[:, 0] = ci
+            cip[:, 1] = ci + nj_ni
+            fip = np.empty(cip.shape, dtype = np.int8)
+            fip[:, 0] = gcs.face_index_map[0, 1]
+            fip[:, 1] = gcs.face_index_map[0, 0]
+        else:
+            cip = np.empty((0, 2), dtype = gcs.cell_index_dtype)
+            fip = np.empty((0, 2), dtype = np.int8)
+        if j_faces_kji0 is not None and len(j_faces_kji0) > 0:
+            ci = grid.natural_cell_indices(j_faces_kji0)
+            if remove_duplicates:
+                ci = _sort_and_remove_duplicates(ci, j_properties)
+            j_cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
+            j_cip[:, 0] = ci
+            j_cip[:, 1] = ci + grid.ni
+            j_fip = np.empty(j_cip.shape, dtype = np.int8)
+            j_fip[:, 0] = gcs.face_index_map[1, 1]
+            j_fip[:, 1] = gcs.face_index_map[1, 0]
+            cip = np.concatenate((cip, j_cip), axis = 0)
+            fip = np.concatenate((fip, j_fip), axis = 0)
+            del j_cip, j_fip
+        if i_faces_kji0 is not None and len(i_faces_kji0) > 0:
+            ci = grid.natural_cell_indices(i_faces_kji0)
+            if remove_duplicates:
+                ci = _sort_and_remove_duplicates(ci, i_properties)
+            i_cip = np.empty((ci.size, 2), dtype = gcs.cell_index_dtype)
+            i_cip[:, 0] = ci
+            i_cip[:, 1] = ci + 1
+            i_fip = np.empty(i_cip.shape, dtype = np.int8)
+            i_fip[:, 0] = gcs.face_index_map[2, 1]
+            i_fip[:, 1] = gcs.face_index_map[2, 0]
+            cip = np.concatenate((cip, i_cip), axis = 0)
+            fip = np.concatenate((fip, i_fip), axis = 0)
+            del i_cip, i_fip
+        gcs.cell_index_pairs = cip
+        gcs.face_index_pairs = fip
+        gcs.count = len(gcs.cell_index_pairs)
+        gcs.feature_indices = np.zeros(gcs.count, dtype = np.int8)
+        assert len(gcs.face_index_pairs) == gcs.count
+        return gcs
 
     @classmethod
     def from_gcs_uuid_list(cls,
@@ -249,6 +355,7 @@ class GridConnectionSet(BaseResqpy):
         gcs.model = parent_model
         gcs.uuid = bu.new_uuid()  # not strictly necessary as append will cause a new uuid as well
         gcs.title = title
+        gcs.property_collection = None
         # append data from the remaining grid connection sets
         for another_uuid in gcs_uuid_list[1:]:
             another_gcs = GridConnectionSet(source_model, uuid = another_uuid)
@@ -356,6 +463,14 @@ class GridConnectionSet(BaseResqpy):
             self.property_collection = rqp.PropertyCollection(support = self)
         return self.property_collection
 
+    def _set_cell_index_dtype(self):
+        """Determines whether to use int32 or int64 for normalised cell indices."""
+        self.cell_index_dtype = np.int32
+        for g in self.grid_list:
+            if g.is_big():
+                self.cell_index_dtype = np.int64
+                break
+
     def set_pairs_from_kelp(self,
                             kelp_0,
                             kelp_1,
@@ -393,7 +508,7 @@ class GridConnectionSet(BaseResqpy):
                 k_layer = np.zeros((grid.nk - 1, grid.ni), dtype = bool)
             else:
                 k_layer = np.zeros((grid.nk - 1, grid.nj), dtype = bool)
-            kelp_a = np.array(kelp_k, dtype = int).T
+            kelp_a = np.array(kelp_k, dtype = np.int32).T
             k_layer[kelp_a[0], kelp_a[1]] = True
             k_faces = np.zeros((grid.nk - 1, grid.nj, grid.ni), dtype = bool)
             if axis == 'J':
@@ -407,7 +522,7 @@ class GridConnectionSet(BaseResqpy):
                 j_layer = np.zeros((grid.nj - 1, grid.ni), dtype = bool)
             else:
                 j_layer = np.zeros((grid.nk, grid.nj - 1), dtype = bool)
-            kelp_a = np.array(kelp_j, dtype = int).T
+            kelp_a = np.array(kelp_j, dtype = np.int32).T
             j_layer[kelp_a[0], kelp_a[1]] = True
             j_faces = np.zeros((grid.nk, grid.nj - 1, grid.ni), dtype = bool)
             if axis == 'K':
@@ -421,7 +536,7 @@ class GridConnectionSet(BaseResqpy):
                 i_layer = np.zeros((grid.nj, grid.ni - 1), dtype = bool)
             else:
                 i_layer = np.zeros((grid.nk, grid.ni - 1), dtype = bool)
-            kelp_a = np.array(kelp_i, dtype = int).T
+            kelp_a = np.array(kelp_i, dtype = np.int32).T
             i_layer[kelp_a[0], kelp_a[1]] = True
             i_faces = np.zeros((grid.nk, grid.nj, grid.ni - 1), dtype = bool)
             if axis == 'K':
@@ -437,24 +552,13 @@ class GridConnectionSet(BaseResqpy):
                                        create_organizing_objects_where_needed,
                                        feature_type = feature_type)
 
-    def set_pairs_from_face_masks(
-            self,
-            k_faces,
-            j_faces,
-            i_faces,
-            feature_name,
-            create_organizing_objects_where_needed,
-            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
-            k_sides = None,
-            j_sides = None,
-            i_sides = None):
-        """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
-
+    def _sort_out_organizing_objects(self, feature_type, feature_name, create_organizing_objects_where_needed):
+        """Finds or creates interpretation and feature objects."""
         assert feature_type in ['fault', 'horizon', 'geobody boundary']
         if feature_name is None:
-            feature_name = 'feature from face masks'  # not sure this default is wise
+            feature_name = 'feature from faces'  # not sure this default is wise
         if len(self.grid_list) > 1:
-            log.warning('setting grid connection set pairs from face masks for first grid in list only')
+            log.warning('setting grid connection set pairs from faces for first grid in list only')
         grid = self.grid_list[0]
         if feature_type == 'fault':
             feature_flavour = 'TectonicBoundaryFeature'
@@ -511,6 +615,23 @@ class GridConnectionSet(BaseResqpy):
                 log.error('no interpretation found for feature: ' + feature_name)
                 return
         self.feature_list = [('obj_' + interpretation_flavour, fi_uuid, str(feature_name))]
+
+    def set_pairs_from_face_masks(
+            self,
+            k_faces,
+            j_faces,
+            i_faces,
+            feature_name,
+            create_organizing_objects_where_needed,
+            feature_type = 'fault',  # other feature_type values: 'horizon', 'geobody boundary'
+            k_sides = None,
+            j_sides = None,
+            i_sides = None):
+        """Sets cell_index_pairs and face_index_pairs based on triple face masks, using simple no throw pairing."""
+
+        self._sort_out_organizing_objects(feature_type, feature_name, create_organizing_objects_where_needed)
+
+        grid = self.grid_list[0]
         cell_pair_list = []
         face_pair_list = []
         nj_ni = grid.nj * grid.ni
@@ -547,10 +668,10 @@ class GridConnectionSet(BaseResqpy):
                 else:
                     cell_pair_list.append((cell, cell + 1))
                     face_pair_list.append((self.face_index_map[2, 1], self.face_index_map[2, 0]))
-        self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
-        self.face_index_pairs = np.array(face_pair_list, dtype = int)
+        self.cell_index_pairs = np.array(cell_pair_list, dtype = self.cell_index_dtype)
+        self.face_index_pairs = np.array(face_pair_list, dtype = np.int8)
         self.count = len(self.cell_index_pairs)
-        self.feature_indices = np.zeros(self.count, dtype = int)
+        self.feature_indices = np.zeros(self.count, dtype = np.int8)
         assert len(self.face_index_pairs) == self.count
 
     def set_pairs_from_faces_df(self,
@@ -608,9 +729,9 @@ class GridConnectionSet(BaseResqpy):
             if success:
                 feature_index += 1
 
-        self.feature_indices = np.array(fi_list, dtype = int)
-        self.cell_index_pairs = np.array(cell_pair_list, dtype = int)
-        self.face_index_pairs = np.array(face_pair_list, dtype = int)
+        self.feature_indices = np.array(fi_list, dtype = np.int32)
+        self.cell_index_pairs = np.array(cell_pair_list, dtype = self.cell_index_dtype)
+        self.face_index_pairs = np.array(face_pair_list, dtype = np.int8)
         self.count = len(self.cell_index_pairs)
         assert len(self.face_index_pairs) == self.count
         if create_mult_prop and self.count > 0:
@@ -695,7 +816,7 @@ class GridConnectionSet(BaseResqpy):
         singleton.cell_index_pairs, singleton.face_index_pairs =  \
            self.raw_list_of_cell_face_pairs_for_feature_index(feature_index)
         singleton.count = singleton.cell_index_pairs.shape[0]
-        singleton.feature_indices = np.zeros((singleton.count,), dtype = int)
+        singleton.feature_indices = np.zeros((singleton.count,), dtype = np.int32)
         singleton.feature_list = [self.feature_list[feature_index]]
         return singleton
 
@@ -822,7 +943,7 @@ class GridConnectionSet(BaseResqpy):
                                         cache_array = True,
                                         object = self,
                                         array_attribute = 'cell_index_pairs',
-                                        dtype = 'int')
+                                        dtype = 'int64' if self.cell_index_dtype is np.int64 else 'int32')
 
         if self.face_index_pairs is None:
             log.debug('caching face index pairs from hdf5')
@@ -833,7 +954,7 @@ class GridConnectionSet(BaseResqpy):
                                         cache_array = True,
                                         object = self,
                                         array_attribute = 'face_index_pairs',
-                                        dtype = 'int32')
+                                        dtype = 'int8')
 
         if len(self.grid_list) > 1 and self.grid_index_pairs is None:
             grid_index_node = rqet.find_tag(self.root, 'GridIndexPairs')
@@ -844,7 +965,7 @@ class GridConnectionSet(BaseResqpy):
                                         cache_array = True,
                                         object = self,
                                         array_attribute = 'grid_index_pairs',
-                                        dtype = 'int')
+                                        dtype = 'int32' if len(self.grid_list) > 127 else 'int8')
 
         if self.feature_list is None:
             return
@@ -853,18 +974,18 @@ class GridConnectionSet(BaseResqpy):
         if self.feature_indices is None:
             log.debug('caching feature indices')
             elements_node = rqet.find_nested_tags(interp_root, ['InterpretationIndices', 'Elements'])
-            #         elements_node = rqet.find_nested_tags(interp_root, ['FaultIndices', 'Elements'])
+            # elements_node = rqet.find_nested_tags(interp_root, ['FaultIndices', 'Elements'])
             h5_key_pair = self.model.h5_uuid_and_path_for_node(elements_node, tag = 'Values')
             assert h5_key_pair is not None
             self.model.h5_array_element(h5_key_pair,
                                         cache_array = True,
                                         object = self,
                                         array_attribute = 'feature_indices',
-                                        dtype = 'uint32')
+                                        dtype = 'int32')
             assert self.feature_indices.shape == (self.count,)
 
             cl_node = rqet.find_nested_tags(interp_root, ['InterpretationIndices', 'CumulativeLength'])
-            #         cl_node = rqet.find_nested_tags(interp_root, ['FaultIndices', 'CumulativeLength'])
+            # cl_node = rqet.find_nested_tags(interp_root, ['FaultIndices', 'CumulativeLength'])
             h5_key_pair = self.model.h5_uuid_and_path_for_node(cl_node, tag = 'Values')
             assert h5_key_pair is not None
             self.model.h5_array_element(h5_key_pair,
@@ -872,8 +993,8 @@ class GridConnectionSet(BaseResqpy):
                                         object = self,
                                         array_attribute = 'fi_cl',
                                         dtype = 'uint32')
-            assert self.fi_cl.shape == (
-                self.count,), 'connection set face pair(s) not assigned to exactly one feature'  # rough check
+            assert self.fi_cl.shape == (self.count,),  \
+                'connection set face pair(s) not assigned to exactly one feature'  # rough check
 
         # delattr(self, 'fi_cl')  # assumed to be one-to-one mapping, so cumulative length is discarded
 
@@ -1195,7 +1316,7 @@ class GridConnectionSet(BaseResqpy):
             # uuid/InterpretationIndices/elements  (N,)  uint32
             h5_reg.register_dataset(self.uuid, 'InterpretationIndices/elements', self.feature_indices)
             # uuid/InterpretationIndices/cumulativeLength  (N,)  uint32
-            one_to_one = np.arange(1, self.count + 1, dtype = int)
+            one_to_one = np.arange(1, self.count + 1, dtype = np.uint32)
             h5_reg.register_dataset(self.uuid, 'InterpretationIndices/cumulativeLength', one_to_one)
 
         h5_reg.write(file_name, mode = mode)
@@ -1370,11 +1491,16 @@ class GridConnectionSet(BaseResqpy):
                         include_both_sides = False,
                         use_minus = False,
                         trans_mult_uuid = None):
-        """Creates a Nexus include file holding MULT keywords and data. trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values. If not provided values of 1.0 will be used."""
+        """Creates a Nexus include file holding MULT keywords and data. 
+
+        note:
+            trans_mult_uuid (optional) is the uuid of a property on the gcs containing transmissibility multiplier values;
+            If not provided values of 1.0 will be used
+        """
         if trans_mult_uuid is not None:
             self.extract_property_collection()
-            assert self.property_collection.part_in_collection(self.model.part_for_uuid(
-                trans_mult_uuid)), f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
+            assert self.property_collection.part_in_collection(self.model.part_for_uuid(trans_mult_uuid)),  \
+                f'trans_mult_uuid provided is not part of collection {trans_mult_uuid}'
             tmult_array = self.property_collection.cached_part_array_ref(self.model.part_for_uuid(trans_mult_uuid))
             assert tmult_array is not None
         else:
@@ -1420,26 +1546,39 @@ class GridConnectionSet(BaseResqpy):
                 feature_name = self.feature_list[feature_index][2].split()[0].upper()
                 cell_index_pairs, face_index_pairs = self.list_of_cell_face_pairs_for_feature_index(feature_index)
                 if tmult_array is not None:
-                    feature_mask = np.where(self.feature_indices == feature_index, 1, 0)
+                    feature_mask = (self.feature_indices == feature_index)
                     feat_mult_array = np.extract(feature_mask, tmult_array)
                 else:
                     feat_mult_array = np.ones(shape = (cell_index_pairs.shape[0],), dtype = float)
                 for side in sides:
-                    both = np.empty((cell_index_pairs.shape[0], 6), dtype = int)  # axis, polarity, k, j, i, tmult
+                    both = np.empty((cell_index_pairs.shape[0], 5), dtype = np.int32)  # axis, polarity, k, j, i
                     both[:, :2] = face_index_pairs[:, side, :]  # axis, polarity
-                    both[:, 2:-1] = cell_index_pairs[:, side, :]  # k, j, i
-                    both[:, -1] = feat_mult_array.flatten()
-                    df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
-                    df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
-                    both_sorted = np.empty(both.shape, dtype = int)
-                    both_sorted[:] = df
-                    cell_indices = both_sorted[:, 2:-1]
-                    face_indices = np.empty((both_sorted.shape[0], 2), dtype = int)
-                    face_indices[:, :] = both_sorted[:, :2]
-                    tmult_values = both_sorted[:, -1]
-                    del both_sorted
+                    both[:, 2:] = cell_index_pairs[:, side, :]  # k, j, i
+                    # both[:, -1] = feat_mult_array.flatten()
+                    # df = pd.DataFrame(both, columns = ['axis', 'polarity', 'k', 'j', 'i', 'tmult'])
+                    # df = df.sort_values(by = ['axis', 'polarity', 'j', 'i', 'k', 'tmult'])
+                    # both_sorted = np.empty(both.shape, dtype = np.int32)
+                    # both_sorted[:] = df
+                    si = np.argsort(both[:, 2])  # k
+                    msi = si
+                    both = both[si]
+                    si = np.argsort(both[:, 4], kind = 'stable')  # i
+                    msi = msi[si]
+                    both = both[si]
+                    si = np.argsort(both[:, 3], kind = 'stable')  # j
+                    msi = msi[si]
+                    both = both[si]
+                    si = np.argsort(both[:, 1], kind = 'stable')  # polarity
+                    msi = msi[si]
+                    both = both[si]
+                    si = np.argsort(both[:, 0], kind = 'stable')  # axis
+                    msi = msi[si]
+                    both = both[si]
+                    cell_indices = both[:, 2:]
+                    face_indices = np.empty((both.shape[0], 2), dtype = np.int8)
+                    face_indices[:, :] = both[:, :2]
+                    tmult_values = feat_mult_array[msi]
                     del both
-                    del df
                     k = None
                     i = j = k2 = axis = polarity = None  # only needed to placate flake8 which whinges incorrectly otherwise
                     for row in range(cell_indices.shape[0]):
@@ -1557,7 +1696,7 @@ class GridConnectionSet(BaseResqpy):
                 log.info(
                     f'Property name {property_name} not found in extra_metadata for {self.model.citation_title_for_part(self.model.part_for_uuid(feature_uuid))}'
                 )
-                value_list.append(np.NaN)
+                value_list.append(np.nan)
             else:
                 value_list.append(float(feat.extra_metadata[property_name]))
         return value_list
@@ -1691,7 +1830,7 @@ class GridConnectionSet(BaseResqpy):
                     combined_values = property_value_by_column_edge.copy()
                 else:
                     combined_values = None
-                combined_index = np.full((fault_by_column_edge_mask.shape), -1, dtype = int)
+                combined_index = np.full((fault_by_column_edge_mask.shape), -1, dtype = np.int32)
                 combined_index = np.where(fault_by_column_edge_mask, feature, combined_index)
                 sum_unmasked = np.sum(fault_by_column_edge_mask)
             else:
@@ -1801,7 +1940,7 @@ class GridConnectionSet(BaseResqpy):
         def sorted_paired_cell_face_index_position(cell_face_index, a_or_b):
             # pair one side (a_or_b) of cell_face_index with its position, then sort
             count = len(cell_face_index)
-            sp = np.empty((count, 2), dtype = int)
+            sp = np.empty((count, 2), dtype = np.int32)
             sp[:, 0] = cell_face_index[:, a_or_b]
             sp[:, 1] = np.arange(count)
             t = [tuple(r) for r in sp]  # could use numpy fields based sort instead of tuple list?
@@ -1984,19 +2123,19 @@ class GridConnectionSet(BaseResqpy):
             for k0 in range(entry['k1'], entry['k2'] + 1):
                 for j0 in range(entry['j1'], entry['j2'] + 1):
                     for i0 in range(entry['i1'], entry['i2'] + 1):
-                        neighbour = np.array([k0, j0, i0], dtype = int)
+                        neighbour = np.array([k0, j0, i0], dtype = np.int32)
                         if fp:
                             neighbour[axis] += 1
                         else:
                             neighbour[axis] -= 1
                         fi_list.append(feature_index)
-                        cell_pair_list.append((grid.natural_cell_index(
-                            (k0, j0, i0)), grid.natural_cell_index(neighbour)))
+                        cell_pair_list.append((grid.natural_cell_index((k0, j0, i0)),  \
+                                               grid.natural_cell_index(neighbour)))
                         face_pair_list.append((self.face_index_map[axis, fp], self.face_index_map[axis, 1 - fp]))
                         if create_mult_prop:
                             mult_list.append(multiplier)
         if fi_root is not None and fault_const_mult and fault_mult_value is not None:
-            #patch extra_metadata into xml for new fault interpretation object
+            # patch extra_metadata into xml for new fault interpretation object
             rqet.create_metadata_xml(fi_root, {"Transmissibility multiplier": str(fault_mult_value)})
         return True, const_mult
 
@@ -2042,14 +2181,15 @@ class GridConnectionSet(BaseResqpy):
                          feature_index = None,
                          active_only = True,
                          lazy = False,
-                         baffle_uuid = None):
+                         baffle_uuid = None,
+                         dtype = None):
         """Creates a triplet of grid face numpy arrays populated from a property for this gcs.
 
         arguments:
             property_uuid (UUID): the uuid of the gcs property
             default_value (float or int, optional): the value to use in the grid property
                 on faces that do not appear in the grid connection set; will default to
-                np.NaN for continuous properties, -1 for categorical or discrete
+                np.nan for continuous properties, -1 for categorical or discrete
             feature_index (int, optional): if present, only faces for this feature are used
             active_only (bool, default True): if True and an active property exists for the
                 grid connection set, then only active faces are used when populating the
@@ -2060,6 +2200,8 @@ class GridConnectionSet(BaseResqpy):
             baffle_uuid (uuid, optional): if present, the uuid of a discrete (bool) property
                 of the gcs holding baffle flags; where True the output face value is set
                 to zero regardless of the main property value
+            dtype (type or str, optional): the element type for the returned arrays; defaults
+                to float for continuous properties or int for discrete properties; see notes
 
         returns:
             triple numpy arrays: identifying the K, J & I direction grid face property values;
@@ -2069,7 +2211,9 @@ class GridConnectionSet(BaseResqpy):
             can only be used on single grid gcs; gcs property must have indexable of faces;
             at present generates grid properties with indexable 'faces' not 'faces per cell',
             which might not be appropriate for grids with split pillars (structural faults);
-            points properties not currently supported; count must be 1
+            points properties not currently supported; count must be 1;
+            if the property is a boolean array and may have been written to hdf5 using packing,
+            then the dtype argument must be set to bool or np.uint8 to ensure unpacking
         """
 
         assert self.number_of_grids() == 1
@@ -2077,7 +2221,7 @@ class GridConnectionSet(BaseResqpy):
         active_mask = None
         if active_only:
             pc = self.extract_property_collection()
-            active_mask = pc.single_array_ref(property_kind = 'active')
+            active_mask = pc.single_array_ref(property_kind = 'active', dtype = bool)
             if active_mask is not None:
                 assert active_mask.shape == (self.count,)
         gcs_prop = rqp.Property(self.model, uuid = property_uuid)
@@ -2085,10 +2229,12 @@ class GridConnectionSet(BaseResqpy):
         assert bu.matching_uuids(gcs_prop.collection.support_uuid, self.uuid)
         assert gcs_prop.count() == 1
         assert not gcs_prop.is_points()
-        dtype = float if gcs_prop.is_continuous() else int
+        if dtype is None:
+            dtype = float if gcs_prop.is_continuous() else int
         if default_value is None:
-            default_value = -1 if dtype is int else np.NaN
-        gcs_prop_array = gcs_prop.array_ref()
+            default_value = -1 if dtype is int else np.nan
+        gcs_prop_array = gcs_prop.array_ref(dtype = dtype)
+        assert gcs_prop_array.shape == (self.count,)
         log.debug(f'preparing grid face arrays from gcs property: {gcs_prop.title}; from gcs:{self.title}')
 
         baffle_mask = None
@@ -2100,55 +2246,49 @@ class GridConnectionSet(BaseResqpy):
         ak = np.full((nk + 1, nj, ni), default_value, dtype = dtype)
         aj = np.full((nk, nj + 1, ni), default_value, dtype = dtype)
         ai = np.full((nk, nj, ni + 1), default_value, dtype = dtype)
-        # mk = np.zeros((nk + 1, nj, ni), dtype = bool)
-        # mj = np.zeros((nk, nj + 1, ni), dtype = bool)
-        # mi = np.zeros((nk, nj, ni + 1), dtype = bool)
 
         # populate arrays from faces of gcs, optionally filtered by feature index
-        cip, fip = self.list_of_cell_face_pairs_for_feature_index(None)
-        assert len(cip) == self.count and len(fip) == self.count
-        assert gcs_prop_array.shape == (self.count,)
-        if feature_index is None:
-            indices = np.arange(self.count, dtype = int)
-        else:
+        cip, fip = self.list_of_cell_face_pairs_for_feature_index(feature_index)
+
+        value_array = gcs_prop_array.copy()
+
+        if baffle_mask is not None:
+            value_array[baffle_mask] = 0  # will be cast to float (or bool) if needed
+
+        if feature_index is not None:
             indices = self.indices_for_feature_index(feature_index)
+            value_array = value_array[indices]
+            if active_mask is not None:
+                active_mask = active_mask[indices]
 
-        # opposing_count = 0
+        if active_mask is not None:
+            cip = cip[active_mask, :, :]
+            fip = fip[active_mask, :, :]
+            value_array = value_array[active_mask]
+
         side_list = ([0] if lazy else [0, 1])
-        for fi in indices:
-            # fi = int(i)
-            if active_mask is not None and not active_mask[fi]:
-                continue
-            value = gcs_prop_array[fi]
-            if baffle_mask is not None and baffle_mask[fi]:
-                value = 0  # will be cast to float (or bool) if needed when assigned below
-            for side in side_list:
-                cell_kji0 = cip[fi, side].copy()
-                # opposing = cell_kji0.copy()
-                axis, polarity = fip[fi, side]
-                assert 0 <= axis <= 2 and 0 <= polarity <= 1
-                cell_kji0[axis] += polarity
-                # opposing[axis] += (1 - polarity)
-                if axis == 0:
-                    ak[tuple(cell_kji0)] = value
-                    # mk[tuple(cell_kji0)] = True
-                    # if mk[tuple(opposing)]:
-                    #     opposing_count += 1
-                elif axis == 1:
-                    aj[tuple(cell_kji0)] = value
-                    # mj[tuple(cell_kji0)] = True
-                    # if mj[tuple(opposing)]:
-                    #     opposing_count += 1
-                else:
-                    ai[tuple(cell_kji0)] = value
-                    # mi[tuple(cell_kji0)] = True
-                    # if mi[tuple(opposing)]:
-                    #     opposing_count += 1
 
-        # if opposing_count:
-        #     log.warning(f'{opposing_count} suspicious opposing faces of {len(indices)} detected in gcs: {self.title}')
-        # else:
-        #     log.debug(f'no suspicious opposing faces detected in gcs: {self.title}')
+        for side in side_list:
+            cell_kji0 = cip[:, side].copy()  # shape (N, 3)
+            axis = fip[:, side, 0]  # shape (N,)
+            polarity = fip[:, side, 1]  # shape (N,)
+            # assert 0 <= np.min(axis) and np.max(axis) <= 2
+            # assert 0 <= np.min(polarity) and np.max(polarity) <= 1
+
+            axis_mask = (axis == 0).astype(bool)
+            ak_kji0 = cell_kji0[axis_mask, :]
+            ak_kji0[:, 0] += polarity[axis_mask]
+            ak[ak_kji0[:, 0], ak_kji0[:, 1], ak_kji0[:, 2]] = value_array[axis_mask]
+
+            axis_mask = (axis == 1).astype(bool)
+            aj_kji0 = cell_kji0[axis_mask, :]
+            aj_kji0[:, 1] += polarity[axis_mask]
+            aj[aj_kji0[:, 0], aj_kji0[:, 1], aj_kji0[:, 2]] = value_array[axis_mask]
+
+            axis_mask = (axis == 2).astype(bool)
+            ai_kji0 = cell_kji0[axis_mask, :]
+            ai_kji0[:, 2] += polarity[axis_mask]
+            ai[ai_kji0[:, 0], ai_kji0[:, 1], ai_kji0[:, 2]] = value_array[axis_mask]
 
         return (ak, aj, ai)
 
@@ -2160,3 +2300,27 @@ def _copy_organisation_objects(target_model, source_model, gcs):
     for _, uuid, _ in gcs.feature_list:
         target_model.copy_uuid_from_other_model(source_model,
                                                 uuid)  # will copy related features as well as interpretations
+
+
+def _sort_and_remove_duplicates(a, props = None):
+    """Return copy of 1D array a, sorted and with duplicates removed; secondary arrays can be kept in alignment."""
+    if a is None or a.size <= 1:
+        return a
+    assert a.ndim == 1
+    si = None
+    no_props = (props is None or len(props) == 0)
+    if no_props:
+        a = np.sort(a)
+    else:
+        si = np.argsort(a)
+        a = a[si]
+    m = np.empty(a.size, dtype = bool)
+    m[0] = True
+    m[1:] = (a[1:] != a[:-1])
+    if np.all(m):
+        return a
+    if not no_props:
+        for i in range(len(props)):
+            p = props[i][si]
+            props[i] = p[m]
+    return a[m]

@@ -91,7 +91,7 @@ class RelPerm(DataFrame):
             processed_phase_combo_checks.get(processed_phase_combo)(df)
             # ensure that missing capillary pressure values are stored as np.nan
             if 'Pc' in df.columns:
-                df['Pc'].replace('None', np.nan, inplace = True)
+                df['Pc'] = df['Pc'].replace('None', np.nan)
             # convert all values in the dataframe to numeric type
             df[df.columns] = df[df.columns].apply(pd.to_numeric, errors = 'coerce')
             # ensure that no other column besides Pc has missing values

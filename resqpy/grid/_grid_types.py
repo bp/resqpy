@@ -51,13 +51,15 @@ def is_regular_grid(grid_root):
     return grid_flavour(grid_root) == 'IjkBlockGrid'
 
 
-def any_grid(parent_model, uuid = None, find_properties = True):
+def any_grid(parent_model, uuid = None, find_properties = True, load_inactive = True):
     """Returns a Grid or RegularGrid or UnstructuredGrid object depending on the extra metadata in the xml.
 
     arguments:
         parent_model (Model): the model within which the grid exists
         uuid (UUID): the uuid of the grid object to be instantiated
         find_properties (bool, default True): passed onward to the instantiation method
+        load_inactive (bool, default True): if True and uuid is provided, the inactive attribubte is
+            populated if a property of kind 'active' is found for the grid
 
     note:
         full list of resqpy grid class objects which could be returned:
@@ -70,17 +72,30 @@ def any_grid(parent_model, uuid = None, find_properties = True):
     if flavour is None:
         return None
     if flavour == 'IjkGrid':
-        return grr.Grid(parent_model, uuid = uuid, find_properties = find_properties)
+        return grr.Grid(parent_model, uuid = uuid, find_properties = find_properties, load_inactive = load_inactive)
     if flavour == 'IjkBlockGrid':
-        return grr.RegularGrid(parent_model, extent_kji = None, uuid = uuid, find_properties = find_properties)
+        return grr.RegularGrid(parent_model,
+                               extent_kji = None,
+                               uuid = uuid,
+                               find_properties = find_properties,
+                               load_inactive = load_inactive)
     if flavour == 'UnstructuredGrid':
-        return rug.UnstructuredGrid(parent_model, uuid = uuid, find_properties = find_properties)
+        return rug.UnstructuredGrid(parent_model,
+                                    uuid = uuid,
+                                    find_properties = find_properties,
+                                    load_inactive = load_inactive)
     if flavour == 'TetraGrid':
-        return rug.TetraGrid(parent_model, uuid = uuid, find_properties = find_properties)
+        return rug.TetraGrid(parent_model,
+                             uuid = uuid,
+                             find_properties = find_properties,
+                             load_inactive = load_inactive)
     if flavour == 'HexaGrid':
-        return rug.HexaGrid(parent_model, uuid = uuid, find_properties = find_properties)
+        return rug.HexaGrid(parent_model, uuid = uuid, find_properties = find_properties, load_inactive = load_inactive)
     if flavour == 'PyramidGrid':
         return rug.PyramidGrid(parent_model, uuid = uuid, find_properties = find_properties)
     if flavour == 'PrismGrid':
-        return rug.PrismGrid(parent_model, uuid = uuid, find_properties = find_properties)
+        return rug.PrismGrid(parent_model,
+                             uuid = uuid,
+                             find_properties = find_properties,
+                             load_inactive = load_inactive)
     return None

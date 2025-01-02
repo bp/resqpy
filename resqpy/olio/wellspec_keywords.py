@@ -75,9 +75,9 @@ wellspec_dict['DZ']       = (0, wk_preferably_not, wk_okay, None,   True)   # no
 
 wellspec_dtype: Dict[str, Type] = { }  # mapping wellspec column key to expected data type
 
-wellspec_dtype['IW']       = int
-wellspec_dtype['JW']       = int
-wellspec_dtype['L']        = int
+wellspec_dtype['IW']       = np.int32
+wellspec_dtype['JW']       = np.int32
+wellspec_dtype['L']        = np.int32
 wellspec_dtype['GRID']     = str
 wellspec_dtype['RADW']     = float
 wellspec_dtype['KHMULT']   = float
@@ -89,11 +89,11 @@ wellspec_dtype['KH']       = float
 wellspec_dtype['SKIN']     = float
 wellspec_dtype['PPERF']    = float
 wellspec_dtype['ANGLE']    = float
-wellspec_dtype['IRELPM']   = int
+wellspec_dtype['IRELPM']   = np.int32
 wellspec_dtype['RADB']     = float
 wellspec_dtype['WI']       = float
 wellspec_dtype['K']        = float
-wellspec_dtype['LAYER']    = int
+wellspec_dtype['LAYER']    = np.int32
 wellspec_dtype['DEPTH']    = float   # '#' causes nexus to use cell depth
 wellspec_dtype['X']        = float   # use cell X for i.p. perf
 wellspec_dtype['Y']        = float   # use cell Y for i.p. perf
@@ -109,10 +109,10 @@ wellspec_dtype['PARENT']   = str
 wellspec_dtype['MDCON']    = float
 wellspec_dtype['SECT']     = str     # todo: need to check type
 wellspec_dtype['FLOWSECT'] = str     # todo: need to check type
-wellspec_dtype['ZONE']     = int
+wellspec_dtype['ZONE']     = np.int32
 wellspec_dtype['GROUP']    = str
 wellspec_dtype['TEMP']     = float
-wellspec_dtype['IPTN']     = int
+wellspec_dtype['IPTN']     = np.int32
 wellspec_dtype['D']        = float
 wellspec_dtype['ND']       = str
 wellspec_dtype['DZ']       = float
@@ -456,7 +456,7 @@ def get_well_data(
     line = kf.strip_trailing_comment(file.readline()).upper()
     columns_present = line.split()
     if selecting:
-        column_map = np.full((len(column_list),), -1, dtype = int)
+        column_map = np.full((len(column_list),), -1, dtype = np.int32)
         for i in range(len(column_list)):
             column = column_list[i].upper()
             if column in columns_present:
@@ -482,11 +482,11 @@ def get_well_data(
                     if column_list[col_index].upper() == "GRID":
                         data[col].append("ROOT")
                     else:
-                        data[col].append(np.NaN)
+                        data[col].append(np.nan)
                 else:
                     value = words[column_map[col_index]]
                     if value == "NA":
-                        data[col].append(np.NaN)
+                        data[col].append(np.nan)
                     elif value == "#":
                         data[col].append(value)
                     elif value:
@@ -496,7 +496,7 @@ def get_well_data(
         else:
             for col, value in zip(columns_present, words[:len(columns_present)]):
                 if value == "NA":
-                    data[col].append(np.NaN)
+                    data[col].append(np.nan)
                 elif value == "#":
                     data[col].append(value)
                 elif value:
@@ -519,12 +519,18 @@ def get_well_data(
 
     def stat_tranformation(row):
         if row["STAT"] == "ON":
-            return 1
+            return np.int8(1)
         else:
-            return 0
+            return np.int8(0)
 
     if "STAT" in df.columns:
         df["STAT"] = df.apply(lambda row: stat_tranformation(row), axis = 1)
+
+    int_col_dict = {}
+    for col in ["IW", "JW", "L", "LAYER", "STAT"]:
+        if col in df.columns:
+            int_col_dict[col] = (np.int8 if col == "STAT" else np.int32)
+    df = df.astype(int_col_dict)
 
     return df
 

@@ -191,7 +191,7 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
         wb_a = np.zeros(bw.cell_count, dtype = bool)
         length = np.zeros(bw.cell_count, dtype = float)
         pperf = np.zeros(bw.cell_count, dtype = float)
-        dominant_wbf_interval = np.full(bw.cell_count, -1, dtype = int)
+        dominant_wbf_interval = np.full(bw.cell_count, -1, dtype = np.int32)
         ci = 0
         for wb_ii in range(bw.node_count - 1):
             if bw.grid_indices[wb_ii] < 0:
@@ -258,7 +258,7 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
         wbf_p = wbf_pc.singleton(property_kind = 'wellbore radius')
         assert wbf_p is not None, 'problem with wellbore radius wellbore frame property'
         wbf_a = wbf_pc.cached_part_array_ref(wbf_p)
-        wb_a = np.full(bw.cell_count, np.NaN, dtype = float)
+        wb_a = np.full(bw.cell_count, np.nan, dtype = float)
         for i, wbf_contributions in enumerate(wb_fraction_of_wbf):
             if len(wbf_contributions) == 0:
                 continue  # todo: could try to inherit wellbore radius from above or below?
@@ -350,7 +350,7 @@ def add_blocked_well_properties_from_wellbore_frame(bw,
                 skin_uom = skin_pc.uom_for_part(skin_part)
             else:
                 assert skin_pc.uom_for_part(skin_part) == skin_uom, 'mixed skin units of measure'
-            wb_skin = np.full(bw.cell_count, np.NaN, dtype = float)
+            wb_skin = np.full(bw.cell_count, np.nan, dtype = float)
             for i, wbf_contributions in enumerate(wb_fraction_of_wbf):
                 if len(wbf_contributions) == 0:
                     continue

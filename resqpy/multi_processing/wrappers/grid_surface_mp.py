@@ -18,32 +18,33 @@ import resqpy.surface as rqs
 import resqpy.olio.uuid as bu
 
 
-def find_faces_to_represent_surface_regular_wrapper(
-        index: int,
-        parent_tmp_dir: str,
-        use_index_as_realisation: bool,
-        grid_epc: str,
-        grid_uuid: Union[UUID, str],
-        surface_epc: str,
-        surface_uuid: Union[UUID, str],
-        name: str,
-        title: Optional[str] = None,
-        agitate: bool = False,
-        random_agitation: bool = False,
-        feature_type: str = 'fault',
-        trimmed: bool = False,
-        is_curtain = False,
-        extend_fault_representation: bool = False,
-        flange_inner_ring = False,
-        saucer_parameter = None,
-        retriangulate: bool = False,
-        related_uuid = None,
-        progress_fn: Optional[Callable] = None,
-        extra_metadata = None,
-        return_properties: Optional[List[str]] = None,
-        raw_bisector: bool = False,
-        use_pack: bool = False,
-        flange_radius = None) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
+def find_faces_to_represent_surface_regular_wrapper(index: int,
+                                                    parent_tmp_dir: str,
+                                                    use_index_as_realisation: bool,
+                                                    grid_epc: str,
+                                                    grid_uuid: Union[UUID, str],
+                                                    surface_epc: str,
+                                                    surface_uuid: Union[UUID, str],
+                                                    name: str,
+                                                    title: Optional[str] = None,
+                                                    agitate: bool = False,
+                                                    random_agitation: bool = False,
+                                                    feature_type: str = 'fault',
+                                                    trimmed: bool = False,
+                                                    is_curtain = False,
+                                                    extend_fault_representation: bool = False,
+                                                    flange_inner_ring = False,
+                                                    saucer_parameter = None,
+                                                    retriangulate: bool = False,
+                                                    related_uuid = None,
+                                                    progress_fn: Optional[Callable] = None,
+                                                    extra_metadata = None,
+                                                    return_properties: Optional[List[str]] = None,
+                                                    raw_bisector: bool = False,
+                                                    use_pack: bool = False,
+                                                    flange_radius = None,
+                                                    reorient = True,
+                                                    n_threads = 20) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     arguments:
@@ -92,10 +93,13 @@ def find_faces_to_represent_surface_regular_wrapper(
            the returned dictionary has the passed strings as keys and numpy arrays as values
         raw_bisector (bool, default False): if True and grid bisector is requested then it is left in a raw
            form without assessing which side is shallower (True values indicate same side as origin cell)
-        use_pack (bool, default False): if True, boolean properties will be stored in numpy packed format,
-           which will only be readable by resqpy based applications
+        use_pack (bool, default False): if True, boolean properties will be generated and stored in numpy
+           packed format, which will only be readable by resqpy based applications
         flange_radius (float, optional): the radial distance to use for outer flange extension points; if None,
            a large value will be calculated from the grid size; units are xy units of grid crs
+        reorient (bool, default True):  if True, the points are reoriented to minimise the
+              z range prior to retriangulation (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+        n_threads (int, default 20): the number of parallel threads to use in numba points in triangles function
 
     returns:
         Tuple containing:
@@ -175,7 +179,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         surf = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         flange_bool = surf.set_from_point_set(pset,
                                               convexity_parameter = 2.0,
-                                              reorient = True,
+                                              reorient = reorient,
                                               extend_with_flange = extend_fault_representation,
                                               flange_inner_ring = flange_inner_ring,
                                               saucer_parameter = saucer_parameter,
@@ -206,15 +210,23 @@ def find_faces_to_represent_surface_regular_wrapper(
         pset = rqs.PointSet(model, points_array = p, crs_uuid = grid.crs.uuid, title = surf_title)
         if extend_fault_representation and not surf_title.endswith('extended'):
             surf_title += ' extended'
-        surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
-        flange_bool = surface.set_from_point_set(pset,
-                                                 convexity_parameter = 2.0,
-                                                 reorient = True,
-                                                 extend_with_flange = extend_fault_representation,
-                                                 flange_inner_ring = flange_inner_ring,
-                                                 saucer_parameter = saucer_parameter,
-                                                 flange_radial_distance = flange_radius,
-                                                 make_clockwise = False)
+        if saucer_parameter is not None and not reorient:
+            surface, flange_bool = surface.extend_surface_with_flange(convexity_parameter = 2.0,
+                                                                      reorient = reorient,
+                                                                      saucer_parameter = saucer_parameter,
+                                                                      flange_radial_distance = flange_radius,
+                                                                      make_clockwise = False)
+            surface.title = surf_title
+        else:
+            surface = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
+            flange_bool = surface.set_from_point_set(pset,
+                                                     convexity_parameter = 2.0,
+                                                     reorient = reorient,
+                                                     extend_with_flange = extend_fault_representation,
+                                                     flange_inner_ring = flange_inner_ring,
+                                                     saucer_parameter = saucer_parameter,
+                                                     flange_radial_distance = flange_radius,
+                                                     make_clockwise = False)
         del pset
         extended = extend_fault_representation
         retriangulated = True
@@ -235,7 +247,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            property_kind = 'flange bool',
                                            find_local_property_kind = True,
                                            indexable_element = 'faces',
-                                           discrete = True)
+                                           discrete = True,
+                                           dtype = np.uint8)
         uuid_list.append(flange_p.uuid)
     uuid_list.append(surface_uuid)
 
@@ -249,7 +262,9 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                      is_curtain,
                                                                      progress_fn,
                                                                      return_properties,
-                                                                     raw_bisector = raw_bisector)
+                                                                     raw_bisector = raw_bisector,
+                                                                     n_batches = n_threads,
+                                                                     packed_bisectors = use_pack)
 
     success = False
 
@@ -339,17 +354,17 @@ def find_faces_to_represent_surface_regular_wrapper(
                 if grid_pc is None:
                     grid_pc = rqp.PropertyCollection()
                     grid_pc.set_support(support = grid)
-                grid_pc.add_cached_array_to_imported_list(
-                    array,
-                    f"from find_faces function for {surface.title}",
-                    f'{surface.title} {p_name}',
-                    discrete = True,
-                    property_kind = "grid bisector",
-                    facet_type = 'direction',
-                    facet = 'raw' if raw_bisector else ('vertical' if is_curtain else 'sloping'),
-                    realization = realisation,
-                    indexable_element = "columns" if is_curtain else "cells",
-                )
+                grid_pc.add_cached_array_to_imported_list(array,
+                                                          f"from find_faces function for {surface.title}",
+                                                          f'{surface.title} {p_name}',
+                                                          discrete = True,
+                                                          property_kind = "grid bisector",
+                                                          facet_type = 'direction',
+                                                          facet = 'raw' if raw_bisector else
+                                                          ('vertical' if is_curtain else 'sloping'),
+                                                          realization = realisation,
+                                                          indexable_element = "columns" if is_curtain else "cells",
+                                                          pre_packed = False if is_curtain else use_pack)
             elif p_name == 'grid shadow':
                 if grid_pc is None:
                     grid_pc = rqp.PropertyCollection()

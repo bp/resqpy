@@ -106,7 +106,11 @@ class WellboreFrame(BaseResqpy):
             assert self.node_mds is not None and self.node_mds.ndim == 1
 
     def _load_from_xml(self):
-        """Loads the wellbore frame object from an xml node (and associated hdf5 data)."""
+        """Loads the wellbore frame object from an xml node.
+
+        Also loads the associated data either from an hdf5 file or generated from a
+        lattice array definition.
+        """
 
         # NB: node is the root level xml node, not a node in the md list!
 
@@ -126,7 +130,11 @@ class WellboreFrame(BaseResqpy):
 
         mds_node = rqet.find_tag(node, 'NodeMd')
         assert mds_node is not None, 'wellbore frame measured depths hdf5 reference not found in xml'
-        rqwu.load_hdf5_array(self, mds_node, 'node_mds')
+        if rqet.node_type(mds_node) == "DoubleLatticeArray":
+            rqwu.load_lattice_array(self, mds_node, "node_mds", self.trajectory)
+            self.node_count = self.node_mds.size
+        else:
+            rqwu.load_hdf5_array(self, mds_node, "node_mds")
 
         assert self.node_mds is not None and self.node_mds.ndim == 1 and self.node_mds.size == self.node_count
 

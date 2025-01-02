@@ -120,6 +120,7 @@ class TriMesh(rqs.Mesh):
                 self.origin = None
             else:
                 self.origin = origin
+        self.t_type = np.int32 if self.is_big() else np.int64
 
     @classmethod
     def from_tri_mesh_and_z_values(cls,
@@ -241,8 +242,8 @@ class TriMesh(rqs.Mesh):
         fy[am] = 1.0 - fy[am]
         j[mask] = -1
         i[mask] = -1
-        fx[mask] = np.NaN
-        fy[mask] = np.NaN
+        fx[mask] = np.nan
+        fy[mask] = np.nan
 
         return (np.stack((j, i), axis = -1), np.stack((1.0 - (fx + fy), fx, fy), axis = -1))
 
@@ -302,7 +303,7 @@ class TriMesh(rqs.Mesh):
     def tri_nodes_for_tji(self, tji):
         """Return mesh node indices, shape (3, 2), for triangle tji (tj, ti)."""
         j, i = tji
-        tn = np.zeros((3, 2), dtype = int)
+        tn = np.zeros((3, 2), dtype = self.t_type)
         j_odd = j % 2
         i2, i_odd = divmod(i, 2)
         assert 0 <= j < self.nj - 1 and 0 <= i < 2 * (self.ni - 1)
@@ -325,7 +326,7 @@ class TriMesh(rqs.Mesh):
         j = tji_array[..., 0]
         i = tji_array[..., 1]
         tn_shape = tuple(list(tji_array.shape[:-1]) + [3, 2])
-        tn = np.zeros(tn_shape, dtype = int)
+        tn = np.zeros(tn_shape, dtype = self.t_type)
         j_odd = j % 2
         i2, i_odd = np.divmod(i, 2)
         mask = np.logical_or(np.logical_or(j < 0, j >= self.nj - 1), np.logical_or(i < 0, i >= 2 * (self.ni - 1)))
@@ -342,9 +343,9 @@ class TriMesh(rqs.Mesh):
 
     def all_tri_nodes(self):
         """Returns array of mesh node indices for all triangles, shape (nj - 1, 2 * (ni - 1), 3, 2)."""
-        tna = np.zeros((self.nj - 1, 2 * (self.ni - 1), 3, 2), dtype = int)
+        tna = np.zeros((self.nj - 1, 2 * (self.ni - 1), 3, 2), dtype = self.t_type)
         # set mesh j indices
-        tna[:, :, 0, 0] = np.expand_dims(np.arange(self.nj - 1, dtype = int), axis = -1)
+        tna[:, :, 0, 0] = np.expand_dims(np.arange(self.nj - 1, dtype = self.t_type), axis = -1)
         tna[1::2, ::2, 0, 0] += 1
         tna[::2, 1::2, 0, 0] += 1
         tna[:, :, 1, 0] = tna[:, :, 0, 0]
@@ -352,7 +353,7 @@ class TriMesh(rqs.Mesh):
         tna[1::2, ::2, 2, 0] -= 2
         tna[::2, 1::2, 2, 0] -= 2
         # set mesh i indices
-        tna[:, ::2, 0, 1] = np.expand_dims(np.arange(self.ni - 1, dtype = int), axis = 0)
+        tna[:, ::2, 0, 1] = np.expand_dims(np.arange(self.ni - 1, dtype = self.t_type), axis = 0)
         tna[:, 1::2, 0, 1] = tna[:, ::2, 0, 1]
         tna[:, :, 1, 1] = tna[:, :, 0, 1] + 1
         tna[:, :, 2, 1] = tna[:, :, 0, 1]
@@ -362,7 +363,7 @@ class TriMesh(rqs.Mesh):
     def triangles_and_points(self):
         """Returns node indices and xyz points in form suitable for a Surface (triangulated set)."""
         tna = self.all_tri_nodes()
-        composite_ji = tna[:, :, :, 0] * self.ni + tna[:, :, :, 1]
+        composite_ji = (tna[:, :, :, 0] * self.ni + tna[:, :, :, 1]).astype(self.t_type)
         return (composite_ji.reshape((-1, 3)), self.full_array_ref().reshape((-1, 3)))
 
     def tji_for_triangle_index(self, ti):
@@ -410,7 +411,7 @@ class TriMesh(rqs.Mesh):
                                                          tp)
         tn_a[:, 1] *= 2  # node j
 
-        return np.concatenate((tn_a, tn_b), axis = 0)
+        return np.concatenate((tn_a, tn_b), axis = 0).astype(self.t_type)
 
     def edge_zero_crossings(self, z_values = None):
         """Returns numpy list of points from edges where z values cross zero (or given value).

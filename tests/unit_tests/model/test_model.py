@@ -231,6 +231,10 @@ def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_propertie
     for prop, hdf5_path in zip(prop_list, path_list):
         root_node = prop.create_xml(find_local_property_kind = False)
         assert root_node is not None
+        source_em = rqet.find_metadata_item_node_in_xml(root_node, 'source')
+        assert source_em is not None
+        assert rqet.find_tag_text(source_em, 'Name') == 'source'
+        assert rqet.find_tag_text(source_em, 'Value') == 'test data'
         # override the hdf5 internal path in the xml tree
         path_node = rqet.find_nested_tags(root_node, ['PatchOfValues', 'Values', 'Values', 'PathInHdfFile'])
         assert path_node is not None
@@ -737,6 +741,31 @@ def test_h5_array_element(example_model_with_properties):
     assert zone == 2
 
 
+def test_h5_overwrite_array(example_model_with_properties):
+    model = example_model_with_properties
+    zone_root = model.root(obj_type = 'DiscreteProperty', title = 'Zone')
+    assert zone_root is not None
+    key_pair = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(zone_root, ['PatchOfValues', 'Values']))
+    assert key_pair is not None and all([x is not None for x in key_pair])
+    # check full array is expected size and shape
+    shape, dtype = model.h5_array_shape_and_type(key_pair)
+    assert shape == (3, 5, 5)
+    newzone = np.arange(3 * 5 * 5, dtype = int).reshape(shape)
+    model.h5_overwrite_array(key_pair, newzone)
+    model = rq.Model(model.epc_file)
+    zone_root = model.root(obj_type = 'DiscreteProperty', title = 'Zone')
+    assert zone_root is not None
+    key_pair = model.h5_uuid_and_path_for_node(rqet.find_nested_tags(zone_root, ['PatchOfValues', 'Values']))
+    model.h5_array_element(key_pair, cache_array = True, object = model, array_attribute = 'zone_reload')
+    assert model.zone_reload.shape == (3, 5, 5)
+    assert np.all(model.zone_reload == np.arange(3 * 5 * 5, dtype = int).reshape(shape))
+    slice_tuple = (slice(1), slice(2, 5), slice(1, 3))
+    model.h5_overwrite_array_slice(key_pair, slice_tuple, 0)
+    model.h5_array_element(key_pair, cache_array = True, object = model, array_attribute = 'zone_reloaded_again')
+    assert np.count_nonzero(model.zone_reloaded_again == model.zone_reload) == 69
+    assert np.min(model.zone_reloaded_again) == 0
+
+
 def add_grids(model, crs, add_lengths):
     grid_a = grr.RegularGrid(model,
                              extent_kji = (2, 2, 2),
@@ -908,3 +937,48 @@ def test_untitled(tmp_path):
     assert rqet.find_nested_tags_text(crs.root, ['Citation', 'Title']) == 'untitled'
     mdd = rqw.MdDatum(model, uuid = mdd.uuid)
     assert rqet.find_nested_tags_text(mdd.root, ['LocalCrs', 'Title']) == 'untitled'
+
+
+def test_set_and_get_source_info_xml(tmp_path):
+    epc = os.path.join(tmp_path, 'test_source.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    crs_part = crs.part
+    assert crs_part is not None
+    assert model.source_for_part(crs_part) is None
+    model.set_source_for_part(crs_part, 'resqpy unit tests')
+    assert model.source_for_part(crs_part) == 'resqpy unit tests'
+    model.set_modified()
+    model.store_epc()
+    model = rq.Model(epc)
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    crs_part = crs.part
+    assert model.source_for_part(crs_part) == 'resqpy unit tests'
+    model.set_source_for_part(crs_part, 'updated source info')
+    assert model.source_for_part(crs_part) == 'updated source info'
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert len(crs.extra_metadata) == 1
+    assert model.source_for_part(crs.part) == 'updated source info'
+
+
+def test_set_and_get_source_info_obj(tmp_path):
+    epc = os.path.join(tmp_path, 'test_source_obj.epc')
+    model = rq.new_model(epc)
+    crs = rqc.Crs(model)
+    crs.create_xml()
+    assert model.source_for_obj(crs) is None
+    model.set_source_for_obj(crs, 'resqpy source test')
+    assert model.source_for_part(crs.part) == 'resqpy source test'
+    assert model.source_for_obj(crs) == 'resqpy source test'
+    assert crs.extra_metadata['source'] == 'resqpy source test'
+    model.set_modified()
+    model.store_epc()
+    model = rq.Model(epc)
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert model.source_for_obj(crs) == 'resqpy source test'
+    model.set_source_for_obj(crs, 'updated source info')
+    assert model.source_for_obj(crs) == 'updated source info'
+    crs = rqc.Crs(model, uuid = crs.uuid)
+    assert len(crs.extra_metadata) == 1
+    assert model.source_for_obj(crs) == 'updated source info'

@@ -423,15 +423,15 @@ def combined_tr_mult_from_gcs_mults(model,
 
         if grid is None:  # first gcs: grab grid and initialise combined tr mult arrays
             grid = gcs.grid_list[0]
-            combo_trm_k = np.full((grid.nk + 1, grid.nj, grid.ni), np.NaN, dtype = float)
-            combo_trm_j = np.full((grid.nk, grid.nj + 1, grid.ni), np.NaN, dtype = float)
-            combo_trm_i = np.full((grid.nk, grid.nj, grid.ni + 1), np.NaN, dtype = float)
+            combo_trm_k = np.full((grid.nk + 1, grid.nj, grid.ni), np.nan, dtype = float)
+            combo_trm_j = np.full((grid.nk, grid.nj + 1, grid.ni), np.nan, dtype = float)
+            combo_trm_i = np.full((grid.nk, grid.nj, grid.ni + 1), np.nan, dtype = float)
         else:  # check same grid is referenced by this gcs
             assert bu.matching_uuids(gcs.grid_list[0].uuid, grid.uuid)
 
         # get gcs tr mult data in form of triplet of grid faces arrays
         gcs_trm_k, gcs_trm_j, gcs_trm_i = gcs.grid_face_arrays(tr_mult_uuid,
-                                                               default_value = np.NaN,
+                                                               default_value = np.nan,
                                                                active_only = active_only,
                                                                lazy = not sided,
                                                                baffle_uuid = baffle_uuid)
@@ -439,29 +439,29 @@ def combined_tr_mult_from_gcs_mults(model,
 
         # merge in each of the three directional face arrays for this gcs with combined arrays
         for (combo_trm, gcs_trm) in [(combo_trm_k, gcs_trm_k), (combo_trm_j, gcs_trm_j), (combo_trm_i, gcs_trm_i)]:
-            mask = np.logical_not(np.isnan(gcs_trm))  # true where this tr mult is present
+            mask = np.logical_not(np.isnan(gcs_trm)).astype(bool)  # true where this tr mult is present
             clash_mask = np.logical_and(mask, np.logical_not(np.isnan(combo_trm)))  # true where combined value clashes
             if np.any(clash_mask):
                 if merge_mode == 'exception':
                     raise ValueError('gcs transmissibility multiplier conflict when merging')
                 if merge_mode == 'minimum':
-                    combo_trm[:] = np.where(clash_mask, np.minimum(combo_trm, gcs_trm), combo_trm)
+                    combo_trm[clash_mask] = np.minimum(combo_trm, gcs_trm)[clash_mask]
                 elif merge_mode == 'maximum':
-                    combo_trm[:] = np.where(clash_mask, np.maximum(combo_trm, gcs_trm), combo_trm)
+                    combo_trm[clash_mask] = np.maximum(combo_trm, gcs_trm)[clash_mask]
                 elif merge_mode == 'multiply':
-                    combo_trm[:] = np.where(clash_mask, combo_trm * gcs_trm, combo_trm)
+                    combo_trm[clash_mask] = (combo_trm * gcs_trm)[clash_mask]
                 else:
                     raise Exception(f'code failure with unrecognised merge mode {merge_mode}')
                 mask = np.logical_and(mask,
                                       np.logical_not(clash_mask))  # remove clash faces from mask (already handled)
             if np.any(mask):
-                combo_trm[:] = np.where(mask, gcs_trm, combo_trm)  # update combined array from individual array
+                combo_trm[mask] = gcs_trm[mask]  # update combined array from individual array
 
     # for each of the 3 combined tr mult arrays, replace unused values with the default fill value
     # also check that any set values are non-negative
     for combo_trm in (combo_trm_k, combo_trm_j, combo_trm_i):
         if fill_value is not None and not np.isnan(fill_value):
-            combo_trm[:] = np.where(np.isnan(combo_trm), fill_value, combo_trm)
+            combo_trm[:][np.isnan(combo_trm).astype(bool)] = fill_value
             assert np.all(combo_trm >= 0.0)
         else:
             assert np.all(np.logical_or(np.isnan(combo_trm), combo_trm >= 0.0))
