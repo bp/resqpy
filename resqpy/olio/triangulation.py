@@ -25,7 +25,7 @@ import resqpy.olio.vector_utilities as vec
 
 def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Calculates the Delaunay triangulation for an array of points and the convex hull indices.
-    
+
     arguments:
         points (np.ndarray): coordinates of the points to triangulate; array has shape
             (npoints, ndim)
@@ -871,6 +871,7 @@ def surrounding_xy_ring(p,
        numpy float array of shape (N, 3) being xyz points in surrounding ring(s); z is set constant to
        mean value of z in p (optionally adjussted based on saucer_angle);
        N is count if inner_ring is False, 3 * count if True
+       radius used for ring of additional points
     """
 
     def make_ring(count, centre, radius, saucer_angle):
@@ -898,8 +899,8 @@ def surrounding_xy_ring(p,
         inner_radius = p_radius * 1.1
         assert radius > inner_radius
         in_ring = make_ring(2 * count, centre, inner_radius, saucer_angle)
-        return np.concatenate((in_ring, ring), axis = 0)
-    return ring
+        return np.concatenate((in_ring, ring), axis = 0), radius
+    return ring, radius
 
 
 def edges(t):

@@ -345,13 +345,13 @@ def test_surrounding_xy_ring():
                  dtype = float)
     P_radius = maths.sqrt(2 * 23.0 * 23.0)
     for n in (5, 17):
-        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False)
+        ring, _ = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False)
         assert ring.shape == (n, 3)
         assert_array_almost_equal(ring[:, 2], 457.0)
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
         assert_array_almost_equal(r, 10.0 * P_radius)
     for n in (6, 11):
-        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 2.0, radial_distance = 234.0, inner_ring = True)
+        ring, _ = tri.surrounding_xy_ring(p, count = n, radial_factor = 2.0, radial_distance = 234.0, inner_ring = True)
         assert ring.shape == (3 * n, 3)
         assert_array_almost_equal(ring[:, 2], 457.0)
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
@@ -364,24 +364,24 @@ def test_surrounding_xy_ring_with_simple_saucer():
                  dtype = float)
     P_radius = maths.sqrt(2 * 23.0 * 23.0)
     for n in (5, 17):
-        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False, saucer_angle = 45.0)
+        ring, _ = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False, saucer_angle = 45.0)
         assert ring.shape == (n, 3)
         assert_array_almost_equal(ring[:, 2], 457.0 - 10.0 * P_radius)
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
         assert_array_almost_equal(r, 10.0 * P_radius)
     for n in (5, 17):
-        ring = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False, saucer_angle = -45.0)
+        ring, _ = tri.surrounding_xy_ring(p, count = n, radial_factor = 10.0, inner_ring = False, saucer_angle = -45.0)
         assert ring.shape == (n, 3)
         assert_array_almost_equal(ring[:, 2], 457.0 + 10.0 * P_radius)
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
         assert_array_almost_equal(r, 10.0 * P_radius)
     for n in (6, 11):
-        ring = tri.surrounding_xy_ring(p,
-                                       count = n,
-                                       radial_factor = 2.0,
-                                       radial_distance = 234.0,
-                                       inner_ring = True,
-                                       saucer_angle = 30.0)
+        ring, _ = tri.surrounding_xy_ring(p,
+                                          count = n,
+                                          radial_factor = 2.0,
+                                          radial_distance = 234.0,
+                                          inner_ring = True,
+                                          saucer_angle = 30.0)
         tan_theta = maths.tan(np.radians(30.0))
         assert ring.shape == (3 * n, 3)
         r = np.sqrt(ring[:, 0] * ring[:, 0] + ring[:, 1] * ring[:, 1])
