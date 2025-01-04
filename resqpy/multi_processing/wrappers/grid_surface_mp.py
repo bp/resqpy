@@ -4,6 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+import os
 import numpy as np
 import uuid
 from typing import Tuple, Union, List, Optional, Callable
@@ -123,18 +124,15 @@ def find_faces_to_represent_surface_regular_wrapper(
             - uuid_list (List[str]): list of UUIDs of relevant objects
 
     notes:
-        Use this function as argument to the multiprocessing function; it will create a new model that is saved
-        in a temporary epc file and returns the required values, which are used in the multiprocessing function to
-        recombine all the objects into a single epc file;
-        the saucer_parameter is interpreted in one of two ways: (1) +ve fractoinal values between zero and one
-        are the fractional distance from the centre of the points to its rim at which to sample the surface for
-        extrapolation and thereby modify the recumbent z of flange points; 0 will usually give shallower and
-        smoother saucer; larger values (must be less than one) will lead to stronger and more erratic saucer
-        shape in flange; (2) other values between -90.0 and 90.0 are interpreted as an angle to apply out of
-        the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
-        +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
-        the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
-        to the average plane of the original points; patchwork is not compatible with re-triangulation
+        - use this function as argument to the multiprocessing function; it will create a new model that is saved
+          in a temporary epc file and returns the required values, which are used in the multiprocessing function to
+          recombine all the objects into a single epc file
+        - the saucer_parameter is between -90.0 and 90.0 and is interpreted as an angle to apply out of
+          the plane of the original points, to give a simple saucer shape;
+          +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
+          the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
+          to the average plane of the original points
+        - patchwork is not compatible with re-triangulation
     """
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
@@ -170,9 +168,11 @@ def find_faces_to_represent_surface_regular_wrapper(
     assert repr_type in ['TriangulatedSetRepresentation', 'PointSetRepresentation']
     assert repr_type == 'TriangulatedSetRepresentation' or not patchwork,  \
         'patchwork only implemented for triangulated set surfaces'
+
     extended = False
     retriangulated = False
     flange_bool = None
+
     if repr_type == 'PointSetRepresentation':
         # trim pointset to grid xyz box
         pset = rqs.PointSet(model, uuid = surface_uuid)
@@ -264,7 +264,9 @@ def find_faces_to_represent_surface_regular_wrapper(
                                            discrete = True,
                                            dtype = np.uint8)
         uuid_list.append(flange_p.uuid)
-    uuid_list.append(surface_uuid)
+
+    if not patchwork:
+        uuid_list.append(surface_uuid)
 
     patch_indices = None
     if patchwork:  # generate a patch indices array over grid cells based on supplied patching properties
