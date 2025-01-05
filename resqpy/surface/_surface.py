@@ -474,7 +474,8 @@ class Surface(rqsb.BaseSurface):
         notes:
            this method is usually used to change the coordinate system for a temporary resqpy object;
            to add as a new part, call write_hdf5() and create_xml() methods;
-           patches are maintained by this method
+           patches are maintained by this method;
+           normal vector extra metadata item is updated if present; rotation matrix is removed
         """
 
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
@@ -489,6 +490,18 @@ class Surface(rqsb.BaseSurface):
             patch.crs_uuid = self.crs_uuid
         self.triangles = None  # clear cached arrays for surface
         self.points = None
+        if self.extra_metadata.pop('rotation matrix', None) is not None:
+            log.warning(f'discarding rotation matrix extra metadata during crs change of: {self.title}')
+        self._load_normal_vector_from_extra_metadata()
+        if self.normal_vector is not None:
+            if required_crs.z_inc_down != old_crs.z_inc_down:
+                self.normal_vector[2] = -self.normal_vector[2]
+            theta = (wam.convert(required_crs.rotation, required_crs.rotation_units, 'dega') -
+                     wam.convert(old_crs.rotation, old_crs.rotation_units, 'dega'))
+            if not maths.isclose(theta, 0.0):
+                self.normal_vector = vec.rotate_vector(vec.rotation_matrix_3d_axial(2, theta), self.normal_vector)
+            self.extra_metadata['normal vector'] = str(
+                f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}')
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
         assert self.root is None
 
@@ -683,7 +696,8 @@ class Surface(rqsb.BaseSurface):
                            flange_radial_distance = None,
                            flange_inner_ring = False,
                            saucer_parameter = None,
-                           make_clockwise = False):
+                           make_clockwise = False,
+                           normal_vector = None):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -692,9 +706,10 @@ class Surface(rqsb.BaseSurface):
               convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
               chance of even a slight concavity
            reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
-              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation; if a
+              normal_vector is supplied, the reorientation is based on that instead of minimising z
            reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
-              limited to this angle in degrees
+              limited to this angle in degrees; ignored if normal_vector is specified
            extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
               points before the triangulation, effectively extending the surface with a flange
            flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
@@ -712,6 +727,8 @@ class Surface(rqsb.BaseSurface):
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
+           normal_vector (triple float, optional): if present and reorienting, the normal vector to use for reorientation;
+              if None, the reorientation is made so as to minimise the z range
 
         returns:
            if extend_with_flange is True, numpy bool array with a value per triangle indicating flange triangles;
@@ -726,7 +743,8 @@ class Surface(rqsb.BaseSurface):
            the saucer_parameter must be between -90.0 and 90.0, and is interpreted as an angle to apply out of
            the plane of the original points, to give a simple saucer shape; +ve angles result in the shift being in 
            the direction of the -ve z hemisphere; -ve angles result in the shift being in the +ve z hemisphere; in 
-           either case the direction of the shift is perpendicular to the average plane of the original points
+           either case the direction of the shift is perpendicular to the average plane of the original points;
+           normal_vector, if supplied, should be in the crs of the point set
         """
 
         simple_saucer_angle = None
@@ -751,8 +769,24 @@ class Surface(rqsb.BaseSurface):
         else:
             unit_adjusted_p = p.copy()
             wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+            # note: normal vector should already be for a crs with common xy  & z units
         # reorient the points to the fault normal vector
-        p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
+        if normal_vector is None:
+            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p,
+                                                                             max_dip = reorient_max_dip)
+        else:
+            assert len(normal_vector) == 3
+            self.normal_vector = np.array(normal_vector, dtype = np.float64)
+            if self.normal_vector[2] < 0.0:
+                self.normal_vector = -self.normal_vector
+            incl = vec.inclination(normal_vector)
+            if maths.isclose(incl, 0.0):
+                reorient_matrix = vec.no_rotation_matrix()
+                p_xy = unit_adjusted_p
+            else:
+                azi = vec.azimuth(normal_vector)
+                reorient_matrix = vec.tilt_3d_matrix(azi, incl)
+                p_xy = vec.rotate_array(reorient_matrix, unit_adjusted_p)
         if extend_with_flange:
             flange_points, radius = triangulate.surrounding_xy_ring(p_xy,
                                                                     count = flange_point_count,
@@ -810,7 +844,8 @@ class Surface(rqsb.BaseSurface):
                                    flange_inner_ring = False,
                                    saucer_parameter = None,
                                    make_clockwise = False,
-                                   retriangulate = False):
+                                   retriangulate = False,
+                                   normal_vector = None):
         """Returns a new Surface object where the original surface has been extended with a flange with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -818,9 +853,10 @@ class Surface(rqsb.BaseSurface):
                 convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
                 chance of even a slight concavity
             reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
-                z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+                z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation; if
+                normal_vector is supplied that is used to determine the reorientation instead of minimising z
             reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
-                limited to this angle in degrees
+                limited to this angle in degrees; ignored if normal_vector is specified
             flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
                 retriangulate is False
             flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
@@ -841,6 +877,8 @@ class Surface(rqsb.BaseSurface):
                 the existing points. If False, the surface will be generated by adding flange points and triangles directly
                 from the original surface edges, and will no retriangulate the input surface. If False the surface must not
                 contain tears
+            normal_vector (triple float, optional): if present and reorienting, the normal vector to use for reorientation;
+                if None, the reorientation is made so as to minimise the z range
 
         returns:
             a new surface, and a boolean array of length N, where N is the number of triangles on the surface. This boolean
@@ -860,7 +898,8 @@ class Surface(rqsb.BaseSurface):
             the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
             +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
             the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
-            to the average plane of the original points
+            to the average plane of the original points;
+            normal_vector, if supplied, should be in the crs of this surface
         """
         prev_t, prev_p = self.triangles_and_points()
         point_set = rqs.PointSet(self.model, crs_uuid = self.crs_uuid, title = self.title, points_array = prev_p)
@@ -869,7 +908,7 @@ class Surface(rqsb.BaseSurface):
             return out_surf, out_surf.set_from_point_set(point_set, convexity_parameter, reorient, reorient_max_dip,
                                                          True, flange_point_count, flange_radial_factor,
                                                          flange_radial_distance, flange_inner_ring, saucer_parameter,
-                                                         make_clockwise)
+                                                         make_clockwise, normal_vector)
         else:
             simple_saucer_angle = None
             if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
@@ -1019,9 +1058,10 @@ class Surface(rqsb.BaseSurface):
         notes:
            the result becomes more meaningless the less planar the surface is;
            even for a parfectly planar surface, the result is approximate;
-           true normal vector is found when xy & z units differ
+           true normal vector is found when xy & z units differ, ie. for consistent units
         """
 
+        self._load_normal_vector_from_extra_metadata()
         if self.normal_vector is None:
             p = self.unit_adjusted_points()
             _, self.normal_vector, _ = triangulate.reorient(p)
@@ -1529,7 +1569,8 @@ class Surface(rqsb.BaseSurface):
             self.title = 'surface'
 
         em = None
-        if self.normal_vector is not None:
+        if self.normal_vector is not None and (self.extra_metadata is None or
+                                               'normal vector' not in self.extra_metadata):
             assert len(self.normal_vector) == 3
             em = {'normal vector': f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}'}
 

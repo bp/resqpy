@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 import os
 import numpy as np
 import uuid
+import ast
 from typing import Tuple, Union, List, Optional, Callable
 from pathlib import Path
 from uuid import UUID
@@ -35,10 +36,10 @@ def find_faces_to_represent_surface_regular_wrapper(
         trimmed: bool = False,
         is_curtain = False,
         extend_fault_representation: bool = False,
-        flange_inner_ring = False,
-        saucer_parameter = None,
+        flange_inner_ring: bool = False,
+        saucer_parameter: Optional[float] = None,
         retriangulate: bool = False,
-        related_uuid = None,
+        related_uuid: Optional[Union[UUID, str]] = None,
         progress_fn: Optional[Callable] = None,
         extra_metadata = None,
         return_properties: Optional[List[str]] = None,
@@ -49,8 +50,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         n_threads: int = 20,
         patchwork: bool = False,
         grid_patching_property_uuid: Optional[Union[UUID, str]] = None,
-        surface_patching_property_uuid: Optional[Union[UUID,
-                                                       str]] = None) -> Tuple[int, bool, str, List[Union[UUID, str]]]:
+        surface_patching_property_uuid: Optional[Union[UUID, str]] = None) ->  \
+            Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
     arguments:
@@ -216,6 +217,9 @@ def find_faces_to_represent_surface_regular_wrapper(
     surf_title = surface.title
     assert surf_title
     surface.change_crs(grid.crs)
+    normal_vector = None
+    if reorient:
+        normal_vector = surface.normal()
     if patchwork:  # disable trimming as whole patches could be trimmed out, changing the patch indexing from that expected
         trimmed = True
     if not trimmed and surface.triangle_count() > 100:
@@ -224,6 +228,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         trimmed_surf = rqs.Surface(model, crs_uuid = grid.crs.uuid, title = surf_title)
         # trimmed_surf.set_to_trimmed_surface(surf, xyz_box = xyz_box, xy_polygon = parent_seg.polygon)
         trimmed_surf.set_to_trimmed_surface(surface, xyz_box = grid.xyz_box(local = True))
+        trimmed_surf.extra_metadata = surface.extra_metadata
         surface = trimmed_surf
         trimmed = True
     if (extend_fault_representation and not extended) or (retriangulate and not retriangulated):
@@ -240,7 +245,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                  flange_inner_ring = flange_inner_ring,
                                                  saucer_parameter = saucer_parameter,
                                                  flange_radial_distance = flange_radius,
-                                                 make_clockwise = False)
+                                                 make_clockwise = False,
+                                                 normal_vector = normal_vector)
         del pset
         extended = extend_fault_representation
         retriangulated = True
