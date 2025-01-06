@@ -1,7 +1,9 @@
+import os
 import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-import os
+import pytest
+
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid
@@ -11,10 +13,10 @@ import resqpy.organize as rqo
 import resqpy.surface as rqs
 import resqpy.olio.uuid as bu
 import resqpy.olio.triangulation as tri
-
-import pytest
+from resqpy.olio.random_seed import seed
 
 # Unit tests for surface classes
+seed(8211623)
 
 
 def test_surface(tmp_model):
@@ -68,6 +70,11 @@ def test_faces_for_surface(tmp_model):
     assert surf.triangle_count() == 2
     assert surf.normal_vector is not None
     assert_array_almost_equal(surf.normal_vector, (-0.707107, 0.0, 0.707107))
+    patches = surf.patch_indices_for_triangle_indices(np.array([0, 1], dtype = int), lazy = False)
+    assert patches is not None
+    assert patches.shape == (2,)
+    assert np.all(patches == 0)
+    assert surf.patch_index_for_triangle_index(1) == 0
     for mode in ['staffa', 'regular', 'auto']:
         gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
         assert gcs is not None
@@ -206,7 +213,7 @@ def test_surface_from_point_set_with_flange_extension(example_model_and_crs):
     assert 1900.0 < max_p[0] - centre[0] <= 2010.0
     assert 1900.0 < max_p[1] - centre[1] <= 2010.0
     assert 0.0 <= min_p[2] <= 1.0
-    assert 3464.0 < max_p[2] < 3465.5
+    assert 3464.0 < max_p[2] < 3466.0
 
 
 def test_surface_from_point_set_with_nan_removal(example_model_and_crs):

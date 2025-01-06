@@ -2100,6 +2100,11 @@ class Model():
         if other_model is self:
             return part
         assert part is not None
+        # check whether already existing in this model
+        if part in self.parts_forest.keys():
+            return part
+        if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
+            return None
         if realization is not None:
             assert isinstance(realization, int) and realization >= 0
         if force:
@@ -2109,13 +2114,6 @@ class Model():
         if not self_h5_file_name:
             self_h5_file_name = self.h5_file_name(file_must_exist = False)
         hdf5_copy_needed = not os.path.samefile(self_h5_file_name, other_h5_file_name)
-
-        # check whether already existing in this model
-        if part in self.parts_forest.keys():
-            return part
-
-        if m_c._type_of_part(other_model, part) == 'obj_EpcExternalPartReference':
-            return None
 
         return m_f._copy_part_from_other_model(self,
                                                other_model,

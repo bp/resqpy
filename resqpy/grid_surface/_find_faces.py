@@ -880,7 +880,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                       return_properties = None,
                                                       raw_bisector = False,
                                                       n_batches = 20,
-                                                      packed_bisectors = False):
+                                                      packed_bisectors = False,
+                                                      patch_indices = None):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     argumants:
@@ -916,11 +917,14 @@ def find_faces_to_represent_surface_regular_optimised(grid,
            threading allows some parallelism between the batches)
         packed_bisectors (bool, default False): if True and return properties include 'grid bisector' then
            non curtain bisectors are returned in packed form
+        patch_indices (numpy int array, optional): if present, an array over grid cells indicating which 
+           patch of surface is applicable in terms of a bisector, for each cell
 
     returns:
         gcs  or  (gcs, gcs_props)
         where gcs is a new GridConnectionSet with a single feature, not yet written to hdf5 nor xml created;
-        gcs_props is a dictionary mapping from requested return_properties string to numpy array
+        gcs_props is a dictionary mapping from requested return_properties string to numpy array (or tuple
+            of numpy array and curtain bool in the case of grid bisector)
 
     notes:
         this function is designed for aligned regular grids only;
@@ -929,7 +933,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         no trimming of the surface is carried out here: for computational efficiency, it is recommended
         to trim first;
         organisational objects for the feature are created if needed;
-        if the offset return property is requested, the implicit units will be the z units of the grid's crs
+        if the offset return property is requested, the implicit units will be the z units of the grid's crs;
+        if patch_indices is present and grid bisectors are being returned, a composite bisector array is returned
+        with elements set from individual bisectors for each patch of surface
     """
 
     assert isinstance(grid, grr.RegularGrid)
@@ -959,7 +965,10 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         return_flange_bool = "flange bool" in return_properties
         if return_flange_bool:
             return_triangles = True
-
+    patchwork = return_bisector and patch_indices is not None
+    if patchwork:
+        return_triangles = True  # triangle numbers are used to infer patch index
+        assert patch_indices.shape == tuple(grid.extent_kji)
     if title is None:
         title = name
 
@@ -1165,7 +1174,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                    k_faces_kji0 = k_faces_kji0,
                                                    j_faces_kji0 = j_faces_kji0,
                                                    i_faces_kji0 = i_faces_kji0,
-                                                   remove_duplicates = True,
+                                                   remove_duplicates = not patchwork,
                                                    k_properties = k_props,
                                                    j_properties = j_props,
                                                    i_properties = i_props,
@@ -1176,6 +1185,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     # log.debug('finished coversion to gcs')
 
     # NB. following assumes faces have been added to gcs in a particular order!
+    all_tris = None
     if return_triangles:
         # log.debug('preparing triangles array')
         k_triangles = np.empty((0,), dtype = np.int32) if k_props is None else k_props.pop(0)
@@ -1186,6 +1196,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         assert all_tris.shape == (gcs.count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
+    all_depths = None
     if return_depths:
         # log.debug('preparing depths array')
         k_depths = np.empty((0,), dtype = np.float64) if k_props is None else k_props.pop(0)
@@ -1196,6 +1207,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         assert all_depths.shape == (gcs.count,)
 
     # NB. following assumes faces have been added to gcs in a particular order!
+    all_offsets = None
     if return_offsets:
         # log.debug('preparing offsets array')
         k_offsets = np.empty((0,), dtype = np.float64) if k_props is None else k_props[0]
@@ -1205,6 +1217,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
         assert all_offsets.shape == (gcs.count,)
 
+    all_flange = None
     if return_flange_bool:
         # log.debug('preparing flange array')
         flange_bool_uuid = surface.model.uuid(title = "flange bool",
@@ -1217,8 +1230,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         assert all_flange.shape == (gcs.count,)
 
     # note: following is a grid cells property, not a gcs property
+    bisector = None
     if return_bisector:
-        if is_curtain:
+        if is_curtain and not patchwork:
             log.debug("preparing columns bisector")
             if j_faces_kji0 is None:
                 j_faces_ji0 = np.empty((0, 2), dtype = np.int32)
@@ -1230,8 +1244,51 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 i_faces_ji0 = i_faces_kji0[:, 1:]
             bisector = column_bisector_from_face_indices((grid.nj, grid.ni), j_faces_ji0, i_faces_ji0)
             # log.debug('finished preparing columns bisector')
+        elif patchwork:
+            n_patches = surface.number_of_patches()
+            nkf = len(k_faces_kji0)
+            njf = len(j_faces_kji0)
+            nif = len(i_faces_kji0)
+            # fetch patch indices for triangle hits
+            assert all_tris is not None and len(all_tris) == nkf + njf + nif
+            patch_indices_k = surface.patch_indices_for_triangle_indices(all_tris[:nkf])
+            patch_indices_j = surface.patch_indices_for_triangle_indices(all_tris[nkf:nkf + njf])
+            patch_indices_i = surface.patch_indices_for_triangle_indices(all_tris[nkf + njf:])
+            # add extra dimension to bisector array (at axis 0) for patches
+            pb_shape = tuple([n_patches] + list(grid.extent_kji))
+            if packed_bisectors:
+                bisector = np.ones(_shape_packed(grid.extent_kji), dtype = np.uint8)
+            else:
+                bisector = np.ones(tuple(grid.extent_kji), dtype = np.bool_)
+            # populate 4D bisector with an axis zero slice for each patch
+            for patch in range(n_patches):
+                mask = (patch_indices == patch)
+                if np.count_nonzero(mask) == 0:
+                    log.warning(f'patch {patch} of surface {surface.title} is not applicable to any cells in grid')
+                    continue
+                if packed_bisectors:
+                    mask = np.packbits(mask, axis = -1)
+                    patch_bisector, is_curtain =  \
+                        packed_bisector_from_face_indices(tuple(grid.extent_kji),
+                                                          k_faces_kji0[(patch_indices_k == patch).astype(bool)],
+                                                          j_faces_kji0[(patch_indices_j == patch).astype(bool)],
+                                                          i_faces_kji0[(patch_indices_i == patch).astype(bool)],
+                                                          raw_bisector)
+                    bisector = np.bitwise_or(np.bitwise_and(mask, patch_bisector), bisector)
+                else:
+                    patch_bisector, is_curtain =  \
+                        bisector_from_face_indices(tuple(grid.extent_kji),
+                                                   k_faces_kji0[(patch_indices_k == patch).astype(bool)],
+                                                   j_faces_kji0[(patch_indices_j == patch).astype(bool)],
+                                                   i_faces_kji0[(patch_indices_i == patch).astype(bool)],
+                                                   raw_bisector)
+                    bisector[mask] = patch_bisector[mask]
+                if is_curtain:
+                    # TODO: downgrade following to debug once downstream functionality tested
+                    log.warning(f'ignoring curtain nature of bisector for patch {patch} of surface: {surface.title}')
+                    is_curtain = False
         else:
-            log.debug("preparing cells bisector")
+            log.debug("preparing singlular cells bisector")
             if ((k_faces_kji0 is None or len(k_faces_kji0) == 0) and
                 (j_faces_kji0 is None or len(j_faces_kji0) == 0) and (i_faces_kji0 is None or len(i_faces_kji0) == 0)):
                 bisector = np.ones((grid.nj, grid.ni), dtype = bool)
@@ -1249,6 +1306,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                     bisector = bisector[0]  # reduce to a columns property
 
     # note: following is a grid cells property, not a gcs property
+    shadow = None
     if return_shadow:
         log.debug("preparing cells shadow")
         shadow = shadow_from_face_indices(tuple(grid.extent_kji), k_faces_kji0)
@@ -1261,7 +1319,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     # if returning properties, construct dictionary
     if return_properties:
         props_dict = {}
-        if return_triangles:
+        if 'triangle' in return_properties:
             props_dict["triangle"] = all_tris
         if return_depths:
             props_dict["depth"] = all_depths
@@ -1363,7 +1421,7 @@ def bisector_from_faces(  # type: ignore
         - the face sets must form a single 'sealed' cut of the grid (eg. not waving in and out of the grid)
         - any 'boxed in' parts of the grid (completely enclosed by bisecting faces) will be consistently
           assigned to either the True or False part
-        - this function is DEPRECATED, pending proving of newer indices based approach
+        - this function is DEPRECATED, use newer indices based approach instead: bisector_from_face_indices()
     """
     warnings.warn('DEPRECATED: grid_surface.bisector_from_faces() function; use bisector_from_face_indices() instead')
     assert len(grid_extent_kji) == 3
@@ -1408,10 +1466,13 @@ def bisector_from_faces(  # type: ignore
     # check all array elements are not the same
     true_count = np.count_nonzero(array)
     cell_count = array.size
-    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
-
-    # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    if 0 < true_count < cell_count:
+        # negate the array if it minimises the mean k and determine if the surface is a curtain
+        is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    else:
+        assert raw_bisector, 'face set for surface is leaky or empty (surface does not intersect grid)'
+        log.error('face set for surface is leaky or empty (surface does not intersect grid)')
+        is_curtain = False
 
     return array, is_curtain
 
@@ -1482,10 +1543,13 @@ def bisector_from_face_indices(  # type: ignore
     # check all array elements are not the same
     true_count = np.count_nonzero(array)
     cell_count = array.size
-    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
-
-    # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    if 0 < true_count < cell_count:
+        # negate the array if it minimises the mean k and determine if the surface is a curtain
+        is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    else:
+        assert raw_bisector, 'face set for surface is leaky or empty (surface does not intersect grid)'
+        log.error('face set for surface is leaky or empty (surface does not intersect grid)')
+        is_curtain = False
 
     return array, is_curtain
 
@@ -1572,12 +1636,14 @@ def packed_bisector_from_face_indices(  # type: ignore
     else:
         true_count = _bitwise_count_njit(array)  # note: will usually include some padding bits, so not so true!
     cell_count = np.prod(grid_extent_kji)
-    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
-
-    # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _packed_shallow_or_curtain_temp_bitwise_count(array, true_count, raw_bisector)
-    # todo: switch to numpy bitwise_count when numba supports it and resqpy has dropped older numpy versions
-    # is_curtain = _packed_shallow_or_curtain(array, true_count, raw_bisector)
+    if 0 < true_count < cell_count:
+        # negate the array if it minimises the mean k and determine if the surface is a curtain
+        # TODO: switch to _packed_shallow_or_curtain_temp_bitwise_count() when numba supports np.bitwise_count()
+        is_curtain = _packed_shallow_or_curtain_temp_bitwise_count(array, true_count, raw_bisector)
+    else:
+        assert raw_bisector, 'face set for surface is leaky or empty (surface does not intersect grid)'
+        log.error('face set for surface is leaky or empty (surface does not intersect grid)')
+        is_curtain = False
 
     return array, is_curtain
 
@@ -2227,12 +2293,12 @@ def get_boundary_from_indices(  # type: ignore
         k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
         i_faces_kji0: Union[np.ndarray, None], grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
     """Return python protocol box containing indices"""
-    k_min_kji0 = None if k_faces_kji0 is None else np.min(k_faces_kji0, axis = 0)
-    k_max_kji0 = None if k_faces_kji0 is None else np.max(k_faces_kji0, axis = 0)
-    j_min_kji0 = None if j_faces_kji0 is None else np.min(j_faces_kji0, axis = 0)
-    j_max_kji0 = None if j_faces_kji0 is None else np.max(j_faces_kji0, axis = 0)
-    i_min_kji0 = None if i_faces_kji0 is None else np.min(i_faces_kji0, axis = 0)
-    i_max_kji0 = None if i_faces_kji0 is None else np.max(i_faces_kji0, axis = 0)
+    k_min_kji0 = None if (k_faces_kji0 is None or k_faces_kji0.size == 0) else np.min(k_faces_kji0, axis = 0)
+    k_max_kji0 = None if (k_faces_kji0 is None or k_faces_kji0.size == 0) else np.max(k_faces_kji0, axis = 0)
+    j_min_kji0 = None if (j_faces_kji0 is None or j_faces_kji0.size == 0) else np.min(j_faces_kji0, axis = 0)
+    j_max_kji0 = None if (j_faces_kji0 is None or j_faces_kji0.size == 0) else np.max(j_faces_kji0, axis = 0)
+    i_min_kji0 = None if (i_faces_kji0 is None or i_faces_kji0.size == 0) else np.min(i_faces_kji0, axis = 0)
+    i_max_kji0 = None if (i_faces_kji0 is None or i_faces_kji0.size == 0) else np.max(i_faces_kji0, axis = 0)
     box = np.empty((2, 3), dtype = np.int32)
     box[0, :] = grid_extent_kji
     box[1, :] = -1

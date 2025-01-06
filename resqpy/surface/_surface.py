@@ -126,6 +126,75 @@ class Surface(rqsb.BaseSurface):
         self._load_normal_vector_from_extra_metadata()
 
     @classmethod
+    def from_list_of_patches(cls, model, patch_list, title, crs_uuid = None, extra_metadata = None):
+        """Create a Surface from a prepared list of TriangulatedPatch objects.
+
+        arguments:
+            - model (Model): the model to which the surface will be associated
+            - patch_list (list of TriangulatedPatch): the list of patches to be combined to form the surface
+            - title (str): the citation title for the new surface
+            - crs_uuid (uuid, optional): the uuid of a crs in model which the points are deemed to be in
+            - extra_metadata (dict of (str: str), optional): extra metadata to add to the new surface
+
+        returns:
+            - new Surface comprised of a patch for each entry in the patch list
+
+        notes:
+            - the triangulated patch objects are used directly in the surface
+            - the patches should not have had their hdf5 data written yet
+            - the patch index values will be set, with any previous values ignored
+            - the patches will be hijacked to the target model if their model is different
+            - each patch will have its points converted in situ into the surface crs
+            - if the crs_uuid argument is None, the crs_uuid is taken from the first patch
+        """
+        assert len(patch_list) > 0, 'attempting to create Surface from empty patch list'
+        if crs_uuid is None:
+            crs_uuid = patch_list[0].crs_uuid
+            if model.uuid(uuid = crs_uuid) is None:
+                model.copy_uuid_from_other_model(patch_list[0].model, crs_uuid)
+        surf = cls(model, title = title, crs_uuid = crs_uuid, extra_metadata = extra_metadata)
+        surf.patch_list = patch_list
+        surf.crs_uuid = crs_uuid
+        crs = rqc.Crs(model, uuid = crs_uuid)
+        for i, patch in enumerate(surf.patch_list):
+            assert patch.points is not None, f'points missing in patch {i} when making surface {title}'
+            patch.index = i
+            patch._set_t_type()
+            if not bu.matching_uuids(patch.crs_uuid, crs_uuid):
+                p_crs = rqc.Crs(patch.model, uuid = patch.crs_uuid)
+                p_crs.convert_array_to(crs, patch.points)
+            patch.model = model
+        return surf
+
+    @classmethod
+    def from_list_of_patches_of_triangles_and_points(cls, model, t_p_list, title, crs_uuid, extra_metadata = None):
+        """Create a Surface from a prepared list of pairs of (triangles, points).
+
+        arguments:
+            - model (Model): the model to which the surface will be associated
+            - t_p_list (list of (numpy int array, numpy float array)): the list of patches of triangles and points;
+              the int arrays have shape (N, 3) being the triangle vertex indices of points; the float array has
+              shape (M, 3) being the xyx values for the points, in the crs identified by crs_uuid
+            - title (str): the citation title for the new surface
+            - crs_uuid (uuid): the uuid of a crs in model which the points are deemed to be in
+            - extra_metadata (dict of (str: str), optional): extra metadata to add to the new surface
+
+        returns:
+            - new Surface comprised of a patch for each entry in the list of pairs of triangles and points data
+
+        note:
+            - each entry in the t_p_list will have its own patch in the resulting surface, indexed in order of list
+        """
+        assert t_p_list, f'no triangles and points pairs in list when generating surface: {title}'
+        assert crs_uuid is not None
+        patch_list = []
+        for i, (t, p) in enumerate(t_p_list):
+            patch = rqs.TriangulatedPatch(model, patch_index = i, crs_uuid = crs_uuid)
+            patch.set_from_triangles_and_points(t, p)
+            patch_list.append(patch)
+        return cls.from_list_of_patches(model, patch_list, title, crs_uuid = crs_uuid, extra_metadata = extra_metadata)
+
+    @classmethod
     def from_tri_mesh(cls, tri_mesh, exclude_nans = False):
         """Create a Surface from a TriMesh.
 
@@ -319,6 +388,39 @@ class Surface(rqsb.BaseSurface):
             ValueError(f'patch index {patch} out of range for surface with {len(self.patch_list)} patches')
         return self.patch_list[patch].triangles_and_points(copy = copy)
 
+    def patch_index_for_triangle_index(self, triangle_index):
+        """Returns the patch index for a triangle index (as applicable to triangles_and_points() triangles)."""
+        if triangle_index is None or triangle_index < 0:
+            return None
+        self.extract_patches(self.root)
+        if not self.patch_list:
+            return None
+        for i, patch in enumerate(self.patch_list):
+            triangle_index -= patch.triangle_count
+            if triangle_index < 0:
+                return i
+        return None
+
+    def patch_indices_for_triangle_indices(self, triangle_indices, lazy = True):
+        """Returns array of patch indices for array of triangle indices (as applicable to triangles_and_points() triangles)."""
+        self.extract_patches(self.root)
+        if not self.patch_list:
+            return np.full(triangle_indices.shape, -1, dtype = np.int8)
+        patch_count = len(self.patch_list)
+        dtype = (np.int8 if patch_count < 127 else np.int32)
+        if lazy and patch_count == 1:
+            return np.zeros(triangle_indices.shape, dtype = np.int8)
+        patch_limits = np.zeros(patch_count, dtype = np.int32)
+        t_count = 0
+        for p_i in range(patch_count):
+            t_count += self.patch_list[p_i].triangle_count
+            patch_limits[p_i] = t_count
+        patches = np.empty(triangle_indices.shape, dtype = dtype)
+        patches[:] = np.digitize(triangle_indices, patch_limits, right = False)
+        if not lazy:
+            patches[np.logical_or(triangle_indices < 0, patches == patch_count)] = -1
+        return patches
+
     def decache_triangles_and_points(self):
         """Removes the cached composite triangles and points arrays."""
         self.points = None
@@ -369,9 +471,11 @@ class Surface(rqsb.BaseSurface):
     def change_crs(self, required_crs):
         """Changes the crs of the surface, also sets a new uuid if crs changed.
 
-        note:
+        notes:
            this method is usually used to change the coordinate system for a temporary resqpy object;
-           to add as a new part, call write_hdf5() and create_xml() methods
+           to add as a new part, call write_hdf5() and create_xml() methods;
+           patches are maintained by this method;
+           normal vector extra metadata item is updated if present; rotation matrix is removed
         """
 
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
@@ -386,6 +490,18 @@ class Surface(rqsb.BaseSurface):
             patch.crs_uuid = self.crs_uuid
         self.triangles = None  # clear cached arrays for surface
         self.points = None
+        if self.extra_metadata.pop('rotation matrix', None) is not None:
+            log.warning(f'discarding rotation matrix extra metadata during crs change of: {self.title}')
+        self._load_normal_vector_from_extra_metadata()
+        if self.normal_vector is not None:
+            if required_crs.z_inc_down != old_crs.z_inc_down:
+                self.normal_vector[2] = -self.normal_vector[2]
+            theta = (wam.convert(required_crs.rotation, required_crs.rotation_units, 'dega') -
+                     wam.convert(old_crs.rotation, old_crs.rotation_units, 'dega'))
+            if not maths.isclose(theta, 0.0):
+                self.normal_vector = vec.rotate_vector(vec.rotation_matrix_3d_axial(2, theta), self.normal_vector)
+            self.extra_metadata['normal vector'] = str(
+                f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}')
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
         assert self.root is None
 
@@ -580,7 +696,8 @@ class Surface(rqsb.BaseSurface):
                            flange_radial_distance = None,
                            flange_inner_ring = False,
                            saucer_parameter = None,
-                           make_clockwise = False):
+                           make_clockwise = False,
+                           normal_vector = None):
         """Populate this (empty) Surface object with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -589,9 +706,10 @@ class Surface(rqsb.BaseSurface):
               convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
               chance of even a slight concavity
            reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
-              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+              z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation; if a
+              normal_vector is supplied, the reorientation is based on that instead of minimising z
            reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
-              limited to this angle in degrees
+              limited to this angle in degrees; ignored if normal_vector is specified
            extend_with_flange (bool, default False): if True, a ring of points is added around the outside of the
               points before the triangulation, effectively extending the surface with a flange
            flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
@@ -609,10 +727,12 @@ class Surface(rqsb.BaseSurface):
            make_clockwise (bool, default False): if True, the returned triangles will all be clockwise when
               viewed in the direction -ve to +ve z axis; if reorient is also True, the clockwise aspect is
               enforced in the reoriented space
+           normal_vector (triple float, optional): if present and reorienting, the normal vector to use for reorientation;
+              if None, the reorientation is made so as to minimise the z range
 
         returns:
            if extend_with_flange is True, numpy bool array with a value per triangle indicating flange triangles;
-           if extent_with_flange is False, None
+           if extend_with_flange is False, None
 
         notes:
            if extend_with_flange is True, then a boolean array is created for the surface, with a value per triangle,
@@ -623,7 +743,8 @@ class Surface(rqsb.BaseSurface):
            the saucer_parameter must be between -90.0 and 90.0, and is interpreted as an angle to apply out of
            the plane of the original points, to give a simple saucer shape; +ve angles result in the shift being in 
            the direction of the -ve z hemisphere; -ve angles result in the shift being in the +ve z hemisphere; in 
-           either case the direction of the shift is perpendicular to the average plane of the original points
+           either case the direction of the shift is perpendicular to the average plane of the original points;
+           normal_vector, if supplied, should be in the crs of the point set
         """
 
         simple_saucer_angle = None
@@ -648,8 +769,24 @@ class Surface(rqsb.BaseSurface):
         else:
             unit_adjusted_p = p.copy()
             wam.convert_lengths(unit_adjusted_p[:, 2], crs.z_units, crs.xy_units)
+            # note: normal vector should already be for a crs with common xy  & z units
         # reorient the points to the fault normal vector
-        p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p, max_dip = reorient_max_dip)
+        if normal_vector is None:
+            p_xy, self.normal_vector, reorient_matrix = triangulate.reorient(unit_adjusted_p,
+                                                                             max_dip = reorient_max_dip)
+        else:
+            assert len(normal_vector) == 3
+            self.normal_vector = np.array(normal_vector, dtype = np.float64)
+            if self.normal_vector[2] < 0.0:
+                self.normal_vector = -self.normal_vector
+            incl = vec.inclination(normal_vector)
+            if maths.isclose(incl, 0.0):
+                reorient_matrix = vec.no_rotation_matrix()
+                p_xy = unit_adjusted_p
+            else:
+                azi = vec.azimuth(normal_vector)
+                reorient_matrix = vec.tilt_3d_matrix(azi, incl)
+                p_xy = vec.rotate_array(reorient_matrix, unit_adjusted_p)
         if extend_with_flange:
             flange_points, radius = triangulate.surrounding_xy_ring(p_xy,
                                                                     count = flange_point_count,
@@ -707,7 +844,8 @@ class Surface(rqsb.BaseSurface):
                                    flange_inner_ring = False,
                                    saucer_parameter = None,
                                    make_clockwise = False,
-                                   retriangulate = False):
+                                   retriangulate = False,
+                                   normal_vector = None):
         """Returns a new Surface object where the original surface has been extended with a flange with a Delaunay triangulation of points in a PointSet object.
 
         arguments:
@@ -715,9 +853,10 @@ class Surface(rqsb.BaseSurface):
                 convex; reduce to 1.0 to allow slightly more concavities; increase to 100.0 or more for very little
                 chance of even a slight concavity
             reorient (bool, default False): if True, a copy of the points is made and reoriented to minimise the
-                z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation
+                z range (ie. z axis is approximate normal to plane of points), to enhace the triangulation; if
+                normal_vector is supplied that is used to determine the reorientation instead of minimising z
             reorient_max_dip (float, optional): if present, the reorientation of perspective off vertical is
-                limited to this angle in degrees
+                limited to this angle in degrees; ignored if normal_vector is specified
             flange_point_count (int, default 11): the number of points to generate in the flange ring; ignored if
                 retriangulate is False
             flange_radial_factor (float, default 10.0): distance of flange points from centre of points, as a
@@ -738,6 +877,8 @@ class Surface(rqsb.BaseSurface):
                 the existing points. If False, the surface will be generated by adding flange points and triangles directly
                 from the original surface edges, and will no retriangulate the input surface. If False the surface must not
                 contain tears
+            normal_vector (triple float, optional): if present and reorienting, the normal vector to use for reorientation;
+                if None, the reorientation is made so as to minimise the z range
 
         returns:
             a new surface, and a boolean array of length N, where N is the number of triangles on the surface. This boolean
@@ -757,7 +898,8 @@ class Surface(rqsb.BaseSurface):
             the plane of the original points, to give a simple (and less computationally demanding) saucer shape;
             +ve angles result in the shift being in the direction of the -ve z hemisphere; -ve angles result in
             the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
-            to the average plane of the original points
+            to the average plane of the original points;
+            normal_vector, if supplied, should be in the crs of this surface
         """
         prev_t, prev_p = self.triangles_and_points()
         point_set = rqs.PointSet(self.model, crs_uuid = self.crs_uuid, title = self.title, points_array = prev_p)
@@ -766,7 +908,7 @@ class Surface(rqsb.BaseSurface):
             return out_surf, out_surf.set_from_point_set(point_set, convexity_parameter, reorient, reorient_max_dip,
                                                          True, flange_point_count, flange_radial_factor,
                                                          flange_radial_distance, flange_inner_ring, saucer_parameter,
-                                                         make_clockwise)
+                                                         make_clockwise, normal_vector)
         else:
             simple_saucer_angle = None
             if saucer_parameter is not None and (saucer_parameter > 1.0 or saucer_parameter < 0.0):
@@ -916,9 +1058,10 @@ class Surface(rqsb.BaseSurface):
         notes:
            the result becomes more meaningless the less planar the surface is;
            even for a parfectly planar surface, the result is approximate;
-           true normal vector is found when xy & z units differ
+           true normal vector is found when xy & z units differ, ie. for consistent units
         """
 
+        self._load_normal_vector_from_extra_metadata()
         if self.normal_vector is None:
             p = self.unit_adjusted_points()
             _, self.normal_vector, _ = triangulate.reorient(p)
@@ -1346,12 +1489,16 @@ class Surface(rqsb.BaseSurface):
         return resampled
 
     def resample_surface_unique_edges(self):
-        """Returns a new surface, with the same model, title and crs as the original surface, but with additional refined points along original surface tears and edges.
+        """Returns a new surface, with the same model, title and crs as the original, but with additional refined points along tears and edges.
 
-        Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
+        Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points
+        on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
 
-        returns:
-            resqpy.surface.Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
+        returns: 
+            new Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
+            
+        note:
+            this method involves a tr-triangulation
         """
         _, op = self.triangles_and_points()
         ref = self.resampled_surface()  # resample the original surface
@@ -1422,7 +1569,8 @@ class Surface(rqsb.BaseSurface):
             self.title = 'surface'
 
         em = None
-        if self.normal_vector is not None:
+        if self.normal_vector is not None and (self.extra_metadata is None or
+                                               'normal vector' not in self.extra_metadata):
             assert len(self.normal_vector) == 3
             em = {'normal vector': f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}'}
 
