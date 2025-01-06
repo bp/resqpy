@@ -74,6 +74,7 @@ def test_faces_for_surface(tmp_model):
     assert patches is not None
     assert patches.shape == (2,)
     assert np.all(patches == 0)
+    assert surf.patch_index_for_triangle_index(1) == 0
     for mode in ['staffa', 'regular', 'auto']:
         gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
         assert gcs is not None
