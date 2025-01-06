@@ -338,3 +338,29 @@ def test_patch_line_intersection(triple_patch_model_crs_surface):
     assert_array_almost_equal(xyz, (5.0, -5.0, -0.05))
     xyz = surf.line_intersection((5.0, -5.0, -2.0), (0.0, 0.0, 1.0), line_segment = False, patch = 2)
     assert xyz is None
+
+
+def test_surface_from_list_of_patches_of_triangles_and_points(example_model_and_crs):
+    p0 = np.array([(-10.0, -10.0, 0.0), (0.0, -10.0, 0.1), (10.0, -10.0, -0.1), (-10.0, 0.0, 0.2), (0.0, 0.0, -0.2),
+                   (-10.0, 10.0, 0.3)],
+                  dtype = float)
+    p1 = -p0
+    p2 = p0 + np.array((30.0, 0.0, 0.5), dtype = float)
+    t = np.array([(0, 1, 3), (1, 4, 3), (1, 2, 4), (3, 4, 5)], dtype = int)
+    t_and_p_list = [(t, p0), (t, p1), (t, p2)]
+    model, crs = example_model_and_crs
+    cm_surf = rqs.Surface.from_list_of_patches_of_triangles_and_points(model, t_and_p_list, 'class method', crs.uuid)
+    cm_surf.write_hdf5()
+    cm_surf.create_xml()
+    surf = rqs.Surface(model, title = 'triple patch', crs_uuid = crs.uuid)
+    surf.set_multi_patch_from_triangles_and_points(t_and_p_list)
+    surf.write_hdf5()
+    surf.create_xml()
+    model.store_epc()
+    model = rq.Model(model.epc_file)
+    cm_surf = rqs.Surface(model, uuid = cm_surf.uuid)
+    surf = rqs.Surface(model, uuid = surf.uuid)
+    cm_t, cm_p = cm_surf.triangles_and_points()
+    t, p = surf.triangles_and_points()
+    assert np.all(t == cm_t)
+    assert_array_almost_equal(p, cm_p)
