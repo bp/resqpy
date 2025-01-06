@@ -686,17 +686,23 @@ def _copy_referenced_parts(model, other_model, realization, consolidate, force, 
             resident_uuid_int = model.consolidation.map[ref_uuid_int]
             assert resident_uuid_int is not None
             # find referring node for ref_uuid_int and modify its reference to resident_uuid_int
-            if reference_node_dict is None:
+            if reference_node_dict is None:  # now mapping uuid int to list of nodes
                 ref_nodes = rqet.list_obj_references(root_node)
                 reference_node_dict = {}
                 for ref_node in ref_nodes:
                     uuid_node = rqet.find_tag(ref_node, 'UUID')
                     uuid_int = bu.uuid_from_string(uuid_node.text).int
-                    reference_node_dict[uuid_int] = uuid_node
-            uuid_node = reference_node_dict[ref_uuid_int]
-            uuid_node.text = str(bu.uuid_from_int(resident_uuid_int))
-            reference_node_dict.pop(ref_uuid_int)
-            reference_node_dict[resident_uuid_int] = uuid_node
+                    if uuid_int in reference_node_dict:
+                        reference_node_dict[uuid_int].append(uuid_node)
+                    else:
+                        reference_node_dict[uuid_int] = [uuid_node]
+            uuid_node_list = reference_node_dict.pop(ref_uuid_int)
+            for uuid_node in uuid_node_list:
+                uuid_node.text = str(bu.uuid_from_int(resident_uuid_int))
+            if resident_uuid_int in reference_node_dict:
+                reference_node_dict[resident_uuid_int] += uuid_node_list
+            else:
+                reference_node_dict[resident_uuid_int] = uuid_node_list
 
 
 def _copy_relationships_for_present_targets(model, other_model, consolidate, force, resident_uuid, root_node):
