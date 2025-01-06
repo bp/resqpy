@@ -364,3 +364,5 @@ def test_surface_from_list_of_patches_of_triangles_and_points(example_model_and_
     t, p = surf.triangles_and_points()
     assert np.all(t == cm_t)
     assert_array_almost_equal(p, cm_p)
+    p_i = cm_surf.patch_indices_for_triangle_indices(np.arange(12, dtype = int))
+    assert np.all(p_i == (0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2))

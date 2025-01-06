@@ -409,7 +409,7 @@ class Surface(rqsb.BaseSurface):
         patch_count = len(self.patch_list)
         dtype = (np.int8 if patch_count < 127 else np.int32)
         if lazy and patch_count == 1:
-            return np.ones(triangle_indices.shape, dtype = np.int8)
+            return np.zeros(triangle_indices.shape, dtype = np.int8)
         patch_limits = np.zeros(patch_count, dtype = np.int32)
         t_count = 0
         for p_i in range(patch_count):

@@ -1466,10 +1466,13 @@ def bisector_from_faces(  # type: ignore
     # check all array elements are not the same
     true_count = np.count_nonzero(array)
     cell_count = array.size
-    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
-
-    # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    if 0 < true_count < cell_count:
+        # negate the array if it minimises the mean k and determine if the surface is a curtain
+        is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    else:
+        assert raw_bisector, 'face set for surface is leaky or empty (surface does not intersect grid)'
+        log.error('face set for surface is leaky or empty (surface does not intersect grid)')
+        is_curtain = False
 
     return array, is_curtain
 
@@ -1540,10 +1543,13 @@ def bisector_from_face_indices(  # type: ignore
     # check all array elements are not the same
     true_count = np.count_nonzero(array)
     cell_count = array.size
-    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
-
-    # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    if 0 < true_count < cell_count:
+        # negate the array if it minimises the mean k and determine if the surface is a curtain
+        is_curtain = _shallow_or_curtain(array, true_count, raw_bisector)
+    else:
+        assert raw_bisector, 'face set for surface is leaky or empty (surface does not intersect grid)'
+        log.error('face set for surface is leaky or empty (surface does not intersect grid)')
+        is_curtain = False
 
     return array, is_curtain
 
@@ -1630,12 +1636,14 @@ def packed_bisector_from_face_indices(  # type: ignore
     else:
         true_count = _bitwise_count_njit(array)  # note: will usually include some padding bits, so not so true!
     cell_count = np.prod(grid_extent_kji)
-    assert (0 < true_count < cell_count), "face set for surface is leaky or empty (surface does not intersect grid)"
-
-    # negate the array if it minimises the mean k and determine if the surface is a curtain
-    is_curtain = _packed_shallow_or_curtain_temp_bitwise_count(array, true_count, raw_bisector)
-    # todo: switch to numpy bitwise_count when numba supports it and resqpy has dropped older numpy versions
-    # is_curtain = _packed_shallow_or_curtain(array, true_count, raw_bisector)
+    if 0 < true_count < cell_count:
+        # negate the array if it minimises the mean k and determine if the surface is a curtain
+        # TODO: switch to _packed_shallow_or_curtain_temp_bitwise_count() when numba supports np.bitwise_count()
+        is_curtain = _packed_shallow_or_curtain_temp_bitwise_count(array, true_count, raw_bisector)
+    else:
+        assert raw_bisector, 'face set for surface is leaky or empty (surface does not intersect grid)'
+        log.error('face set for surface is leaky or empty (surface does not intersect grid)')
+        is_curtain = False
 
     return array, is_curtain
 
@@ -2285,12 +2293,12 @@ def get_boundary_from_indices(  # type: ignore
         k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
         i_faces_kji0: Union[np.ndarray, None], grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
     """Return python protocol box containing indices"""
-    k_min_kji0 = None if k_faces_kji0 is None else np.min(k_faces_kji0, axis = 0)
-    k_max_kji0 = None if k_faces_kji0 is None else np.max(k_faces_kji0, axis = 0)
-    j_min_kji0 = None if j_faces_kji0 is None else np.min(j_faces_kji0, axis = 0)
-    j_max_kji0 = None if j_faces_kji0 is None else np.max(j_faces_kji0, axis = 0)
-    i_min_kji0 = None if i_faces_kji0 is None else np.min(i_faces_kji0, axis = 0)
-    i_max_kji0 = None if i_faces_kji0 is None else np.max(i_faces_kji0, axis = 0)
+    k_min_kji0 = None if (k_faces_kji0 is None or k_faces_kji0.size == 0) else np.min(k_faces_kji0, axis = 0)
+    k_max_kji0 = None if (k_faces_kji0 is None or k_faces_kji0.size == 0) else np.max(k_faces_kji0, axis = 0)
+    j_min_kji0 = None if (j_faces_kji0 is None or j_faces_kji0.size == 0) else np.min(j_faces_kji0, axis = 0)
+    j_max_kji0 = None if (j_faces_kji0 is None or j_faces_kji0.size == 0) else np.max(j_faces_kji0, axis = 0)
+    i_min_kji0 = None if (i_faces_kji0 is None or i_faces_kji0.size == 0) else np.min(i_faces_kji0, axis = 0)
+    i_max_kji0 = None if (i_faces_kji0 is None or i_faces_kji0.size == 0) else np.max(i_faces_kji0, axis = 0)
     box = np.empty((2, 3), dtype = np.int32)
     box[0, :] = grid_extent_kji
     box[1, :] = -1
