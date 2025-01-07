@@ -3,17 +3,18 @@ import os
 import numpy as np
 import pytest
 
+import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
-import resqpy.model as rq
+import resqpy.property as rqp
+import resqpy.organize as rqo
+import resqpy.surface as rqs
+import resqpy.time_series as rqts
+import resqpy.well as rqw
 import resqpy.olio.consolidation as cons
 import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
-import resqpy.property as rqp
-import resqpy.organize as rqo
-import resqpy.time_series as rqts
-import resqpy.well as rqw
 
 
 def test_model(tmp_path):
@@ -182,6 +183,33 @@ def test_model_copy_all_parts(example_model_with_properties):
     crs_uuid = re_opened.uuid(obj_type = 'LocalDepth3dCrs')
     assert (bu.matching_uuids(crs_uuid, new_crs.uuid) or
             bu.matching_uuids(crs_uuid, original.uuid(obj_type = 'LocalDepth3dCrs')))
+
+
+def test_copy_with_consolidation_multiple_references(tmp_path):
+    source_epc = os.path.join(tmp_path, 'source.epc')
+    source = rq.new_model(source_epc)
+    s_crs = rqc.Crs(source)
+    s_crs.create_xml()
+    # make two patch surface: each patch will have its own reference to the crs
+    p0 = np.array([(0.0, 0.0, 0.0), (10.0, 0.0, 0.5), (0.0, 20.0, 1.0), (10.0, 20.0, 2.0)], dtype = float)
+    p1 = 30.0 - p0
+    t0 = np.array([(0, 1, 2), (0, 2, 3)], dtype = int)
+    t1 = np.array([(1, 2, 3), (0, 1, 3)], dtype = int)
+    t_p_list = [(t0, p0), (t1, p1)]
+    surf = rqs.Surface.from_list_of_patches_of_triangles_and_points(source, t_p_list, 'multi-patch', s_crs.uuid)
+    surf.write_hdf5()
+    surf.create_xml()
+    copied_epc = os.path.join(tmp_path, 'copied.epc')
+    copied = rq.new_model(copied_epc)
+    new_crs = rqc.Crs(copied)
+    new_crs.create_xml()
+    copied.copy_uuid_from_other_model(source, surf.uuid)  # will consolidate crs to new_crs
+    copied.store_epc()
+    c_surf = rqs.Surface(copied, uuid = surf.uuid)
+    assert c_surf is not None
+    assert c_surf.number_of_patches() == 2
+    for patch in c_surf.patch_list:
+        assert bu.matching_uuids(patch.crs_uuid, new_crs.uuid)
 
 
 def test_model_copy_all_parts_non_resqpy_hdf5_paths(example_model_with_properties):
