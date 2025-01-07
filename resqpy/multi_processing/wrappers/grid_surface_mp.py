@@ -161,7 +161,8 @@ def find_faces_to_represent_surface_regular_wrapper(
     if flange_radius is None:
         flange_radius = 5.0 * np.sum(np.array(grid.extent_kji, dtype = float) * np.array(grid.aligned_dxyz()))
     s_model = rq.Model(surface_epc, quiet = True)
-    model.copy_uuid_from_other_model(s_model, uuid = str(surface_uuid))
+    surface_uuid = str(surface_uuid)
+    model.copy_uuid_from_other_model(s_model, uuid = surface_uuid)
     if surface_patching_property_uuid is not None:
         model.copy_uuid_from_other_model(s_model, uuid = surface_patching_property_uuid)
         uuid_list.append(surface_patching_property_uuid)
@@ -213,7 +214,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         inherit_interpretation_relationship(model, surface_uuid, surf.uuid)
         surface_uuid = surf.uuid
 
-    surface = rqs.Surface(parent_model = model, uuid = str(surface_uuid))
+    surface = rqs.Surface(parent_model = model, uuid = surface_uuid)
     surf_title = surface.title
     assert surf_title
     surface.change_crs(grid.crs)

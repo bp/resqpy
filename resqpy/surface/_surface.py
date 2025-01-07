@@ -480,28 +480,32 @@ class Surface(rqsb.BaseSurface):
 
         old_crs = rqc.Crs(self.model, uuid = self.crs_uuid)
         self.crs_uuid = required_crs.uuid
-        if required_crs == old_crs or not self.patch_list:
+        if bu.matching_uuids(required_crs.uuid, old_crs.uuid) or not self.patch_list:
             log.debug(f'no crs change needed for {self.title}')
             return
+        equivalent_crs = (required_crs == old_crs)
         log.debug(f'crs change needed for {self.title} from {old_crs.title} to {required_crs.title}')
         for patch in self.patch_list:
-            patch.triangles_and_points()
-            required_crs.convert_array_from(old_crs, patch.points)
+            assert bu.matching_uuids(patch.crs_uuid, old_crs.uuid)
+            if not equivalent_crs:
+                patch.triangles_and_points()
+                required_crs.convert_array_from(old_crs, patch.points)
             patch.crs_uuid = self.crs_uuid
         self.triangles = None  # clear cached arrays for surface
         self.points = None
-        if self.extra_metadata.pop('rotation matrix', None) is not None:
-            log.warning(f'discarding rotation matrix extra metadata during crs change of: {self.title}')
-        self._load_normal_vector_from_extra_metadata()
-        if self.normal_vector is not None:
-            if required_crs.z_inc_down != old_crs.z_inc_down:
-                self.normal_vector[2] = -self.normal_vector[2]
-            theta = (wam.convert(required_crs.rotation, required_crs.rotation_units, 'dega') -
-                     wam.convert(old_crs.rotation, old_crs.rotation_units, 'dega'))
-            if not maths.isclose(theta, 0.0):
-                self.normal_vector = vec.rotate_vector(vec.rotation_matrix_3d_axial(2, theta), self.normal_vector)
-            self.extra_metadata['normal vector'] = str(
-                f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}')
+        if not equivalent_crs:
+            if self.extra_metadata.pop('rotation matrix', None) is not None:
+                log.warning(f'discarding rotation matrix extra metadata during crs change of: {self.title}')
+            self._load_normal_vector_from_extra_metadata()
+            if self.normal_vector is not None:
+                if required_crs.z_inc_down != old_crs.z_inc_down:
+                    self.normal_vector[2] = -self.normal_vector[2]
+                theta = (wam.convert(required_crs.rotation, required_crs.rotation_units, 'dega') -
+                         wam.convert(old_crs.rotation, old_crs.rotation_units, 'dega'))
+                if not maths.isclose(theta, 0.0):
+                    self.normal_vector = vec.rotate_vector(vec.rotation_matrix_3d_axial(2, theta), self.normal_vector)
+                self.extra_metadata['normal vector'] = str(
+                    f'{self.normal_vector[0]},{self.normal_vector[1]},{self.normal_vector[2]}')
         self.uuid = bu.new_uuid()  # hope this doesn't cause problems
         assert self.root is None
 
