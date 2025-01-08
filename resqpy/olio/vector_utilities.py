@@ -1364,7 +1364,7 @@ def triangle_normal_vector_numba(points):  # pragma: no cover
 
 
 @njit
-def triangles_normal_vectors(t: np.ndarray, p: np.ndarray) -> np.ndarray:
+def triangles_normal_vectors(t: np.ndarray, p: np.ndarray) -> np.ndarray:  # pragma: no cover
     """For a triangulated set, return an array of unit normal vectors (one per triangle).
 
     note:
