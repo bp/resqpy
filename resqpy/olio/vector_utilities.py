@@ -1363,6 +1363,24 @@ def triangle_normal_vector_numba(points):  # pragma: no cover
     return v / np.linalg.norm(v)
 
 
+@njit
+def triangles_normal_vectors(t: np.ndarray, p: np.ndarray) -> np.ndarray:  # pragma: no cover
+    """For a triangulated set, return an array of unit normal vectors (one per triangle).
+
+    note:
+        resulting vectors implicitly assume that xy & z units are the same; if this is not the case, adjust vectors
+        afterwards as required
+    """
+    nv = np.empty((len(t), 3), dtype = np.float64)
+    v = np.zeros(3, dtype = np.float64)
+    for ti in range(len(t)):
+        v[:] = np.cross(p[t[ti, 0]] - p[t[ti, 1]], p[t[ti, 0]] - p[t[ti, 2]])
+        if v[2] < 0.0:
+            v[:] = -v
+        nv[ti, :] = v / np.linalg.norm(v)
+    return nv
+
+
 def in_circumcircle(a, b, c, d):
     """Returns True if point d lies within the circumcircle pf ccw points a, b, c, projected onto xy plane.
 
