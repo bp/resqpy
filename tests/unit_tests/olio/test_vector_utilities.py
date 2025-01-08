@@ -585,3 +585,29 @@ def test_vertical_intercept():
     assert np.isclose(vec.vertical_intercept_nan(4.0, xv[0], xv[1], yv[0], yv[1]), 22.5)
     assert np.isclose(vec.vertical_intercept(6.0, xv, yv), 25.0)
     assert np.isclose(vec.vertical_intercept_nan(6.0, xv[0], xv[1], yv[0], yv[1]), 25.0)
+
+
+def test_triangle_normal_vector():
+    p = np.array([(10.0, 20.0, 30.0), (15.0, 20.0, 30.0), (10.0, 25.0, 35.0)], dtype = float)
+    nv = vec.triangle_normal_vector(p)
+    one_over_root_two = 1.0 / maths.sqrt(2.0)
+    assert_array_almost_equal(nv, np.array((0.0, -one_over_root_two, one_over_root_two), dtype = float))
+    nv_jit = vec.triangle_normal_vector_numba(p)
+    assert_array_almost_equal(nv_jit, nv)
+
+
+def test_triangles_normal_vectors():
+
+    def assert_same_normal(nv_a, nv_b):
+        assert np.all(np.isclose(nv_a, nv_b)) or np.all(np.isclose(nv_a, -np.array(nv_b)))
+
+    p = np.array([(10.0, 20.0, 30.0), (15.0, 20.0, 30.0), (10.0, 25.0, 35.0), (10.0, 15.0, 35.0)], dtype = float)
+    t = np.array([(0, 1, 2), (0, 1, 3), (0, 2, 3)], dtype = int)
+    nvs = vec.triangles_normal_vectors(t, p)
+    assert nvs.shape == (3, 3)
+    one_over_root_two = 1.0 / maths.sqrt(2.0)
+    for i in range(3):
+        assert_same_normal(vec.triangle_normal_vector(p[t[i]]), nvs[i])
+    assert_same_normal(nvs[0], (0.0, -one_over_root_two, one_over_root_two))
+    assert_same_normal(nvs[1], (0.0, one_over_root_two, one_over_root_two))
+    assert_same_normal(nvs[2], (-1.0, 0.0, 0.0))
