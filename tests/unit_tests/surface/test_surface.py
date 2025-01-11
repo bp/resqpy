@@ -75,23 +75,47 @@ def test_faces_for_surface(tmp_model):
     assert patches.shape == (2,)
     assert np.all(patches == 0)
     assert surf.patch_index_for_triangle_index(1) == 0
+    expected_cip = grid.natural_cell_indices(
+        np.array([[[0, 0, 0], [1, 0, 0]], [[0, 1, 0], [1, 1, 0]], [[0, 2, 0], [1, 2, 0]], [[1, 0, 0], [1, 0, 1]],
+                  [[1, 1, 0], [1, 1, 1]], [[1, 2, 0], [1, 2, 1]], [[1, 0, 1], [2, 0, 1]], [[1, 1, 1], [2, 1, 1]],
+                  [[1, 2, 1], [2, 2, 1]], [[2, 0, 1], [2, 0, 2]], [[2, 1, 1], [2, 1, 2]], [[2, 2, 1], [2, 2, 2]]],
+                 dtype = int))
+    e_cip = set([tuple(pair) for pair in expected_cip])
     for mode in ['staffa', 'regular', 'auto']:
         gcs = rqgs.find_faces_to_represent_surface(grid, surf, name = mode, mode = mode)
         assert gcs is not None
         assert gcs.count == 12
         cip = set([tuple(pair) for pair in gcs.cell_index_pairs])
-        expected_cip = grid.natural_cell_indices(
-            np.array([[[0, 0, 0], [1, 0, 0]], [[0, 1, 0], [1, 1, 0]], [[0, 2, 0], [1, 2, 0]], [[1, 0, 0], [1, 0, 1]],
-                      [[1, 1, 0], [1, 1, 1]], [[1, 2, 0], [1, 2, 1]], [[1, 0, 1], [2, 0, 1]], [[1, 1, 1], [2, 1, 1]],
-                      [[1, 2, 1], [2, 2, 1]], [[2, 0, 1], [2, 0, 2]], [[2, 1, 1], [2, 1, 2]], [[2, 2, 1], [2, 2, 2]]],
-                     dtype = int))
-        e_cip = set([tuple(pair) for pair in expected_cip])
         assert cip == e_cip  # note: this assumes lower cell index is first, which happens to be true
         # todo: check face indices
         gcs.write_hdf5()
         gcs.create_xml()
         assert bu.matching_uuids(
             tmp_model.uuid(obj_type = 'GridConnectionSetRepresentation', multiple_handling = 'newest'), gcs.uuid)
+    # minimal test of patches
+    grid_patch_indices = np.zeros(grid.extent_kji, dtype = int)
+    grid_patch_indices[:, 1, :] = 1
+    gcs_optimised, props = rqgs.find_faces_to_represent_surface_regular_optimised(grid,
+                                                                                  surf,
+                                                                                  name = 'surf is up',
+                                                                                  title = 'test surf',
+                                                                                  agitate = True,
+                                                                                  random_agitation = False,
+                                                                                  feature_type = "fault",
+                                                                                  is_curtain = False,
+                                                                                  progress_fn = None,
+                                                                                  return_properties = ['grid bisector'],
+                                                                                  raw_bisector = False,
+                                                                                  n_batches = 2,
+                                                                                  packed_bisectors = True,
+                                                                                  patch_indices = grid_patch_indices)
+    cip = set([tuple(pair) for pair in gcs_optimised.cell_index_pairs])
+    assert cip == e_cip  # note: this assumes lower cell index is first, which happens to be true
+    assert props is not None
+    assert len(props) == 1
+    bisector, is_curtain = props['grid bisector']
+    assert bisector.shape == (3, 3, 1)  # I axis packed
+    assert not is_curtain
 
 
 def test_delaunay_triangulation(example_model_and_crs):
