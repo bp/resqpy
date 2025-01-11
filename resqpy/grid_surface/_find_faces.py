@@ -1246,9 +1246,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # log.debug('finished preparing columns bisector')
         elif patchwork:
             n_patches = surface.number_of_patches()
-            nkf = len(k_faces_kji0)
-            njf = len(j_faces_kji0)
-            nif = len(i_faces_kji0)
+            nkf = 0 if k_faces_kji0 is None else len(k_faces_kji0)
+            njf = 0 if j_faces_kji0 is None else len(j_faces_kji0)
+            nif = 0 if i_faces_kji0 is None else len(i_faces_kji0)
             # fetch patch indices for triangle hits
             assert all_tris is not None and len(all_tris) == nkf + njf + nif
             patch_indices_k = surface.patch_indices_for_triangle_indices(all_tris[:nkf])
@@ -1260,27 +1260,37 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 bisector = np.ones(_shape_packed(grid.extent_kji), dtype = np.uint8)
             else:
                 bisector = np.ones(tuple(grid.extent_kji), dtype = np.bool_)
-            # populate 4D bisector with an axis zero slice for each patch
+            # populate composite bisector
             for patch in range(n_patches):
                 mask = (patch_indices == patch)
                 if np.count_nonzero(mask) == 0:
                     log.warning(f'patch {patch} of surface {surface.title} is not applicable to any cells in grid')
                     continue
+                patch_k_faces_kji0 = None
+                if k_faces_kji0 is not None:
+                    patch_k_faces_kji0 = k_faces_kji0[(patch_indices_k == patch).astype(bool)]
+                patch_j_faces_kji0 = None
+                if j_faces_kji0 is not None:
+                    patch_j_faces_kji0 = j_faces_kji0[(patch_indices_j == patch).astype(bool)]
+                patch_i_faces_kji0 = None
+                if i_faces_kji0 is not None:
+                    patch_i_faces_kji0 = i_faces_kji0[(patch_indices_i == patch).astype(bool)]
                 if packed_bisectors:
                     mask = np.packbits(mask, axis = -1)
                     patch_bisector, is_curtain =  \
                         packed_bisector_from_face_indices(tuple(grid.extent_kji),
-                                                          k_faces_kji0[(patch_indices_k == patch).astype(bool)],
-                                                          j_faces_kji0[(patch_indices_j == patch).astype(bool)],
-                                                          i_faces_kji0[(patch_indices_i == patch).astype(bool)],
+                                                          patch_k_faces_kji0,
+                                                          patch_j_faces_kji0,
+                                                          patch_i_faces_kji0,
                                                           raw_bisector)
-                    bisector = np.bitwise_or(np.bitwise_and(mask, patch_bisector), bisector)
+                    bisector = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
+                                             np.bitwise_and(np.invert(mask), bisector))
                 else:
                     patch_bisector, is_curtain =  \
                         bisector_from_face_indices(tuple(grid.extent_kji),
-                                                   k_faces_kji0[(patch_indices_k == patch).astype(bool)],
-                                                   j_faces_kji0[(patch_indices_j == patch).astype(bool)],
-                                                   i_faces_kji0[(patch_indices_i == patch).astype(bool)],
+                                                   patch_k_faces_kji0,
+                                                   patch_j_faces_kji0,
+                                                   patch_i_faces_kji0,
                                                    raw_bisector)
                     bisector[mask] = patch_bisector[mask]
                 if is_curtain:
@@ -2293,12 +2303,12 @@ def get_boundary_from_indices(  # type: ignore
         k_faces_kji0: Union[np.ndarray, None], j_faces_kji0: Union[np.ndarray, None],
         i_faces_kji0: Union[np.ndarray, None], grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
     """Return python protocol box containing indices"""
-    k_min_kji0 = None if (k_faces_kji0 is None or k_faces_kji0.size == 0) else np.min(k_faces_kji0, axis = 0)
-    k_max_kji0 = None if (k_faces_kji0 is None or k_faces_kji0.size == 0) else np.max(k_faces_kji0, axis = 0)
-    j_min_kji0 = None if (j_faces_kji0 is None or j_faces_kji0.size == 0) else np.min(j_faces_kji0, axis = 0)
-    j_max_kji0 = None if (j_faces_kji0 is None or j_faces_kji0.size == 0) else np.max(j_faces_kji0, axis = 0)
-    i_min_kji0 = None if (i_faces_kji0 is None or i_faces_kji0.size == 0) else np.min(i_faces_kji0, axis = 0)
-    i_max_kji0 = None if (i_faces_kji0 is None or i_faces_kji0.size == 0) else np.max(i_faces_kji0, axis = 0)
+    k_min_kji0 = None if ((k_faces_kji0 is None) or (k_faces_kji0.size == 0)) else np.min(k_faces_kji0, axis = 0)
+    k_max_kji0 = None if ((k_faces_kji0 is None) or (k_faces_kji0.size == 0)) else np.max(k_faces_kji0, axis = 0)
+    j_min_kji0 = None if ((j_faces_kji0 is None) or (j_faces_kji0.size == 0)) else np.min(j_faces_kji0, axis = 0)
+    j_max_kji0 = None if ((j_faces_kji0 is None) or (j_faces_kji0.size == 0)) else np.max(j_faces_kji0, axis = 0)
+    i_min_kji0 = None if ((i_faces_kji0 is None) or (i_faces_kji0.size == 0)) else np.min(i_faces_kji0, axis = 0)
+    i_max_kji0 = None if ((i_faces_kji0 is None) or (i_faces_kji0.size == 0)) else np.max(i_faces_kji0, axis = 0)
     box = np.empty((2, 3), dtype = np.int32)
     box[0, :] = grid_extent_kji
     box[1, :] = -1
