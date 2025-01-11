@@ -1260,7 +1260,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 bisector = np.ones(_shape_packed(grid.extent_kji), dtype = np.uint8)
             else:
                 bisector = np.ones(tuple(grid.extent_kji), dtype = np.bool_)
-            # populate 4D bisector with an axis zero slice for each patch
+            # populate composite bisector
             for patch in range(n_patches):
                 mask = (patch_indices == patch)
                 if np.count_nonzero(mask) == 0:
@@ -1274,7 +1274,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                           j_faces_kji0[(patch_indices_j == patch).astype(bool)],
                                                           i_faces_kji0[(patch_indices_i == patch).astype(bool)],
                                                           raw_bisector)
-                    bisector = np.bitwise_or(np.bitwise_and(mask, patch_bisector), bisector)
+                    bisector = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
+                                             np.bitwise_and(np.invert(mask), bisector))
                 else:
                     patch_bisector, is_curtain =  \
                         bisector_from_face_indices(tuple(grid.extent_kji),
