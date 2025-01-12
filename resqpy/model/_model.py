@@ -1401,7 +1401,7 @@ class Model():
                          cache_array = False,
                          object = None,
                          array_attribute = None,
-                         dtype = 'float',
+                         dtype = None,
                          required_shape = None):
         """Returns one element from an hdf5 array and/or caches the array.
 

@@ -283,7 +283,7 @@ def find_faces_to_represent_surface_regular_wrapper(
         s_patches_array = rqp.Property(model, uuid = surface_patching_property_uuid).array_ref()
         patch_count = surface.number_of_patches()
         assert s_patches_array.shape == (patch_count,)
-        p_dtype = (np.int8 if s_patches_array.shape[0] < 128 else np.int32)
+        p_dtype = (np.int8 if s_patches_array.shape[0] < 127 else np.int32)
         patch_indices = np.full(g_patching_array.shape, -1, dtype = p_dtype)
         for patch in range(patch_count):
             gp = s_patches_array[patch]

@@ -32,6 +32,7 @@ __all__ = [
     "_where_true",
     "_first_true",
     "intersect_numba",
+    "get_box"
 ]
 
 from ._grid_skin import GridSkin
@@ -72,6 +73,7 @@ from ._find_faces import (
     _where_true,
     _first_true,
     intersect_numba,
+    get_box
 )
 
 # Set "module" attribute of all public objects to this path.

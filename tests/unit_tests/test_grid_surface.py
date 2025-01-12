@@ -527,7 +527,7 @@ def test_bisector_from_faces_flat_surface_k():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
-    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, k_face_indices, None, None, False)
+    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, k_face_indices, None, None, False, None)
     bounds = rqgs.get_boundary_dict(k_faces, j_faces, i_faces, grid_extent_kji)
 
     # Assert
@@ -621,7 +621,7 @@ def test_bisector_from_faces_flat_surface_j():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
-    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, None, j_face_indices, None, False)
+    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, None, j_face_indices, None, False, None)
     ca = rqgs.column_bisector_from_faces(grid_extent_kji[1:], j_faces[0], i_faces[0])
 
     # Assert
@@ -696,7 +696,7 @@ def test_bisector_from_faces_flat_surface_i():
 
     # Act
     a, is_curtain = rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
-    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, None, None, i_face_indices, False)
+    pa, p_is_curtain = rqgs.packed_bisector_from_face_indices(grid_extent_kji, None, None, i_face_indices, False, None)
 
     # Assert
     np.all(a == np.array(
@@ -748,7 +748,7 @@ def test_bisector_from_faces_flat_surface_k_hole():
     with pytest.raises(AssertionError):
         rqgs.bisector_from_faces(grid_extent_kji, k_faces, j_faces, i_faces, False)
     with pytest.raises(AssertionError):
-        rqgs.packed_bisector_from_face_indices(grid_extent_kji, k_face_indices, None, None, False)
+        rqgs.packed_bisector_from_face_indices(grid_extent_kji, k_face_indices, None, None, False, None)
 
 
 def test_shadow_from_faces_flat_surface_k_hole():
