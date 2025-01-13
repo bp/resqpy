@@ -1532,10 +1532,13 @@ def bisector_from_face_indices(  # type: ignore
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
     face_box = get_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
+    box = np.empty((2, 3), dtype = np.int32)
     if box is None:
-        box = face_box
+        box[:] = face_box
     else:
-        box = box_intersection(box, face_box)
+        box[:] = box_intersection(box, face_box)
+        if np.all(box == 0):
+            box[:] = face_box
     # set k_faces as bool arrays covering box
     k_faces, j_faces, i_faces = _box_face_arrays_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, box)
 
