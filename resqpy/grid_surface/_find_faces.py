@@ -10,7 +10,7 @@ import numba  # type: ignore
 from numba import njit, prange  # type: ignore
 from typing import Tuple, Union, Dict
 
-import resqpy as rq
+import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.fault as rqf
@@ -1233,7 +1233,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     bisector = None
     if return_bisector:
         if is_curtain and not patchwork:
-            log.debug("preparing columns bisector")
+            log.debug(f'preparing columns bisector for: {surface.title}')
             if j_faces_kji0 is None:
                 j_faces_ji0 = np.empty((0, 2), dtype = np.int32)
             else:
@@ -1258,11 +1258,12 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # add extra dimension to bisector array (at axis 0) for patches
             pb_shape = tuple([n_patches] + list(grid.extent_kji))
             if packed_bisectors:
-                bisector = np.ones(_shape_packed(grid.extent_kji), dtype = np.uint8)
+                bisector = np.invert(np.zeros(_shape_packed(grid.extent_kji), dtype = np.uint8))
             else:
                 bisector = np.ones(tuple(grid.extent_kji), dtype = np.bool_)
             # populate composite bisector
             for patch in range(n_patches):
+                log.debug(f'processing patch {patch} of surface: {surface.title}')
                 mask = (patch_indices == patch)
                 mask_count = np.count_nonzero(mask)
                 if mask_count == 0:
@@ -1272,7 +1273,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 assert box_count == mask_count
                 assert np.all(patch_box[1] > patch_box[0])
                 patch_box = expanded_box(patch_box, tuple(grid.extent_kji))
-                assert np.all(patch_box[1] > patch_box[0])  # debug
+                patch_box[0, 0] = 0
+                patch_box[1, 0] = grid.extent_kji[0]
                 patch_k_faces_kji0 = None
                 if k_faces_kji0 is not None:
                     patch_k_faces_kji0 = k_faces_kji0[(patch_indices_k == patch).astype(bool)]
@@ -1307,15 +1309,14 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                     log.warning(f'ignoring curtain nature of bisector for patch {patch} of surface: {surface.title}')
                     is_curtain = False
         else:
-            log.debug("preparing singlular cells bisector")
+            log.info(f'preparing singlular cells bisector for surface: {surface.title}')  # could downgrade to debug
             if ((k_faces_kji0 is None or len(k_faces_kji0) == 0) and
                 (j_faces_kji0 is None or len(j_faces_kji0) == 0) and (i_faces_kji0 is None or len(i_faces_kji0) == 0)):
                 bisector = np.ones((grid.nj, grid.ni), dtype = bool)
                 is_curtain = True
             elif packed_bisectors:
                 bisector, is_curtain = packed_bisector_from_face_indices(tuple(grid.extent_kji), k_faces_kji0,
-                                                                         j_faces_kji0, i_faces_kji0, raw_bisector,
-                                                                         None)
+                                                                         j_faces_kji0, i_faces_kji0, raw_bisector, None)
                 if is_curtain:
                     bisector = np.unpackbits(bisector[0], axis = -1,
                                              count = grid.ni).astype(bool)  # reduce to a columns property
@@ -1505,6 +1506,7 @@ def bisector_from_face_indices(  # type: ignore
         i_faces_kji0: Union[np.ndarray, None],
         raw_bisector: bool,
         box: Union[np.ndarray, None]) -> Tuple[np.ndarray, bool]:
+    # yapf: enable
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
     arguments:
@@ -1591,7 +1593,7 @@ def packed_bisector_from_face_indices(  # type: ignore
         i_faces_kji0: Union[np.ndarray, None],
         raw_bisector: bool,
         box: Union[np.ndarray, None]) -> Tuple[np.ndarray, bool]:
-# yapf: enable
+    # yapf: enable
     """Creates a uint8 (packed bool) array denoting the bisection of the grid by the face sets.
 
     arguments:
@@ -2329,7 +2331,8 @@ def _set_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: in
 
 
 @njit  # pragma: no cover
-def _set_packed_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: int, kr: int, jr: int, ir: int) -> None:
+def _set_packed_face_array(a: np.ndarray, indices: np.ndarray, ko: int, jo: int, io: int, kr: int, jr: int,
+                           ir: int) -> None:
     k: int = 0
     j: int = 0
     i: int = 0
@@ -2353,7 +2356,7 @@ def get_boundary_from_indices(  # type: ignore
         j_faces_kji0: Union[np.ndarray, None],
         i_faces_kji0: Union[np.ndarray, None],
         grid_extent_kji: Tuple[int, int, int]) -> np.ndarray:
-# yapf: enable
+    # yapf: enable
     """Return python protocol box containing indices"""
     k_min_kji0 = None if ((k_faces_kji0 is None) or (k_faces_kji0.size == 0)) else np.min(k_faces_kji0, axis = 0)
     k_max_kji0 = None if ((k_faces_kji0 is None) or (k_faces_kji0.size == 0)) else np.max(k_faces_kji0, axis = 0)
