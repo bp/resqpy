@@ -1505,7 +1505,7 @@ def bisector_from_face_indices(  # type: ignore
         j_faces_kji0: Union[np.ndarray, None],
         i_faces_kji0: Union[np.ndarray, None],
         raw_bisector: bool,
-        box: Union[np.ndarray, None]) -> Tuple[np.ndarray, bool]:
+        p_box: Union[np.ndarray, None]) -> Tuple[np.ndarray, bool]:
     # yapf: enable
     """Creates a boolean array denoting the bisection of the grid by the face sets.
 
@@ -1515,7 +1515,7 @@ def bisector_from_face_indices(  # type: ignore
         - j_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the j dimension
         - i_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the i dimension
         - raw_bisector (bool): if True, the bisector is returned without determining which side is shallower
-        - box (np.ndarray): a python protocol box to limit the bisector evaluation over
+        - p_box (np.ndarray): a python protocol box to limit the bisector evaluation over
 
     returns:
         Tuple containing:
@@ -1533,10 +1533,10 @@ def bisector_from_face_indices(  # type: ignore
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid)
     face_box = get_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
     box = np.empty((2, 3), dtype = np.int32)
-    if box is None:
+    if p_box is None:
         box[:] = face_box
     else:
-        box[:] = box_intersection(box, face_box)
+        box[:] = box_intersection(p_box, face_box)
         if np.all(box == 0):
             box[:] = face_box
     # set k_faces as bool arrays covering box
@@ -1595,7 +1595,7 @@ def packed_bisector_from_face_indices(  # type: ignore
         j_faces_kji0: Union[np.ndarray, None],
         i_faces_kji0: Union[np.ndarray, None],
         raw_bisector: bool,
-        box: Union[np.ndarray, None]) -> Tuple[np.ndarray, bool]:
+        p_box: Union[np.ndarray, None]) -> Tuple[np.ndarray, bool]:
     # yapf: enable
     """Creates a uint8 (packed bool) array denoting the bisection of the grid by the face sets.
 
@@ -1605,7 +1605,7 @@ def packed_bisector_from_face_indices(  # type: ignore
         - j_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the j dimension
         - i_faces_kji0 (np.ndarray): an int array of indices of which faces represent the surface in the i dimension
         - raw_bisector (bool): if True, the bisector is returned without determining which side is shallower
-        - box (np.ndarray): a python protocol unshrunken box to limit the bisector evaluation over
+        - p_box (np.ndarray): a python protocol unshrunken box to limit the bisector evaluation over
 
     returns:
         Tuple containing:
@@ -1624,10 +1624,10 @@ def packed_bisector_from_face_indices(  # type: ignore
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid), and shrink the I axis
     face_box = get_packed_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
     box = np.empty((2, 3), dtype = np.int32)
-    if box is None:
+    if p_box is None:
         box[:] = face_box
     else:
-        box[:] = box_intersection(shrunk_box_for_packing(box), face_box)
+        box[:] = box_intersection(shrunk_box_for_packing(p_box), face_box)
         if np.all(box == 0):
             box[:] = face_box
 
