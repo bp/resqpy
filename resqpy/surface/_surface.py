@@ -495,7 +495,7 @@ class Surface(rqsb.BaseSurface):
         self.points = None
         if not equivalent_crs:
             if self.extra_metadata.pop('rotation matrix', None) is not None:
-                log.warning(f'discarding rotation matrix extra metadata during crs change of: {self.title}')
+                log.debug(f'discarding rotation matrix extra metadata during crs change of: {self.title}')
             self._load_normal_vector_from_extra_metadata()
             if self.normal_vector is not None:
                 if required_crs.z_inc_down != old_crs.z_inc_down:

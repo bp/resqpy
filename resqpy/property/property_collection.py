@@ -1810,8 +1810,10 @@ class PropertyCollection():
         if masked:
             exclude_value = self.null_value_for_part(part) if exclude_null else None
             return self.masked_array(self.__dict__[cached_array_name], exclude_value = exclude_value)
-        else:
+        elif dtype is None:
             return self.__dict__[cached_array_name]
+        else:
+            return self.__dict__[cached_array_name].astype(dtype)
 
     def h5_slice(self, part, slice_tuple):
         """Returns a subset of the array for part, without loading the whole array.
