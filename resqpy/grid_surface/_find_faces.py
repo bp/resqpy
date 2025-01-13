@@ -1258,7 +1258,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # add extra dimension to bisector array (at axis 0) for patches
             pb_shape = tuple([n_patches] + list(grid.extent_kji))
             if packed_bisectors:
-                bisector = np.invert(np.zeros(_shape_packed(grid.extent_kji), dtype = np.uint8))
+                bisector = np.invert(np.zeros(_shape_packed(grid.extent_kji), dtype = np.uint8), dtype = np.uint8)
             else:
                 bisector = np.ones(tuple(grid.extent_kji), dtype = np.bool_)
             # populate composite bisector
@@ -1293,8 +1293,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                           patch_i_faces_kji0,
                                                           raw_bisector,
                                                           patch_box)
-                    bisector = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
-                                             np.bitwise_and(np.invert(mask), bisector))
+                    bisector[:] = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
+                                                np.bitwise_and(np.invert(mask, dtype = np.uint8), bisector))
                 else:
                     patch_bisector, is_curtain =  \
                         bisector_from_face_indices(tuple(grid.extent_kji),
@@ -1620,10 +1620,13 @@ def packed_bisector_from_face_indices(  # type: ignore
 
     # find the surface boundary (includes a buffer slice where surface does not reach edge of grid), and shrink the I axis
     face_box = get_packed_boundary_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, grid_extent_kji)
+    box = np.empty((2, 3), dtype = np.int32)
     if box is None:
-        box = face_box
+        box[:] = face_box
     else:
-        box = box_intersection(shrunk_box_for_packing(box), face_box)
+        box[:] = box_intersection(shrunk_box_for_packing(box), face_box)
+        if np.all(box == 0):
+            box[:] = face_box
 
     # set k_faces, j_faces & i_faces as uint8 packed bool arrays covering box
     k_faces, j_faces, i_faces = _packed_box_face_arrays_from_indices(k_faces_kji0, j_faces_kji0, i_faces_kji0, box)
@@ -2233,7 +2236,7 @@ def _packed_shallow_or_curtain_temp_bitwise_count(a: np.ndarray, true_count: int
     return is_curtain
 
 
-def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndarray):
+def _set_bisector_outside_box(a: np.ndarray, box: np.ndarray, box_array: np.ndarray):  # type: ignore
     # set values outside of the bounding box
     if box[1, 0] < a.shape[0] and np.any(box_array[-1, :, :]):
         a[box[1, 0]:, :, :] = True
