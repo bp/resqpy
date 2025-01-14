@@ -15,15 +15,15 @@ import resqpy.surface as rqs
 
 
 def add_surfaces(
-    epc_file,  # existing resqml model
-    crs_uuid = None,  # optional crs uuid, defaults to crs associated with model (usually main grid crs)
-    surface_file_format = 'zmap',  # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
-    rq_class = 'surface',  # 'surface' or 'mesh': the class of object to be created
-    surface_role = 'map',  # 'map' or 'pick'
-    quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
-    surface_file_list = None,  # list of full file names (paths), each holding one surface
-    make_horizon_interpretations_and_features = True,  # if True, feature and interpretation objects are created
-    interpretation_type = 'horizon'):
+        epc_file,  # existing resqml model
+        crs_uuid = None,  # optional crs uuid, defaults to crs associated with model (usually main grid crs)
+        surface_file_format = 'zmap',  # zmap, rms (roxar) or GOCAD-Tsurf only formats currently supported
+        rq_class = 'surface',  # 'surface' or 'mesh': the class of object to be created
+        surface_role = 'map',  # 'map' or 'pick'
+        quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
+        surface_file_list = None,  # list of full file names (paths), each holding one surface
+        make_horizon_interpretations_and_features = True,  # if True, feature and interpretation objects are created
+        interpretation_type = 'horizon'):
     """Process a list of surface files, adding each surface as a new part in the resqml model.
 
     Arguments:
