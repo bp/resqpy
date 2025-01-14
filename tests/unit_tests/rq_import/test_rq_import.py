@@ -358,7 +358,7 @@ def test_add_surfaces_different_types(example_model_and_crs, test_data_path, sur
 
     if interptype == 'horizon':
         assert len(model.parts_list_of_type('obj_HorizonInterpretation')) == len(surfaces)
-        assert len(model.parts_list_of_type('obj_GenericBoundaryFeature')) == len(surfaces)
+        assert len(model.parts_list_of_type('obj_GeneticBoundaryFeature')) == len(surfaces)
     elif interptype == 'fault':
         assert len(model.parts_list_of_type('obj_FaultInterpretation')) == len(surfaces)
         assert len(model.parts_list_of_type('obj_TectonicBoundaryFeature')) == len(surfaces)
