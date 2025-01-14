@@ -334,8 +334,8 @@ def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, r
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'horizon'),
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'fault'),
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'geobody')])
-def test_add_surfaces_different_types(example_model_and_crs, test_data_path, surfaces, format, rqclass, interp_and_feat, role,
-                      newparts, interptype):
+def test_add_surfaces_different_types(example_model_and_crs, test_data_path, surfaces, format, rqclass, interp_and_feat,
+                                      role, newparts, interptype):
     model, crs = example_model_and_crs
     model.store_epc()
 
