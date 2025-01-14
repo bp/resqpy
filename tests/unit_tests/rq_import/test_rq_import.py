@@ -323,6 +323,7 @@ def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, r
     if interp_and_feat:
         assert len(model.parts_list_of_type('obj_HorizonInterpretation')) == len(surfaces)
 
+
 @pytest.mark.parametrize('surfaces,format,interp_and_feat,role,rqclass,newparts,interptype',
                          [(['Surface_zmap.dat'], 'zmap', True, 'map', 'surface', 2, 'horizon'),
                           (['Surface_zmap.dat'], 'zmap', True, 'map', 'surface', 2, 'fault'),
@@ -332,7 +333,7 @@ def test_add_surfaces(example_model_and_crs, test_data_path, surfaces, format, r
                           (['Surface_roxartext.txt'], 'rms', True, 'map', 'surface', 2, 'geobody'),
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'horizon'),
                           (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'fault'),
-                          (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'geobody'))
+                          (['Surface_tsurf.txt'], 'GOCAD-Tsurf', True, 'map', 'surface', 2, 'geobody')])
 def test_add_surfaces_different_types(example_model_and_crs, test_data_path, surfaces, format, rqclass, interp_and_feat, role,
                       newparts, interptype):
     model, crs = example_model_and_crs
