@@ -119,7 +119,10 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
         elif interpretation_type == 'fault':
             feature = rqo.TectonicBoundaryFeature(model, kind = 'fault', feature_name = short_name)
             feature.create_xml()
-            interp = rqo.FaultInterpretation(model, tectonic_boundary_feature = feature, domain = 'depth', is_normal = True)
+            interp = rqo.FaultInterpretation(model, 
+                                             tectonic_boundary_feature = feature, 
+                                             domain = 'depth', 
+                                             is_normal = True)
             interp_root = interp.create_xml()
         else:
             feature = rqo.GeobodyFeature(model, feature_name = short_name)
