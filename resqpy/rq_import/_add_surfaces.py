@@ -22,7 +22,8 @@ def add_surfaces(
     surface_role = 'map',  # 'map' or 'pick'
     quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
     surface_file_list = None,  # list of full file names (paths), each holding one surface
-    make_horizon_interpretations_and_features = True):  # if True, feature and interpretation objects are created
+    make_horizon_interpretations_and_features = True,  # if True, feature and interpretation objects are created
+    interpretation_type = 'horizon'):
     """Process a list of surface files, adding each surface as a new part in the resqml model.
 
     Arguments:
@@ -34,6 +35,7 @@ def add_surfaces(
         quad_triangles (bool, default False): if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
         surface_file_list (list, default None): list of full file names (paths), each holding one surface
         make_horizon_interpretations_and_features (bool, default True): if True, feature and interpretation objects are created
+        interpretation_type (str, default 'horizon'): if 'make_horizon_interpretations_and_features' is True, feature and interpretation objects are added. Default is 'horizon', other options are 'fault' and 'geobody'
 
     Returns:
         resqml model object with added surfaces
@@ -42,13 +44,14 @@ def add_surfaces(
     assert surface_file_list, 'surface file list is empty or missing'
     assert surface_file_format in ['zmap', 'rms', 'roxar',
                                    'GOCAD-Tsurf'], 'unsupported surface file format: ' + str(surface_file_format)
+    assert interpretation_type in ['horizon', 'fault', 'geobody']
     rq_class = _get_rq_class(rq_class)
 
     model, crs_uuid = _get_model_details(epc_file, crs_uuid)
 
     for surf_file in surface_file_list:
         model = _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
-                                    rq_class, make_horizon_interpretations_and_features)
+                                    rq_class, make_horizon_interpretations_and_features, interpretation_type)
 
     # mark model as modified
     model.set_modified()
@@ -61,7 +64,7 @@ def add_surfaces(
 
 
 def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid, rq_class,
-                        make_horizon_interpretations_and_features):
+                        make_horizon_interpretations_and_features, interpretation_type):
     _, short_name = os.path.split(surf_file)
     dot = short_name.rfind('.')
     if dot > 0:
@@ -106,10 +109,21 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
     surface.write_hdf5()
 
     if make_horizon_interpretations_and_features:
-        feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
-        feature.create_xml()
-        interp = rqo.HorizonInterpretation(model, genetic_boundary_feature = feature, domain = 'depth')
-        interp_root = interp.create_xml()
+        if interpretation_type == 'horizon':
+            feature = rqo.GeneticBoundaryFeature(model, kind = 'horizon', feature_name = short_name)
+            feature.create_xml()
+            interp = rqo.HorizonInterpretation(model, genetic_boundary_feature = feature, domain = 'depth')
+            interp_root = interp.create_xml()
+        elif interpretation_type == 'fault':
+            feature = rqo.TectonicBoundaryFeature(model, kind = 'fault', feature_name = short_name)
+            feature.create_xml()
+            interp = rqo.FaultInterpretation(model, tectonic_boundary_feature = feature, domain = 'depth')
+            interp_root = interp.create_xml()
+        else:
+            feature = rqo.GeobodyFeature(model, feature_name = short_name)
+            feature.create_xml()
+            interp = rqo.GeobodyInterpretation(model, geobody_feature = feature, domain = 'depth')
+            interp_root = interp.create_xml()
         surface.set_represented_interpretation_root(interp_root)
 
     surface.create_xml(add_as_part = True, add_relationships = True, title = short_name, originator = None)
