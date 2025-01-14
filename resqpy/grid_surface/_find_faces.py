@@ -2004,12 +2004,12 @@ def _first_true(array: np.ndarray) -> int:  # type: ignore
 
 
 @njit  # pragma: no cover
-def _set_packed_where_mask(a: np.ndarray, mask: np.ndarray, v: np.ndarray):
+def _set_packed_where_mask(a: np.ndarray, mask: np.ndarray, v: np.ndarray):  # type: ignore
     """Update 3D packed boolean array a from packed boolean array v where packed boolean array mask is set."""
     assert a.ndim == 3 and a.shape == mask.shape and a.shape == v.shape
-    nk: np.int32 = a.shape[0]
-    nj: np.int32 = a.shape[1]
-    ni: np.int32 = a.shape[2]
+    nk: int = a.shape[0]
+    nj: int = a.shape[1]
+    ni: int = a.shape[2]
     for k in prange(nk):
         for j in range(nj):
             for i in range(ni):
