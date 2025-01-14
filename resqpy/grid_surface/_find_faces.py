@@ -1293,8 +1293,9 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                           patch_i_faces_kji0,
                                                           raw_bisector,
                                                           patch_box)
-                    bisector[:] = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
-                                                np.bitwise_and(np.invert(mask, dtype = np.uint8), bisector))
+                    # bisector[:] = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
+                    #                             np.bitwise_and(np.invert(mask, dtype = np.uint8), bisector))
+                    _set_packed_where_mask(bisector, mask, patch_bisector)
                 else:
                     patch_bisector, is_curtain =  \
                         bisector_from_face_indices(tuple(grid.extent_kji),
@@ -2000,6 +2001,22 @@ def _first_true(array: np.ndarray) -> int:  # type: ignore
         if val:
             return idx[0] + 1
     return array.size
+
+
+@njit  # pragma: no cover
+def _set_packed_where_mask(a: np.ndarray, mask: np.ndarray, v: np.ndarray):
+    """Update 3D packed boolean array a from packed boolean array v where packed boolean array mask is set."""
+    assert a.ndim == 3 and a.shape == mask.shape and a.shape == v.shape
+    nk: np.int32 = a.shape[0]
+    nj: np.int32 = a.shape[1]
+    ni: np.int32 = a.shape[2]
+    for k in prange(nk):
+        for j in range(nj):
+            for i in range(ni):
+                m: np.uint8 = mask[k, j, i]
+                if m != 0:
+                    not_m: np.uint8 = ~m
+                    a[k, j, i] = (m & v[k, j, i]) | (not_m & a[k, j, i])
 
 
 @njit  # pragma: no cover
