@@ -23,7 +23,8 @@ def add_surfaces(
         quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
         surface_file_list = None,  # list of full file names (paths), each holding one surface
         make_horizon_interpretations_and_features = True,  # if True, feature and interpretation objects are created
-        interpretation_type = 'horizon'):
+        interpretation_type = 'horizon'
+        fault_is_normal = True):
     """Process a list of surface files, adding each surface as a new part in the resqml model.
 
     Arguments:
@@ -36,11 +37,10 @@ def add_surfaces(
         surface_file_list (list, default None): list of full file names (paths), each holding one surface
         make_horizon_interpretations_and_features (bool, default True): if True, feature and interpretation objects are created
         interpretation_type (str, default 'horizon'): if 'make_horizon_interpretations_and_features' is True, feature and interpretation objects are added. Default is 'horizon', other options are 'fault' and 'geobody'
+        fault_is_normal (bool, default True): if 'interpretation_type' is 'fault', define if the fault is a normal fault. Default True
 
     Returns:
         resqml model object with added surfaces
-
-    Note: where interpretation_type is 'fault' the faultinterpretation added will be defined as a normal fault.
     """
 
     assert surface_file_list, 'surface file list is empty or missing'
@@ -122,7 +122,7 @@ def _add_single_surface(model, surf_file, surface_file_format, surface_role, qua
             interp = rqo.FaultInterpretation(model,
                                              tectonic_boundary_feature = feature,
                                              domain = 'depth',
-                                             is_normal = True)
+                                             is_normal = fault_is_normal)
             interp_root = interp.create_xml()
         else:
             feature = rqo.GeobodyFeature(model, feature_name = short_name)
