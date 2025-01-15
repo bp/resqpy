@@ -53,7 +53,8 @@ def add_surfaces(
 
     for surf_file in surface_file_list:
         model = _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid,
-                                    rq_class, make_horizon_interpretations_and_features, interpretation_type)
+                                    rq_class, make_horizon_interpretations_and_features, interpretation_type,
+                                    fault_is_normal)
 
     # mark model as modified
     model.set_modified()
@@ -66,7 +67,7 @@ def add_surfaces(
 
 
 def _add_single_surface(model, surf_file, surface_file_format, surface_role, quad_triangles, crs_uuid, rq_class,
-                        make_horizon_interpretations_and_features, interpretation_type):
+                        make_horizon_interpretations_and_features, interpretation_type, fault_is_normal):
     _, short_name = os.path.split(surf_file)
     dot = short_name.rfind('.')
     if dot > 0:
