@@ -23,7 +23,7 @@ def add_surfaces(
         quad_triangles = False,  # if True, 4 triangles per quadrangle will be used for mesh formats, otherwise 2
         surface_file_list = None,  # list of full file names (paths), each holding one surface
         make_horizon_interpretations_and_features = True,  # if True, feature and interpretation objects are created
-        interpretation_type = 'horizon'
+        interpretation_type = 'horizon',
         fault_is_normal = True):
     """Process a list of surface files, adding each surface as a new part in the resqml model.
 
