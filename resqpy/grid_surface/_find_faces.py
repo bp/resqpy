@@ -1246,7 +1246,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             # log.debug('finished preparing columns bisector')
         elif patchwork:
             n_patches = surface.number_of_patches()
-            log.info(f'surface: {surface.title}; number of patches: {n_patches}')
+            log.info(f'preparing composite cells bisector for surface: {surface.title}; number of patches: {n_patches}')
             nkf = 0 if k_faces_kji0 is None else len(k_faces_kji0)
             njf = 0 if j_faces_kji0 is None else len(j_faces_kji0)
             nif = 0 if i_faces_kji0 is None else len(i_faces_kji0)
@@ -1275,6 +1275,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                 patch_box = expanded_box(patch_box, tuple(grid.extent_kji))
                 patch_box[0, 0] = 0
                 patch_box[1, 0] = grid.extent_kji[0]
+                packed_box = shrunk_box_for_packing(patch_box)
                 patch_k_faces_kji0 = None
                 if k_faces_kji0 is not None:
                     patch_k_faces_kji0 = k_faces_kji0[(patch_indices_k == patch).astype(bool)]
@@ -1295,7 +1296,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                           patch_box)
                     # bisector[:] = np.bitwise_or(np.bitwise_and(mask, patch_bisector),
                     #                             np.bitwise_and(np.invert(mask, dtype = np.uint8), bisector))
-                    _set_packed_where_mask(bisector, mask, patch_bisector)
+                    _set_packed_where_mask(bisector, mask, patch_bisector, packed_box)
                 else:
                     patch_bisector, is_curtain =  \
                         bisector_from_face_indices(tuple(grid.extent_kji),
@@ -2003,16 +2004,19 @@ def _first_true(array: np.ndarray) -> int:  # type: ignore
     return array.size
 
 
-@njit  # pragma: no cover
-def _set_packed_where_mask(a: np.ndarray, mask: np.ndarray, v: np.ndarray):  # type: ignore
+@njit('(uint8[:,:,:], uint8[:,:,:], uint8[:,:,:], int32[:,:])', parallel = True)  # pragma: no cover
+def _set_packed_where_mask(a: np.ndarray, mask: np.ndarray, v: np.ndarray, box: np.ndarray):  # type: ignore
     """Update 3D packed boolean array a from packed boolean array v where packed boolean array mask is set."""
-    assert a.ndim == 3 and a.shape == mask.shape and a.shape == v.shape
-    nk: int = a.shape[0]
-    nj: int = a.shape[1]
-    ni: int = a.shape[2]
-    for k in prange(nk):
-        for j in range(nj):
-            for i in range(ni):
+    assert a.ndim == 3 and a.shape == mask.shape and a.shape == v.shape and box.shape == (2, 3)
+    sk: int = box[0, 0]
+    sj: int = box[0, 1]
+    si: int = box[0, 2]
+    ek: int = box[1, 0]
+    ej: int = box[1, 1]
+    ei: int = box[1, 2]
+    for k in prange(sk, ek):
+        for j in range(sj, ej):
+            for i in range(si, ei):
                 m: np.uint8 = mask[k, j, i]
                 if m != 0:
                     not_m: np.uint8 = ~m
