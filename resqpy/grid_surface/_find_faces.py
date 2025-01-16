@@ -1167,68 +1167,6 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         else:
             return None
 
-    log.debug("converting face sets into grid connection set")
-    # NB: kji0 arrays in internal face protocol: used as cell_kji0 with polarity of 1
-    # property lists have elements replaced with sorted and filtered equivalents
-    gcs = rqf.GridConnectionSet.from_faces_indices(grid = grid,
-                                                   k_faces_kji0 = k_faces_kji0,
-                                                   j_faces_kji0 = j_faces_kji0,
-                                                   i_faces_kji0 = i_faces_kji0,
-                                                   remove_duplicates = not patchwork,
-                                                   k_properties = k_props,
-                                                   j_properties = j_props,
-                                                   i_properties = i_props,
-                                                   feature_name = name,
-                                                   feature_type = feature_type,
-                                                   create_organizing_objects_where_needed = True,
-                                                   title = title)
-    # log.debug('finished coversion to gcs')
-
-    # NB. following assumes faces have been added to gcs in a particular order!
-    all_tris = None
-    if return_triangles:
-        # log.debug('preparing triangles array')
-        k_triangles = np.empty((0,), dtype = np.int32) if k_props is None else k_props.pop(0)
-        j_triangles = np.empty((0,), dtype = np.int32) if j_props is None else j_props.pop(0)
-        i_triangles = np.empty((0,), dtype = np.int32) if i_props is None else i_props.pop(0)
-        all_tris = np.concatenate((k_triangles, j_triangles, i_triangles), axis = 0)
-        # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
-        assert all_tris.shape == (gcs.count,)
-
-    # NB. following assumes faces have been added to gcs in a particular order!
-    all_depths = None
-    if return_depths:
-        # log.debug('preparing depths array')
-        k_depths = np.empty((0,), dtype = np.float64) if k_props is None else k_props.pop(0)
-        j_depths = np.empty((0,), dtype = np.float64) if j_props is None else j_props.pop(0)
-        i_depths = np.empty((0,), dtype = np.float64) if i_props is None else i_props.pop(0)
-        all_depths = np.concatenate((k_depths, j_depths, i_depths), axis = 0)
-        # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
-        assert all_depths.shape == (gcs.count,)
-
-    # NB. following assumes faces have been added to gcs in a particular order!
-    all_offsets = None
-    if return_offsets:
-        # log.debug('preparing offsets array')
-        k_offsets = np.empty((0,), dtype = np.float64) if k_props is None else k_props[0]
-        j_offsets = np.empty((0,), dtype = np.float64) if j_props is None else j_props[0]
-        i_offsets = np.empty((0,), dtype = np.float64) if i_props is None else i_props[0]
-        all_offsets = _all_offsets(grid.crs, k_offsets, j_offsets, i_offsets)
-        # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
-        assert all_offsets.shape == (gcs.count,)
-
-    all_flange = None
-    if return_flange_bool:
-        # log.debug('preparing flange array')
-        flange_bool_uuid = surface.model.uuid(title = "flange bool",
-                                              obj_type = "DiscreteProperty",
-                                              related_uuid = surface.uuid)
-        assert (flange_bool_uuid is not None), f"No flange bool property found for surface: {surface.title}"
-        flange_bool = rqp.Property(surface.model, uuid = flange_bool_uuid)
-        flange_array = flange_bool.array_ref(dtype = bool)
-        all_flange = np.take(flange_array, all_tris)
-        assert all_flange.shape == (gcs.count,)
-
     # note: following is a grid cells property, not a gcs property
     bisector = None
     if return_bisector:
@@ -1245,6 +1183,15 @@ def find_faces_to_represent_surface_regular_optimised(grid,
             bisector = column_bisector_from_face_indices((grid.nj, grid.ni), j_faces_ji0, i_faces_ji0)
             # log.debug('finished preparing columns bisector')
         elif patchwork:
+            # NB. following assumes faces have been added to gcs in a particular order!
+            all_tris = None
+            assert return_triangles
+            # log.debug('preparing triangles array')
+            k_triangles = np.empty((0,), dtype = np.int32) if k_props is None else k_props[0]
+            j_triangles = np.empty((0,), dtype = np.int32) if j_props is None else j_props[0]
+            i_triangles = np.empty((0,), dtype = np.int32) if i_props is None else i_props[0]
+            all_tris = np.concatenate((k_triangles, j_triangles, i_triangles), axis = 0)
+            # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
             n_patches = surface.number_of_patches()
             log.info(f'preparing composite cells bisector for surface: {surface.title}; number of patches: {n_patches}')
             nkf = 0 if k_faces_kji0 is None else len(k_faces_kji0)
@@ -1327,6 +1274,98 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                                   i_faces_kji0, raw_bisector, None)
                 if is_curtain:
                     bisector = bisector[0]  # reduce to a columns property
+
+    # if using patchwork, filter all faces (and properties) to those within (or on boundary of) volume corresponding to patch
+    if patchwork:
+        if k_faces_kji0 is not None:
+            selection = filter_faces(k_faces_kji0, patch_indices_k, patch_indices, 0)
+            if np.any(selection):
+                k_faces_kji0 = k_faces_kji0[selection]
+                if k_props is not None:
+                    k_props = [prop[selection] for prop in k_props]
+            else:
+                k_faces_kji0 = None
+                k_props = None
+        if j_faces_kji0 is not None:
+            selection = filter_faces(j_faces_kji0, patch_indices_j, patch_indices, 1)
+            if np.any(selection):
+                j_faces_kji0 = j_faces_kji0[selection]
+                if j_props is not None:
+                    j_props = [prop[selection] for prop in j_props]
+            else:
+                j_faces_kji0 = None
+                j_props = None
+        if i_faces_kji0 is not None:
+            selection = filter_faces(i_faces_kji0, patch_indices_i, patch_indices, 2)
+            if np.any(selection):
+                i_faces_kji0 = i_faces_kji0[selection]
+                if i_props is not None:
+                    i_props = [prop[selection] for prop in i_props]
+            else:
+                i_faces_kji0 = None
+                i_props = None
+
+    log.debug("converting face sets into grid connection set")
+    # NB: kji0 arrays in internal face protocol: used as cell_kji0 with polarity of 1
+    # property lists have elements replaced with sorted and filtered equivalents
+    gcs = rqf.GridConnectionSet.from_faces_indices(grid = grid,
+                                                   k_faces_kji0 = k_faces_kji0,
+                                                   j_faces_kji0 = j_faces_kji0,
+                                                   i_faces_kji0 = i_faces_kji0,
+                                                   remove_duplicates = not patchwork,
+                                                   k_properties = k_props,
+                                                   j_properties = j_props,
+                                                   i_properties = i_props,
+                                                   feature_name = name,
+                                                   feature_type = feature_type,
+                                                   create_organizing_objects_where_needed = True,
+                                                   title = title)
+    # log.debug('finished coversion to gcs')
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    all_tris = None
+    if return_triangles:
+        # log.debug('preparing triangles array')
+        k_triangles = np.empty((0,), dtype = np.int32) if k_props is None else k_props.pop(0)
+        j_triangles = np.empty((0,), dtype = np.int32) if j_props is None else j_props.pop(0)
+        i_triangles = np.empty((0,), dtype = np.int32) if i_props is None else i_props.pop(0)
+        all_tris = np.concatenate((k_triangles, j_triangles, i_triangles), axis = 0)
+        # log.debug(f'gcs count: {gcs.count}; all triangles shape: {all_tris.shape}')
+        assert all_tris.shape == (gcs.count,)
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    all_depths = None
+    if return_depths:
+        # log.debug('preparing depths array')
+        k_depths = np.empty((0,), dtype = np.float64) if k_props is None else k_props.pop(0)
+        j_depths = np.empty((0,), dtype = np.float64) if j_props is None else j_props.pop(0)
+        i_depths = np.empty((0,), dtype = np.float64) if i_props is None else i_props.pop(0)
+        all_depths = np.concatenate((k_depths, j_depths, i_depths), axis = 0)
+        # log.debug(f'gcs count: {gcs.count}; all depths shape: {all_depths.shape}')
+        assert all_depths.shape == (gcs.count,)
+
+    # NB. following assumes faces have been added to gcs in a particular order!
+    all_offsets = None
+    if return_offsets:
+        # log.debug('preparing offsets array')
+        k_offsets = np.empty((0,), dtype = np.float64) if k_props is None else k_props[0]
+        j_offsets = np.empty((0,), dtype = np.float64) if j_props is None else j_props[0]
+        i_offsets = np.empty((0,), dtype = np.float64) if i_props is None else i_props[0]
+        all_offsets = _all_offsets(grid.crs, k_offsets, j_offsets, i_offsets)
+        # log.debug(f'gcs count: {gcs.count}; all offsets shape: {all_offsets.shape}')
+        assert all_offsets.shape == (gcs.count,)
+
+    all_flange = None
+    if return_flange_bool:
+        # log.debug('preparing flange array')
+        flange_bool_uuid = surface.model.uuid(title = "flange bool",
+                                              obj_type = "DiscreteProperty",
+                                              related_uuid = surface.uuid)
+        assert (flange_bool_uuid is not None), f"No flange bool property found for surface: {surface.title}"
+        flange_bool = rqp.Property(surface.model, uuid = flange_bool_uuid)
+        flange_array = flange_bool.array_ref(dtype = bool)
+        all_flange = np.take(flange_array, all_tris)
+        assert all_flange.shape == (gcs.count,)
 
     # note: following is a grid cells property, not a gcs property
     shadow = None
@@ -2517,3 +2556,28 @@ def get_box(mask: np.ndarray) -> Tuple[np.ndarray, int]:  # pragma: no cover
                             box[1, 2] = i + 1
                     count += 1
     return box, count
+
+
+@njit
+def filter_faces(faces_kji0: np.ndarray, face_patches: np.ndarray, cell_patches: np.ndarray, axis: int) -> np.ndarray:
+    """Return 1D boolean selection array indicating subset of faces that are applicable to cells with matching patch."""
+    n: int = len(faces_kji0)
+    assert len(face_patches) == n
+    selection = np.zeros(n, dtype = np.bool_)
+    for f in range(n):
+        k: int = faces_kji0[f, 0]
+        j: int = faces_kji0[f, 1]
+        i: int = faces_kji0[f, 2]
+        if face_patches[f] == cell_patches[k, j, i]:
+            selection[f] = True
+        else:
+            if axis == 0:
+                if face_patches[f] == cell_patches[k + 1, j, i]:
+                    selection[f] = True
+            elif axis == 1:
+                if face_patches[f] == cell_patches[k, j + 1, i]:
+                    selection[f] = True
+            else:
+                if face_patches[f] == cell_patches[k, j, i + 1]:
+                    selection[f] = True
+    return selection
