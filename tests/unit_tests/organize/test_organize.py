@@ -115,6 +115,79 @@ def test_FaultInterp(tmp_model):
     fault_interp_2 = rqo.FaultInterpretation(tmp_model, uuid = fault_interp.uuid)
     assert fault_interp_2.title == title
     assert fault_interp_2.maximum_throw == 3
+    assert fault_interp_2.is_normal
+    assert not fault_interp_2.is_listric
+
+
+def test_FaultInterp_normality_not_given(tmp_model):
+    title = "fault interpretation unknown normality"
+    tect_boundary = rqo.TectonicBoundaryFeature(tmp_model, kind = 'fault')
+    fault_interp = rqo.FaultInterpretation(
+        tmp_model,
+        tectonic_boundary_feature = tect_boundary,
+        title = title,
+        domain = "depth",
+        maximum_throw = 3,
+        mean_dip = 1,
+        mean_azimuth = 2,
+    )
+
+    tect_boundary.create_xml()
+    fault_interp.create_xml()
+
+    fault_interp_2 = rqo.FaultInterpretation(tmp_model, uuid = fault_interp.uuid)
+    assert fault_interp_2.title == title
+    assert fault_interp_2.maximum_throw == 3
+    assert fault_interp_2.is_normal
+    assert not fault_interp_2.is_listric
+
+
+def test_FaultInterp_is_listric(tmp_model):
+    title = "fault interpretation listric"
+    tect_boundary = rqo.TectonicBoundaryFeature(tmp_model, kind = 'fault')
+    fault_interp = rqo.FaultInterpretation(
+        tmp_model,
+        tectonic_boundary_feature = tect_boundary,
+        title = title,
+        domain = "depth",
+        is_listric = True,
+        maximum_throw = 3,
+        mean_dip = 1,
+        mean_azimuth = 2,
+    )
+
+    tect_boundary.create_xml()
+    fault_interp.create_xml()
+
+    fault_interp_2 = rqo.FaultInterpretation(tmp_model, uuid = fault_interp.uuid)
+    assert fault_interp_2.title == title
+    assert fault_interp_2.maximum_throw == 3
+    assert fault_interp_2.is_normal
+    assert fault_interp_2.is_listric
+
+
+def test_FaultInterp_reverse(tmp_model):
+    title = "fault interpretation reverse"
+    tect_boundary = rqo.TectonicBoundaryFeature(tmp_model, kind = 'fault')
+    fault_interp = rqo.FaultInterpretation(
+        tmp_model,
+        tectonic_boundary_feature = tect_boundary,
+        title = title,
+        domain = "depth",
+        is_normal = False,
+        maximum_throw = 3,
+        mean_dip = 1,
+        mean_azimuth = 2,
+    )
+
+    tect_boundary.create_xml()
+    fault_interp.create_xml()
+
+    fault_interp_2 = rqo.FaultInterpretation(tmp_model, uuid = fault_interp.uuid)
+    assert fault_interp_2.title == title
+    assert fault_interp_2.maximum_throw == 3
+    assert not fault_interp_2.is_normal
+    assert fault_interp_2.is_listric is None
 
 
 def test_EarthModelInterp(tmp_model):
