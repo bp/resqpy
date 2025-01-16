@@ -32,7 +32,7 @@ class FaultInterpretation(BaseResqpy):
                  tectonic_boundary_feature = None,
                  domain = 'depth',
                  is_normal = None,
-                 is_listric = None,
+                 is_listric = False,
                  maximum_throw = None,
                  mean_azimuth = None,
                  mean_dip = None,
@@ -44,7 +44,7 @@ class FaultInterpretation(BaseResqpy):
         # if not extracting from xml,:
         # tectonic_boundary_feature is required and must be a TectonicBoundaryFeature object
         # domain is required and must be one of 'depth', 'time' or 'mixed'
-        # is_listric is required if the fault is not normal (and must be None if normal)
+        # is_listric is required if the fault is normal (and is ignored if not normal)
         # max throw, azimuth & dip are all optional
         # the throw interpretation list is not supported for direct initialisation
 
@@ -53,10 +53,12 @@ class FaultInterpretation(BaseResqpy):
         if (not title) and self.tectonic_boundary_feature is not None:
             title = self.tectonic_boundary_feature.feature_name
         self.main_has_occurred_during = (None, None)
+        if is_normal is None:
+            is_normal = (is_listric is not None)
         self.is_normal = is_normal  # extra field, not explicitly in RESQML
         self.domain = domain
         # RESQML xml business rule: IsListric must be present if the fault is normal; must not be present if the fault is not normal
-        self.is_listric = is_listric
+        self.is_listric = is_listric if is_normal else None
         self.maximum_throw = maximum_throw
         self.mean_azimuth = mean_azimuth
         self.mean_dip = mean_dip
@@ -87,7 +89,7 @@ class FaultInterpretation(BaseResqpy):
                                                                              self.feature_root))
             self.main_has_occurred_during = ou.extract_has_occurred_during(root_node)
             self.is_listric = rqet.find_tag_bool(root_node, 'IsListric')
-            self.is_normal = (self.is_listric is None)
+            self.is_normal = (self.is_listric is not None)
             self.maximum_throw = rqet.find_tag_float(root_node, 'MaximumThrow')
             # todo: check that type="eml:LengthMeasure" is simple float
             self.mean_azimuth = rqet.find_tag_float(root_node, 'MeanAzimuth')
@@ -164,7 +166,7 @@ class FaultInterpretation(BaseResqpy):
 
         # note: related tectonic boundary feature node should be created first and referenced here
 
-        assert self.is_normal == (self.is_listric is None)
+        assert self.is_normal == (self.is_listric is not None)
         if not self.title:
             if tectonic_boundary_feature_root is not None:
                 title = rqet.find_nested_tags_text(tectonic_boundary_feature_root, ['Citation', 'Title'])
