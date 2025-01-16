@@ -2558,7 +2558,7 @@ def get_box(mask: np.ndarray) -> Tuple[np.ndarray, int]:
     return box, count
 
 
-@njit  # pragma
+@njit  # pragma: no cover
 def filter_faces(faces_kji0: np.ndarray, face_patches: np.ndarray, cell_patches: np.ndarray, axis: int) -> np.ndarray:
     """Return 1D boolean selection array indicating subset of faces that are applicable to cells with matching patch."""
     n: int = len(faces_kji0)
