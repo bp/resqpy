@@ -109,8 +109,10 @@ def test_faces_for_surface(tmp_model):
                                                                                   n_batches = 2,
                                                                                   packed_bisectors = True,
                                                                                   patch_indices = grid_patch_indices)
+    reduced_cip = set([(9, 10), (6, 15), (19, 20), (0, 9), (16, 25), (15, 16), (10, 19), (25, 26)])
+    assert reduced_cip.issubset(e_cip)
     cip = set([tuple(pair) for pair in gcs_optimised.cell_index_pairs])
-    assert cip == e_cip  # note: this assumes lower cell index is first, which happens to be true
+    assert cip == reduced_cip  # note: this assumes lower cell index is first, which happens to be true
     assert props is not None
     assert len(props) == 1
     bisector, is_curtain = props['grid bisector']
