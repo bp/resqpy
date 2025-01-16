@@ -2514,7 +2514,7 @@ def _bitwise_count_njit(a: np.ndarray) -> np.int64:
     return c
 
 
-@njit
+@njit  # pragma: no cover
 def box_intersection(box_a: np.ndarray, box_b: np.ndarray) -> np.ndarray:
     """Return a box which is the intersection of two boxes, python protocol; all zeros if no intersection."""
     box = np.zeros((2, 3), dtype = np.int32)
@@ -2525,8 +2525,8 @@ def box_intersection(box_a: np.ndarray, box_b: np.ndarray) -> np.ndarray:
     return box
 
 
-@njit
-def get_box(mask: np.ndarray) -> Tuple[np.ndarray, int]:  # pragma: no cover
+@njit  # pragma: no cover
+def get_box(mask: np.ndarray) -> Tuple[np.ndarray, int]:
     """Returns a python protocol box enclosing True elements of 3D boolean mask, and count which is zero if all False."""
     box = np.full((2, 3), -1, dtype = np.int32)
     count = 0
@@ -2558,7 +2558,7 @@ def get_box(mask: np.ndarray) -> Tuple[np.ndarray, int]:  # pragma: no cover
     return box, count
 
 
-@njit
+@njit  # pragma
 def filter_faces(faces_kji0: np.ndarray, face_patches: np.ndarray, cell_patches: np.ndarray, axis: int) -> np.ndarray:
     """Return 1D boolean selection array indicating subset of faces that are applicable to cells with matching patch."""
     n: int = len(faces_kji0)
