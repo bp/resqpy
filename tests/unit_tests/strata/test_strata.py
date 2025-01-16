@@ -6,6 +6,7 @@ import numpy as np
 
 import resqpy.crs as rqc
 import resqpy.grid as grr
+import resqpy.grid._extract_functions as ef
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.organize as rqo
@@ -15,7 +16,7 @@ import resqpy.strata as strata
 # the following creates a fully related set of objects, saves to persistent storage, and retrieves
 
 
-def test_strata(tmp_path):
+def test_strata(tmp_path, caplog):
 
     epc = os.path.join(tmp_path, 'strata.epc')
 
@@ -184,3 +185,16 @@ def test_strata(tmp_path):
         unit = strata_column_ri.unit_for_unit_index(grid.stratigraphic_units[grid.k_raw_index_array[k]])
         assert unit is not None
         assert unit.title == expected_unit_names_per_layer[k]
+
+    # Ensure that a grid with a mismatch between:
+    #    nk_plus_k_gaps and number of stratigraphic_units can still
+    #    be processed by grid/_extract_functions.py::extract_stratigraphy
+    grid.k_gaps = 0
+    assert grid.nk_plus_k_gaps != len(grid.stratigraphic_units)
+    ef.extract_stratigraphy(grid = grid)
+
+    # The following should have been set to None.
+    assert grid.stratigraphic_column_rank_uuid is None
+    assert grid.stratigraphic_units is None
+    # And an error should have been logged.
+    assert "Unable to load Stratigraphy," in caplog.text
