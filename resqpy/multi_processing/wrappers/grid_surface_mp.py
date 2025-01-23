@@ -50,7 +50,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         n_threads: int = 20,
         patchwork: bool = False,
         grid_patching_property_uuid: Optional[Union[UUID, str]] = None,
-        surface_patching_property_uuid: Optional[Union[UUID, str]] = None) ->  \
+        surface_patching_property_uuid: Optional[Union[UUID, str]] = None,
+        direction = 'IJK') ->  \
             Tuple[int, bool, str, List[Union[UUID, str]]]:
     """Multiprocessing wrapper function of find_faces_to_represent_surface_regular_optimised.
 
@@ -116,6 +117,8 @@ def find_faces_to_represent_surface_regular_wrapper(
         surface_patching_property_uuid (uuid, optional): required if patchwork is True, the uuid of a discrete or
            categorical property on the patches of the surface, identifying the value of the grid patching property
            that each patch relates to
+        direction (str, default 'IJK'): indicates which face directions to include; one of 'I', 'J', 'K',
+           'IJ', IK', 'JK', 'IJK"
 
     returns:
         Tuple containing:
@@ -134,6 +137,7 @@ def find_faces_to_represent_surface_regular_wrapper(
           the shift being in the +ve z hemisphere; in either case the direction of the shift is perpendicular
           to the average plane of the original points
         - patchwork is not compatible with re-triangulation
+        - if grid bisector is included in return properties, direction will usually need to be 'IJK'
     """
     tmp_dir = Path(parent_tmp_dir) / f"{uuid.uuid4()}"
     tmp_dir.mkdir(parents = True, exist_ok = True)
@@ -302,7 +306,8 @@ def find_faces_to_represent_surface_regular_wrapper(
                                                                      raw_bisector = raw_bisector,
                                                                      n_batches = n_threads,
                                                                      packed_bisectors = use_pack,
-                                                                     patch_indices = patch_indices)
+                                                                     patch_indices = patch_indices,
+                                                                     direction = direction)
 
     success = False
 

@@ -881,7 +881,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                       raw_bisector = False,
                                                       n_batches = 20,
                                                       packed_bisectors = False,
-                                                      patch_indices = None):
+                                                      patch_indices = None,
+                                                      direction = 'IJK'):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
     argumants:
@@ -919,6 +920,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
            non curtain bisectors are returned in packed form
         patch_indices (numpy int array, optional): if present, an array over grid cells indicating which 
            patch of surface is applicable in terms of a bisector, for each cell
+        direction (str, default 'IJK'): indicates which face directions to include; one of 'I', 'J', 'K',
+           'IJ', IK', 'JK', 'IJK"
 
     returns:
         gcs  or  (gcs, gcs_props)
@@ -935,7 +938,8 @@ def find_faces_to_represent_surface_regular_optimised(grid,
         organisational objects for the feature are created if needed;
         if the offset return property is requested, the implicit units will be the z units of the grid's crs;
         if patch_indices is present and grid bisectors are being returned, a composite bisector array is returned
-        with elements set from individual bisectors for each patch of surface
+        with elements set from individual bisectors for each patch of surface;
+        if generating a grid bisector property then direction will typically need to be 'IJK'
     """
 
     assert isinstance(grid, grr.RegularGrid)
@@ -1018,7 +1022,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     k_depths = None
     k_offsets = None
     k_props = None
-    if nk > 1:
+    if nk > 1 and 'K' in direction:
         # log.debug("searching for k faces")
 
         k_hits, k_depths = vec.points_in_triangles_aligned_unified(grid.ni, grid.nj, 0, 1, 2, p, n_batches)
@@ -1061,7 +1065,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     j_depths = None
     j_offsets = None
     j_props = None
-    if grid.nj > 1:
+    if grid.nj > 1 and 'J' in direction:
         # log.debug("searching for J faces")
 
         j_hits, j_depths = vec.points_in_triangles_aligned_unified(grid.ni, nk, 0, 2, 1, p, n_batches)
@@ -1113,7 +1117,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
     i_depths = None
     i_offsets = None
     i_props = None
-    if grid.ni > 1:
+    if grid.ni > 1 and 'I' in direction:
         # log.debug("searching for I faces")
 
         i_hits, i_depths = vec.points_in_triangles_aligned_unified(grid.nj, nk, 1, 2, 0, p, n_batches)
