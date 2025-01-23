@@ -45,6 +45,36 @@ def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surfac
     np.testing.assert_array_equal(fip_normal, fip_old_fuddy_duddy)
 
 
+def test_find_k_faces_only_to_represent_surface_regular_optimised(small_grid_and_surface):
+    grid = small_grid_and_surface[0]
+    surface = small_grid_and_surface[1]
+    old_fuddy_duddy_crs = rqc.Crs(surface.model, xy_units = 'ft', z_units = 'chain')
+    old_fuddy_duddy_crs.create_xml()
+    surface.model.store_epc()
+    s2 = rqs.Surface(surface.model, uuid = surface.uuid)
+    s2.change_crs(old_fuddy_duddy_crs)
+    name = "test"
+    assert grid.is_aligned
+
+    gcs_normal = rqgs.find_faces_to_represent_surface_regular(grid, surface, name)
+    cip_normal = gcs_normal.cell_index_pairs
+    fip_normal = gcs_normal.face_index_pairs
+
+    gcs_optimised = rqgs.find_faces_to_represent_surface_regular_optimised(grid, surface, name, direction = 'K')
+    cip_optimised = gcs_optimised.cell_index_pairs
+    fip_optimised = gcs_optimised.face_index_pairs
+
+    gcs_old_fuddy_duddy = rqgs.find_faces_to_represent_surface_regular_optimised(grid, s2, name, direction = 'K')
+    cip_old_fuddy_duddy = gcs_old_fuddy_duddy.cell_index_pairs
+    fip_old_fuddy_duddy = gcs_old_fuddy_duddy.face_index_pairs
+
+    assert len(cip_optimised) < len(cip_normal)
+    assert len(fip_optimised) == len(cip_optimised)
+    assert np.all(fip_optimised) < 2  # all +/- K faces
+    np.testing.assert_array_equal(cip_optimised, cip_old_fuddy_duddy)
+    np.testing.assert_array_equal(fip_optimised, fip_old_fuddy_duddy)
+
+
 def test_find_faces_to_represent_surface_no_k_faces(small_grid_and_surface_no_k):
     # Arrange
     grid = small_grid_and_surface_no_k[0]
