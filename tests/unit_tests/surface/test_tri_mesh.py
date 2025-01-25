@@ -541,3 +541,46 @@ def test_tri_mesh_compatible(example_model_and_crs):
                          title = 'test tri mesh b')
     assert trim_a.is_compatible_with(trim_b)
     assert trim_b.is_compatible_with(trim_a)
+
+
+def test_tri_mesh_area(example_model_and_crs):
+    model, crs = example_model_and_crs
+    z_values = np.array([(-100.0, -100.0, -100.0, -100.0), (100.0, 100.0, 100.0, 100.0), (500.0, 500.0, 500.0, 500.0)],
+                        dtype = float)
+    trim = rqs.TriMesh(model,
+                       t_side = 100.0,
+                       nj = 3,
+                       ni = 4,
+                       z_values = z_values,
+                       crs_uuid = crs.uuid,
+                       title = 'test tri mesh area')
+
+    area = trim.area()  # default uom based on crs xy units
+    area_m2 = trim.area(required_uom = 'm2')
+    area_ha = trim.area(required_uom = 'ha')
+
+    expected_area = float(2 * 3) * 100.0 * 100.0 * maths.sqrt(3.0) / 2.0
+    assert maths.isclose(area, expected_area)
+    assert maths.isclose(area_m2, expected_area)
+    assert maths.isclose(area_ha, expected_area / 10000.0)
+
+    z_values = np.array([(-100.0, -100.0, np.nan, -100.0), (100.0, np.nan, 100.0, 100.0),
+                         (np.nan, 500.0, 500.0, 500.0)],
+                        dtype = float)
+    trim2 = rqs.TriMesh(model,
+                        t_side = 100.0,
+                        nj = 3,
+                        ni = 4,
+                        z_values = z_values,
+                        crs_uuid = crs.uuid,
+                        title = 'test tri mesh nan area')
+
+    area = trim2.area()  # default uom based on crs xy units
+    area_m2 = trim2.area(required_uom = 'm2')
+    area_ha = trim2.area(required_uom = 'ha')
+
+    # note: area is approximation based directly on proportion of non-NaN points, not area of triangles without NaN points
+    expected_area = (float(9) / float(12)) * float(2 * 3) * 100.0 * 100.0 * maths.sqrt(3.0) / 2.0
+    assert maths.isclose(area, expected_area)
+    assert maths.isclose(area_m2, expected_area)
+    assert maths.isclose(area_ha, expected_area / 10000.0)
