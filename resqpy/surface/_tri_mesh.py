@@ -570,6 +570,17 @@ class TriMesh(rqs.Mesh):
         return p
 
     def area(self, required_uom = None):
+        """Returns approximate area of tri mesh based on proportion of non-NaN z values.
+
+        arguments:
+            - required_uom (str, optional): RESQML area unit of measure string for result
+
+        returns:
+            - float being the approximate area of the tri mesh in its xy projection
+
+        note:
+            - default uom is crs xy_units squared
+        """
         a = 1.0 - (float(np.count_nonzero(np.isnan(self.full_array_ref()[..., 2]))) / float(self.nj * self.ni))
         a *= float((self.nj - 1) * (self.ni - 1)) * self.t_side * self.t_side * root_3_by_2
         if required_uom is not None:
