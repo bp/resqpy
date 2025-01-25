@@ -9,6 +9,7 @@ import numpy as np
 
 import resqpy.crs as rqc
 import resqpy.surface as rqs
+import resqpy.weights_and_measures as wam
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.uuid as bu
 
@@ -567,6 +568,16 @@ class TriMesh(rqs.Mesh):
                 p = np.concatenate((p, w[crossing]))
 
         return p
+
+    def area(self, required_uom = None):
+        a = 1.0 - (float(np.count_nonzero(np.isnan(self.full_array_ref()[..., 2]))) / float(self.nj * self.ni))
+        a *= float((self.nj - 1) * (self.ni - 1)) * self.t_side * self.t_side * root_3_by_2
+        if required_uom is not None:
+            crs = rqc.Crs(self.model, uuid = self.crs_uuid)
+            if required_uom != crs.xy_units + '2':
+                uom = ('ft' if crs.xy_units.startswith('ft') else crs.xy_units) + '2'
+                a = wam.convert(a, uom, required_uom)
+        return a
 
     def is_compatible_with(self, other_tri_mesh):
         """Returns True if this tri mesh has the same xy points as the other."""
