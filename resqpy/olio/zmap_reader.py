@@ -7,6 +7,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
+import resqpy.olio.vector_utilities as vec
 
 
 def read_zmap_header(inputfile):
