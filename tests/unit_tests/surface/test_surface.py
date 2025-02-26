@@ -314,7 +314,8 @@ def test_surface_change_crs(example_model_and_crs):
 
 @pytest.mark.parametrize('mesh_file,mesh_format,firstval', [('Surface_roxartext.txt', 'rms', 0.4229),
                                                             ('Surface_roxartext.txt', 'roxar', 0.4229),
-                                                            ('Surface_zmap.dat', 'zmap', 0.4648)])
+                                                            ('Surface_zmap.dat', 'zmap', 0.4648),
+                                                            ('Surface_roxartext_rotate.txt', 'roxar', 0.4229)])
 def test_surface_from_mesh_file(example_model_and_crs, test_data_path, mesh_file, mesh_format, firstval):
     # Arrange
     model, crs = example_model_and_crs
