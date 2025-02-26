@@ -72,7 +72,7 @@ def read_roxar_header(inputfile):
     """Reads header lines from a roxar format file.
 
     returns:
-       header_lines_count, no_rows, no_cols, minx, maxx, miny, maxy, null_value
+       header_lines_count, no_rows, no_cols, minx, maxx, miny, maxy, null_value, rotation, originx, originy
     """
 
     with open(inputfile, 'r') as fp:
@@ -88,9 +88,12 @@ def read_roxar_header(inputfile):
         maxy = float(words[3])
         words = fp.readline().split()
         no_cols = int(words[0])
+        rotation = float(words[1])
+        originx = float(words[2])
+        originy = float(words[3])
     headers = 4
     null_value = '9999900.0000'
-    return headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value
+    return headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value, rotation, originx, originy
 
 
 def read_mesh(inputfile, dtype = np.float64, format = None):
@@ -103,7 +106,7 @@ def read_mesh(inputfile, dtype = np.float64, format = None):
     if format == 'zmap':
         headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value = read_zmap_header(inputfile)
     elif format in ['rms', 'roxar']:
-        headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value = read_roxar_header(inputfile)
+        headers, no_rows, no_cols, minx, maxx, miny, maxy, null_value, rotation, originx, originy = read_roxar_header(inputfile)
     else:
         raise ValueError('format not recognised for read_mesh: ' + str(format))
     # load the values in, converting null value to NaN's
@@ -143,6 +146,15 @@ def read_mesh(inputfile, dtype = np.float64, format = None):
     else:  # format in ['rms', 'roxar']
         y = np.linspace(miny, maxy, no_rows)
     x, y = np.meshgrid(x, y)  # get x and y of every node
+    if rotation != 0.0:
+        unrot = np.empty(shape = [no_rows, no_cols, 3])
+        unrot[:, :, 0] = x - originx
+        unrot[:, :, 1] = y - originy
+        matrix = vec.rotation_matrix_3d_axial(2, rotation)
+        rot = vec.rotate_array(matrix, unrot)
+        x = rot[:, :, 0] + originx
+        y = rot[:, :, 1] + originy
+
     assert x.shape == y.shape == f.shape
 
     return x, y, f
