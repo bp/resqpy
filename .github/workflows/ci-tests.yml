@@ -81,7 +81,7 @@ jobs:
 
   legacy-dependencies:
     # Test against older versions of numpy and pandas,
-    # To ensure resqpy works with the lower bounds of our published constraints
+    # To ensure resqpy works with the lower bounds of our published constraints 
 
     name: Unit tests (older dependencies)
     runs-on: ubuntu-latest
