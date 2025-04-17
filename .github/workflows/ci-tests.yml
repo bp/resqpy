@@ -92,7 +92,7 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
         with:
-          python-version: 3.10
+          python-version: "3.10"
 
       - name: Downgrade numpy and pandas
         # Use caret-style requirements (~) to fix minor version but allow patches
