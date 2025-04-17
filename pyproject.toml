@@ -43,12 +43,12 @@ include = ["data/*.json"]
 python = ">= 3.10, < 3.14"
 numpy = "^2.2.4"
 pandas = "^2.2"
-h5py = "^3.13"
-lxml = "^5.3"
+h5py = "^3.7"
+lxml = "^5.1"
 lasio = "^0.31"
-scipy = "^1.15"
+scipy = "^1.9"
 numba = ">=0.59, < 1.0"
-joblib = "^1.4"
+joblib = "^1.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2"
