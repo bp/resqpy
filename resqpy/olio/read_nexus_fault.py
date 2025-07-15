@@ -39,7 +39,8 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
     name = face = None
     grid = 'ROOT'  ## nexus default grid
 
-    face_dict = {'TX': 'I', 'TY': 'J', 'TZ': 'K', 'TI': 'I', 'TJ': 'J', 'TK': 'K'}
+    face_dict = {'TX': 'I', 'TY': 'J', 'TZ': 'K', 'TI': 'I', 'TJ': 'J', 'TK': 'K',
+                 'TXF': 'IF', 'TYF': 'JF', 'TZF': 'KF'}
 
     chunks = []
     for line in file_as_list:
