@@ -24,8 +24,29 @@ FNAME RED
                                                                            'grid': ['ROOT', 'ROOT', 'ROOT', 'ROOT'],
                                                                            'name': ['BLUE', 'BLUE', 'RED', 'RED'],
                                                                            'face': ['I', 'I', 'J-', 'J-']
+                                                                       })),
+                                                                      ("""MULT TXF ALL MINUS MULT
+                                  GRID ROOT
+                                  FNAME fault1
+                                  22 222 90 90 1 1 1
+                                  22 222 90 90 9 9 1
+                                  22 222 90 90 11 11 1
+                                  22 223 91 90 13 13 1
+                                  22 223 91 90 14 14 1
+                                  22 223 91 90 15 15 1""",
+                                                                       pd.DataFrame({
+                                                                           'i1': [22] * 6,
+                                                                           'i2': [222, 222, 222, 223, 223, 223],
+                                                                           'j1': [90, 90, 90, 91, 91, 91],
+                                                                           'j2': [90, 90, 90, 90, 90, 90],
+                                                                           'k1': [1, 9, 11, 13, 14, 15],
+                                                                           'k2': [1, 9, 11, 13, 14, 15],
+                                                                           'mult': [1.0] * 6,
+                                                                           'grid': ['ROOT'] * 6,
+                                                                           'name': ['fault1'] * 6,
+                                                                           'face': ['IF-'] * 6,
                                                                        }))],
-                         ids = ['basic'])
+                         ids = ['basic', 'fracture_faults'])
 def test_load_nexus_fault_mult_table(mocker, file_contents, expected_fault_definition):
     # Arrange
     # mock out open to return test file contents
