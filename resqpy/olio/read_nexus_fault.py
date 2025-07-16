@@ -39,8 +39,17 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
     name = face = None
     grid = 'ROOT'  ## nexus default grid
 
-    face_dict = {'TX': 'I', 'TY': 'J', 'TZ': 'K', 'TI': 'I', 'TJ': 'J', 'TK': 'K',
-                 'TXF': 'IF', 'TYF': 'JF', 'TZF': 'KF'}
+    face_dict = {
+        'TX': 'I',
+        'TY': 'J',
+        'TZ': 'K',
+        'TI': 'I',
+        'TJ': 'J',
+        'TK': 'K',
+        'TXF': 'IF',
+        'TYF': 'JF',
+        'TZF': 'KF'
+    }
 
     chunks = []
     for line in file_as_list:
@@ -61,12 +70,12 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
                         # Mask of valid places in each row
                         mask = np.arange(lens.max()) < lens[:, None]
                         # Setup output array and put elements from data into masked positions
-                        outdata = np.zeros(mask.shape, dtype = d_elems.dtype)
+                        outdata = np.zeros(mask.shape, dtype=d_elems.dtype)
                         outdata[mask] = np.concatenate(d_elems)
                         df = pd.DataFrame(outdata)
                         for column in df.columns:
                             try:
-                                df[column] = pd.to_numeric(df[column], errors = "coerce")
+                                df[column] = pd.to_numeric(df[column], errors="coerce")
                             except ValueError:
                                 pass
                         df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
@@ -114,12 +123,12 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
                 # Mask of valid places in each row
                 mask = np.arange(lens.max()) < lens[:, None]
                 # Setup output array and put elements from data into masked positions
-                outdata = np.zeros(mask.shape, dtype = d_elems.dtype)
+                outdata = np.zeros(mask.shape, dtype=d_elems.dtype)
                 outdata[mask] = np.concatenate(d_elems)
                 df = pd.DataFrame(outdata)
                 for column in df.columns:
                     try:
-                        df[column] = pd.to_numeric(df[column], errors = "coerce")
+                        df[column] = pd.to_numeric(df[column], errors="coerce")
                     except ValueError:
                         pass
                 df.columns = ['i1', 'i2', 'j1', 'j2', 'k1', 'k2', 'mult']
@@ -136,7 +145,7 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
     if not dfs:
         return pd.DataFrame()
 
-    fault_df = pd.concat(dfs).reset_index(drop = True)
+    fault_df = pd.concat(dfs).reset_index(drop=True)
 
     convert_dict = {'i1': int, 'i2': int, 'j1': int, 'j2': int, 'k1': int, 'k2': int, 'mult': float}
     fault_df = fault_df.astype(convert_dict)
