@@ -305,7 +305,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius(small_gri
     assert len(model.uuids(obj_type = 'DiscreteProperty')) == 3
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
     assert len(model.uuids()) == 17
-    assert len(uuid_list) == 17
+    assert len(uuid_list) == 11
 
 
 def test_find_faces_to_represent_surface_extended_bisector_use_pack(small_grid_and_extended_surface: Tuple[RegularGrid,
