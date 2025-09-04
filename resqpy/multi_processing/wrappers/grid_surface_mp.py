@@ -438,19 +438,17 @@ def find_faces_to_represent_surface_regular_wrapper(
             log.debug('flange bool processed separately to ensure correct dtype for packing')
             p_name = 'flange bool'
             array = properties['flange bool']
-            property_collection.add_cached_array_to_imported_list(
-                array,
-                f"from find_faces function for {surface.title}",
-                f'{surface.title} {p_name}',
-                discrete = True,
-                null_value = -1,
-                property_kind = "flange bool",
-                realization = realisation,
-                indexable_element = "faces"
-            )
+            property_collection.add_cached_array_to_imported_list(array,
+                                                                  f"from find_faces function for {surface.title}",
+                                                                  f'{surface.title} {p_name}',
+                                                                  discrete = True,
+                                                                  null_value = -1,
+                                                                  property_kind = "flange bool",
+                                                                  realization = realisation,
+                                                                  indexable_element = "faces")
         if property_collection.number_of_imports() > 0:
             # log.debug('writing gcs property hdf5 data')
-            property_collection.write_hdf5_for_imported_list(use_pack = use_pack, dtype=np.int8)
+            property_collection.write_hdf5_for_imported_list(use_pack = use_pack, dtype = np.int8)
             uuids_properties = property_collection.create_xml_for_imported_list_and_add_parts_to_model(
                 find_local_property_kinds = True)
             uuid_list.extend(uuids_properties)
