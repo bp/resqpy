@@ -2317,8 +2317,6 @@ def _sort_and_remove_duplicates(a, props = None):
     m = np.empty(a.size, dtype = bool)
     m[0] = True
     m[1:] = (a[1:] != a[:-1])
-    if np.all(m):
-        return a
     if not no_props:
         for i in range(len(props)):
             p = props[i][si]
