@@ -772,22 +772,6 @@ def small_grid_and_surface_nonrandom(tmp_model: Model) -> Tuple[grr.RegularGrid,
     grid.create_xml()
 
     n_points = 100
-    points = @pytest.fixture
-
-def small_grid_and_surface_nonrandom(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
-    """Creates a small RegularGrid and a random triangular surface."""
-    crs = Crs(tmp_model)
-    crs.create_xml()
-
-    extent = 10
-    extent_kji = (extent, extent, extent)
-    dxyz = (1.0, 1.0, 1.0)
-    crs_uuid = crs.uuid
-    title = "small_grid"
-    grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
-    grid.create_xml()
-
-    n_points = 100
     points = np.array(
         [[5.44992339, 4.57510223, 7.63222857],
          [2.84841428, 7.25510613, 7.90621386],
@@ -890,16 +874,6 @@ def small_grid_and_surface_nonrandom(tmp_model: Model) -> Tuple[grr.RegularGrid,
          [1.09410637, 4.60533303, 6.97173082],
          [3.37516656, 6.10493044, 9.60024728]
         ])
-    triangles = tri.dt(points)
-    surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_surface")
-    surface.set_from_triangles_and_points(triangles, points)
-    surface.triangles_and_points()
-    surface.write_hdf5()
-    surface.create_xml()
-
-    tmp_model.store_epc()
-
-    return grid, surface
     triangles = tri.dt(points)
     surface = rqs.Surface(tmp_model, crs_uuid = crs_uuid, title = "small_surface")
     surface.set_from_triangles_and_points(triangles, points)
