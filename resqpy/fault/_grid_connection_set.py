@@ -10,6 +10,7 @@ import math as maths
 import numpy as np
 import pandas as pd
 
+from typing import Optional
 import resqpy.grid as grr
 import resqpy.fault
 import resqpy.olio.read_nexus_fault as rnf
