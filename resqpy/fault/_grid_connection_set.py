@@ -2303,7 +2303,7 @@ def _copy_organisation_objects(target_model, source_model, gcs):
                                                 uuid)  # will copy related features as well as interpretations
 
 
-def _sort_and_remove_duplicates(a: np.ndarray, props: Optional[List[np.ndarray]] = None):
+def _sort_and_remove_duplicates(a: np.ndarray, props: Optional[list[np.ndarray]] = None):
     """Return copy of 1D array a, sorted and with duplicates removed; secondary arrays can be kept in alignment. 
     
     note: If present, property arrays are also sorted in-place with duplicates removed.
