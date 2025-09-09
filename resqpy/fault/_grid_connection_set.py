@@ -2322,7 +2322,7 @@ def _sort_and_remove_duplicates(a: np.ndarray, props: Optional[list[np.ndarray]]
     m[0] = True
     m[1:] = (a[1:] != a[:-1])
     if not no_props:
-        assert props is None
+        assert props is not None
         for i in range(len(props)):
             p = props[i][si]
             props[i] = p[m]
