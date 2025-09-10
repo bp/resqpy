@@ -757,6 +757,7 @@ def small_grid_with_properties(tmp_model: Model) -> Tuple[grr.RegularGrid, List[
 
     return grid, prop_uuids
 
+
 @pytest.fixture
 def small_grid_and_surface_nonrandom(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
     """Creates a small RegularGrid and a random triangular surface."""
@@ -771,8 +772,8 @@ def small_grid_and_surface_nonrandom(tmp_model: Model) -> Tuple[grr.RegularGrid,
     grid = grr.RegularGrid(tmp_model, extent_kji = extent_kji, dxyz = dxyz, crs_uuid = crs_uuid, title = title)
     grid.create_xml()
 
-    points = np.array([[0.08106761, 1.3295167 , 0.11162371], [1.12741581, 2.38222333, 0.68750453],
-                       [2.30178467, 0.46994407, 0.32888339], [0.1420671 , 2.88356852, 0.63064418],
+    points = np.array([[0.08106761, 1.3295167, 0.11162371], [1.12741581, 2.38222333, 0.68750453],
+                       [2.30178467, 0.46994407, 0.32888339], [0.1420671, 2.88356852, 0.63064418],
                        [1.86901752, 0.89184046, 2.20140932], [2.05943122, 2.72558781, 0.48310686],
                        [2.34584349, 0.46591499, 0.28747912], [2.89670254, 2.76028382, 0.49175011],
                        [0.90551676, 1.15075557, 1.94205026], [0.84642013, 0.22261785, 1.59408085],
