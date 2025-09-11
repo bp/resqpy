@@ -10,6 +10,7 @@ import math as maths
 import numpy as np
 import pandas as pd
 
+from typing import Optional
 import resqpy.grid as grr
 import resqpy.fault
 import resqpy.olio.read_nexus_fault as rnf
@@ -2302,8 +2303,11 @@ def _copy_organisation_objects(target_model, source_model, gcs):
                                                 uuid)  # will copy related features as well as interpretations
 
 
-def _sort_and_remove_duplicates(a, props = None):
-    """Return copy of 1D array a, sorted and with duplicates removed; secondary arrays can be kept in alignment."""
+def _sort_and_remove_duplicates(a: np.ndarray, props: Optional[list[np.ndarray]] = None):
+    """Return copy of 1D array a, sorted and with duplicates removed; secondary arrays can be kept in alignment. 
+    
+    note: If present, property arrays are also sorted in-place with duplicates removed.
+    """
     if a is None or a.size <= 1:
         return a
     assert a.ndim == 1
@@ -2317,9 +2321,8 @@ def _sort_and_remove_duplicates(a, props = None):
     m = np.empty(a.size, dtype = bool)
     m[0] = True
     m[1:] = (a[1:] != a[:-1])
-    if np.all(m):
-        return a
     if not no_props:
+        assert props is not None
         for i in range(len(props)):
             p = props[i][si]
             props[i] = p[m]

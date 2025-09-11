@@ -622,3 +622,51 @@ def test_find_faces_to_represent_surface_extended_patchwork(small_grid_and_exten
     assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
     assert len(model.uuids()) == 20
     assert len(uuid_list) == 11
+
+
+def test_find_faces_to_represent_surface_regular_wrapper_properties_triangles(
+        small_grid_and_surface_nonrandom: Tuple[RegularGrid, Surface]):
+    # Arrange
+    grid, surface = small_grid_and_surface_nonrandom
+    grid_epc = surface_epc = grid.model.epc_file
+    grid_uuid = grid.uuid
+    surface_uuid = surface.uuid
+    return_properties = ["triangle", "offset"]
+
+    name = "test"
+    input_index = 0
+    use_index_as_realisation = False
+
+    # Act
+    index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
+        input_index,
+        "tmp_dir",
+        use_index_as_realisation,
+        grid_epc,
+        grid_uuid,
+        surface_epc,
+        surface_uuid,
+        name,
+        extend_fault_representation = True,
+        feature_type = 'fault',
+        return_properties = return_properties)
+    model = Model(epc_file = epc_file)
+
+    # Assert
+    assert success is True
+    assert index == input_index
+    assert len(model.uuids(obj_type = 'LocalDepth3dCrs')) == 1
+    assert len(model.uuids(obj_type = 'IjkGridRepresentation')) == 1
+    assert len(model.uuids(obj_type = 'TriangulatedSetRepresentation')) == 2
+    assert len(model.uuids(obj_type = 'GridConnectionSetRepresentation')) == 1
+    assert len(model.uuids(obj_type = 'FaultInterpretation')) == 1
+    assert len(model.uuids(obj_type = 'TectonicBoundaryFeature')) == 1
+    assert len(model.uuids(obj_type = 'DiscreteProperty')) == 2
+    assert len(model.uuids(obj_type = 'ContinuousProperty')) == 4
+    assert len(model.uuids(obj_type = 'PropertyKind', title = "offset")) == 1
+    assert len(model.uuids()) == 16
+    assert len(uuid_list) == 10
+    triangle_array = rqp.Property(model, uuid = model.uuid(title = 'small_surface extended triangle')).array_ref()
+    expected_triangles = np.array([11, 29, 18, 19, 21, 23, 26, 18, 21, 9, 9, 9, 26, 23, 21, 21, 27, 23, 29, 25])
+    np.testing.assert_array_equal(triangle_array, expected_triangles)
+    rm_tree("tmp_dir")
