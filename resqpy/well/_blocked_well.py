@@ -447,6 +447,38 @@ class BlockedWell(BaseResqpy):
 
         return self.derive_from_dataframe(df, self.well_name, grid, use_face_centres = True, length_uom = length_uom)
 
+    def dtop_dbot_to_layers(self, df, grid):
+        """Populates the wellspec dataframe with corresponding L when DTOP and DBOT are specified but L is not
+        arguments
+          df (pd.DataFrame): Dataframe of wellspec information
+          grid (grid.Grid object): Grid where well is located
+        returns
+          df_expanded (pd.DataFrame): DataFrame of wellspec information where L is populated with the layers corresponding to the DTOP and DBOT depths
+        """
+        corp = grid.corner_points()
+        nk,nj,ni = corp.shape[:3]
+        df_expanded = []
+
+        for ix,data in df.iterrows():
+            if np.isnan(data['L']):
+                dtop = data['DTOP']
+                dbot = data['DBOT']
+                j,i = int(data['JW']), int(data['IW'])
+                for k in range(nk):
+                    if dbot == 'BOT':
+                        data['L'] = k + 1
+                        df_expanded.append(data.copy())
+                    elif (corp[k,j,i,0,:,:,2].min() >= dtop) and (corp[k,j,i,1,:,:,2].max() <= dbot):
+                        data['L'] = k + 1
+                        df_expanded.append(data.copy())
+            else:
+                df_expanded.append(data.copy())
+
+        df_expanded = pd.DataFrame(df_expanded).reset_index(drop = True)
+        df_expanded[['IW','JW','L']] = df_expanded[['IW','JW','L']].astype(int)
+
+        return df_expanded
+
     def derive_from_wellspec(self,
                              wellspec_file,
                              well_name,
@@ -498,7 +530,7 @@ class BlockedWell(BaseResqpy):
         name_for_check, col_list = rqwu._derive_from_wellspec_check_grid_name(check_grid_name = check_grid_name,
                                                                               grid = grid,
                                                                               col_list = col_list)
-
+        
         wellspec_dict, dates_list = wsk.load_wellspecs(wellspec_file,
                                                        well = well_name,
                                                        column_list = col_list,
@@ -619,6 +651,11 @@ class BlockedWell(BaseResqpy):
 
         angles_present = ('ANGLV' in df.columns and 'ANGLA' in df.columns and not pd.isnull(df.iloc[0]['ANGLV']) and
                           not pd.isnull(df.iloc[0]['ANGLA']))
+        
+        dtop_dbot_present = ('DTOP' in df.columns and ~pd.isnull(df['DTOP']).all()) and ('DBOT' in df.columns and ~pd.isnull(df['DBOT']).all())
+
+        if dtop_dbot_present:
+            df = self.dtop_dbot_to_layers(df, grid)
 
         if not angles_present and not use_face_centres:
             log.warning(f'ANGLV and/or ANGLA data unavailable for well {well_name}: using face centres')
