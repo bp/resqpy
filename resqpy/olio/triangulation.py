@@ -1,5 +1,5 @@
 """triangulation.py: functions for finding Delaunay triangulation and Voronoi graph from a set of points."""
-
+from __future__ import annotations
 import logging
 
 log = logging.getLogger(__name__)
