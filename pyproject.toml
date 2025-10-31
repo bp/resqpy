@@ -47,7 +47,7 @@ h5py = "^3.7"
 lxml = "^5.1"
 lasio = "^0.31"
 scipy = "^1.9"
-numba = ">=0.59, < 1.0"
+numba = "^0.59" # Later versions contain breaking changes that cause issues.
 joblib = "^1.2"
 
 [tool.poetry.group.dev.dependencies]
