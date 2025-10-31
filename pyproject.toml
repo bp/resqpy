@@ -41,8 +41,8 @@ include = ["data/*.json"]
 # See here for "caret" style dependency specifications:
 #   - https://python-poetry.org/docs/dependency-specification/
 python = ">= 3.9, < 3.13"
-numpy = "^1.26"
-pandas = "^2.2"
+numpy = "~1.26"
+pandas = "~2.2"
 h5py = "^3.7"
 lxml = "^5.1"
 lasio = "^0.31"
