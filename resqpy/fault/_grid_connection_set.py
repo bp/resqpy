@@ -2316,7 +2316,7 @@ def _sort_and_remove_duplicates(a: np.ndarray, props: Optional[list[np.ndarray]]
     if no_props:
         a = np.sort(a)
     else:
-        si = np.argsort(a)
+        si = np.argsort(a, kind = 'stable')
         a = a[si]
     m = np.empty(a.size, dtype = bool)
     m[0] = True
