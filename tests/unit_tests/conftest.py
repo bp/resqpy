@@ -495,7 +495,7 @@ def example_fine_coarse_model(example_model_and_crs):
 def small_grid_and_surface(tmp_model: Model) -> Tuple[grr.RegularGrid, rqs.Surface]:
     """Creates a small RegularGrid and a random triangular surface."""
     crs = Crs(tmp_model)
-    crs.create_xml()
+    crs.create_xml() 
 
     extent = 10
     extent_kji = (extent, extent, extent)
