@@ -122,7 +122,6 @@ wellspec_dtype['DZ']       = float
 def increment_complaints(keyword):  # pragma: no cover
     """Increments the count of complaints (warnings) associated with the keyword."""
 
-    global wellspec_dict
     assert keyword.upper() in wellspec_dict.keys()
     old_entry = wellspec_dict[keyword.upper()]
     wellspec_dict[keyword.upper()] = (
@@ -143,7 +142,6 @@ def known_keyword(keyword):  # pragma: no cover
 def add_unknown_keyword(keyword):  # pragma: no cover
     """Adds the keyword to the dictionary with attributes flagged as unknown."""
 
-    global wellspec_dict
     assert not known_keyword(keyword)
     wellspec_dict[keyword.upper()] = (
         1,

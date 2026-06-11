@@ -27,9 +27,6 @@ class H5Register():
     def __init__(self, model, default_chunks = None, default_compression = None):
         """Create a new, empty register of arrays to be written to an hdf5 file."""
 
-        global global_default_chunks
-        global global_default_compression
-
         assert default_chunks is None or (isinstance(default_chunks, str) and
                                           default_chunks in ['auto', 'all', 'slice', 'none'])
         if default_chunks is None:
@@ -297,9 +294,6 @@ def copy_h5_path_list(file_in, file_out, hdf5_path_list, mode = 'w', chunks = No
     returns:
        number of hdf5 datasets (or groups) copied
     """
-
-    global global_default_chunks
-    global global_default_compression
 
     #  note: if both inclusion and exclusion lists are present, exclusion list is ignored
     assert file_out != file_in, 'identical input and output files specified for hdf5 copy'

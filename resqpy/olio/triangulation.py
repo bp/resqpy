@@ -51,7 +51,6 @@ def _dt_simple(po, plot_fn = None, progress_fn = None, container_size_factor = N
     # returns Delaunay triangulation of po and list of hull point indices, using a simple algorithm
 
     def flip(ei):
-        nonlocal fm, e, t, te, p, nt, p_i, ne
         if fm[ei]:
             return  # this edge has already been flipped since last point insertion
         t0, te0 = e[ei, 0]
@@ -355,7 +354,6 @@ def voronoi(p, t, b, aoi: rql.Polyline):
         return (a <= t <= c) or (a <= t + 360.0 <= c)
 
     def __seg_for_ci(ci):  # returns hull segment for a boundary index
-        nonlocal ca_count, cah_count, caho_count, cahon_count, wing_hull_segments
         if ci < ca_count:
             return None
         if ci < cah_count:  # hull edge intersection
