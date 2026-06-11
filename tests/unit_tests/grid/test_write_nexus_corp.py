@@ -1,16 +1,34 @@
+from unittest import mock
+
 from resqpy.grid._write_nexus_corp import write_nexus_corp
 from pytest_mock import MockerFixture
 from typing import List
 
 
+def _mock_open_records_close() -> bool:
+    """Return True if mock_open records a close() call on context-manager exit.
+
+    Behaviour differs across Python versions (close() is recorded from Python 3.13 onwards),
+    so detect it at runtime rather than pinning a version number.
+    """
+    m = mock.mock_open()
+    with m('probe', 'w') as fh:
+        fh.write('probe')
+    return mock.call().close() in m.mock_calls
+
+
 def get_expected_calls(mocker: MockerFixture, file_name: str) -> List:
     """List of the first 20 expected open calls for the write_nexus_corp method with default args."""
+    # mock_open records a close() call between context-manager exit and the next open() on some
+    # Python versions; include it only when the running interpreter does so.
+    close_calls = [mocker.call().close()] if _mock_open_records_close() else []
     expected_calls = [
         mocker.call(file_name, 'w'),
         mocker.call().__enter__(),
         mocker.call().write('! Nexus corner point data written by resqml_grid module\n'),
         mocker.call().write('! Nexus is a registered trademark of the Halliburton Company\n\n'),
         mocker.call().__exit__(None, None, None),
+        *close_calls,
         mocker.call(file_name, 'a'),
         mocker.call().__enter__(),
         mocker.call().write('! Data written by write_array_to_ascii_file() python function\n'),
