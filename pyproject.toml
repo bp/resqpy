@@ -43,7 +43,7 @@ include = ["data/*.json"]
 #   - https://python-poetry.org/docs/dependency-specification/
 python = ">= 3.10, < 3.15"
 numpy = ">= 1.26"
-pandas = ">=2.2"
+pandas = ">=2.2, <3"
 h5py = "^3.7"
 lxml = "^6.1"
 lasio = ">=0.31"
