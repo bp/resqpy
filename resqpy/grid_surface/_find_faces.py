@@ -2242,7 +2242,7 @@ def _shallow_or_curtain(a: np.ndarray, true_count: int, raw: bool) -> bool:
     is_curtain: bool = False
     layer_count: int = 0
     for k in range(a.shape[0]):
-        layer_count = np.count_nonzero(a[k])
+        layer_count = int(np.count_nonzero(a[k]))
         k_sum += (k + 1) * layer_count
         opposite_k_sum += (k + 1) * (layer_cell_count - layer_count)
     mean_k: float = float(k_sum) / float(true_count)
