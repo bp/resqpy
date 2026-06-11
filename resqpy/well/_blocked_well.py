@@ -11,7 +11,6 @@ import math as maths
 import numpy as np
 import pandas as pd
 import warnings
-from functools import partial
 
 import resqpy.crs as crs
 import resqpy.grid as grr

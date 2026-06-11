@@ -5,9 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import datetime as dt
-import warnings
 
-import resqpy.time_series
 import resqpy.time_series._any_time_series as ats
 import resqpy.time_series._time_duration as td
 

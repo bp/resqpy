@@ -10,7 +10,6 @@ log = logging.getLogger(__name__)
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
-import resqpy.strata
 import resqpy.strata._strata_common as rqstc
 import resqpy.strata._binary_contact_interpretation as rqsbc
 import resqpy.strata._stratigraphic_unit_interpretation as rqsui

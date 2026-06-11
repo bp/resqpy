@@ -6,11 +6,9 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 import warnings
-import numba  # type: ignore
 from numba import njit, prange  # type: ignore
 from typing import Tuple, Union, Dict
 
-import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr
 import resqpy.fault as rqf

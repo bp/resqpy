@@ -8,7 +8,6 @@ import logging
 log = logging.getLogger(__name__)
 
 import resqpy.olio.uuid as bu
-import resqpy.organize
 import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 

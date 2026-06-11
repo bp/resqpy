@@ -1,10 +1,7 @@
 from typing import Tuple
 import numpy as np
 
-import resqpy.model as rq
 import resqpy.property as rqp
-import resqpy.olio.xml_et as rqet
-import resqpy.olio.uuid as bu
 from resqpy.model import Model
 from resqpy.grid import RegularGrid
 from resqpy.surface import Surface, PointSet

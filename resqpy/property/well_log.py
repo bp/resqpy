@@ -4,7 +4,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import resqpy.property
 import resqpy.property.property_collection as rqp_pc
 
 

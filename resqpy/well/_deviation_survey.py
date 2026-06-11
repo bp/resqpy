@@ -16,7 +16,6 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.weights_and_measures as bwam
-import resqpy.well
 import resqpy.well._md_datum as rqmdd
 import resqpy.well.well_utils as rqwu
 from resqpy.olio.base import BaseResqpy

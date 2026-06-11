@@ -7,9 +7,7 @@ log = logging.getLogger(__name__)
 import os
 
 import resqpy.crs as rqc
-import resqpy.derived_model
 import resqpy.model as rq
-import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
 import resqpy.derived_model._common as rqdm_c

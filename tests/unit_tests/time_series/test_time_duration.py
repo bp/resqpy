@@ -1,5 +1,4 @@
 import pytest
-import datetime as dt
 
 from resqpy.time_series import TimeDuration
 

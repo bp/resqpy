@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 import resqpy.model as rq
 import resqpy.grid as grr

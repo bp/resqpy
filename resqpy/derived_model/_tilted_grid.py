@@ -6,8 +6,6 @@ log = logging.getLogger(__name__)
 
 import os
 
-import resqpy.derived_model
-import resqpy.model as rq
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 

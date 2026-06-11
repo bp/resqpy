@@ -7,7 +7,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import warnings
 import math as maths
 import numpy as np
 
@@ -19,7 +18,6 @@ import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
 import resqpy.weights_and_measures as wam
-import resqpy.surface
 import resqpy.surface._base_surface as rqsb
 import resqpy.surface._surface as rqss
 from resqpy.olio.xml_namespaces import curly_namespace as ns

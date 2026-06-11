@@ -9,8 +9,6 @@ import math as maths
 import numpy as np
 
 import resqpy.crs as rqc
-import resqpy.derived_model
-import resqpy.model as rq
 import resqpy.olio.xml_et as rqet
 
 import resqpy.derived_model._common as rqdm_c

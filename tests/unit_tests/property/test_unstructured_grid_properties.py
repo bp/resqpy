@@ -2,11 +2,9 @@ import math as maths
 import os
 
 import numpy as np
-import pytest
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.model as rq
-import resqpy.olio.uuid as bu
 import resqpy.property as rqp
 import resqpy.unstructured as rug
 from resqpy.crs import Crs

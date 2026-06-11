@@ -1,7 +1,5 @@
 # tests functions in resqpy.olio.factors module
 
-import pytest
-
 import resqpy.olio.factors as f
 
 

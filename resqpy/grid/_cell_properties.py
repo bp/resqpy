@@ -10,7 +10,6 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.volume as vol
 import resqpy.weights_and_measures as wam
 
-import resqpy.grid
 import resqpy.grid._defined_geometry as grr_dg
 
 

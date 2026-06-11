@@ -12,7 +12,6 @@ import resqpy.model as rq
 import resqpy.property as rqp
 import resqpy.organize as rqo
 import resqpy.olio.transmission as rqtr
-import resqpy.grid_surface as rqgs
 import resqpy.olio.uuid as bu
 
 

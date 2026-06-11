@@ -52,8 +52,6 @@ from ._xyz import xyz_box, xyz_box_centre, bounding_box, composite_bounding_box,
     check_top_and_base_cell_edge_directions, _local_to_global_crs, _global_to_local_crs
 from ._pixel_maps import pixel_maps, pixel_map_for_split_horizon_points
 
-import warnings
-
 
 class Grid(BaseResqpy):
     """Class for RESQML Grid (extent and geometry) within RESQML model object."""
