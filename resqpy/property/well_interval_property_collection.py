@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 
 import pandas as pd
 
-import resqpy.property
 import resqpy.property.property_collection as rqp_pc
 import resqpy.property.well_interval_property as rqp_wip
 import resqpy.property.property_common as rqp_c

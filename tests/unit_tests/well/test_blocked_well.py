@@ -9,7 +9,6 @@ import pandas as pd
 from numpy.testing import assert_array_almost_equal
 import pytest
 
-import resqpy
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.grid as grr

@@ -10,7 +10,6 @@ from typing import Optional
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.strata
 import resqpy.strata._strata_common as rqstc
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 

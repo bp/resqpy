@@ -2,11 +2,9 @@ import os
 import numpy as np
 import pytest
 
-from resqpy.olio.grid_functions import left_right_foursome, infill_block_geometry, resequence_nexus_corp, random_cell, determine_corp_ijk_handedness, determine_corp_extent, translate_corp, triangles_for_cell_faces, actual_pillar_shape, columns_to_nearest_split_face
+from resqpy.olio.grid_functions import left_right_foursome, infill_block_geometry, resequence_nexus_corp, random_cell, determine_corp_ijk_handedness, determine_corp_extent, translate_corp, triangles_for_cell_faces, actual_pillar_shape
 import resqpy.model as rq
 import resqpy.grid as grr
-from resqpy.lines import Polyline
-from resqpy.derived_model import add_faults
 from resqpy.olio.random_seed import seed
 
 

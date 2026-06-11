@@ -8,7 +8,6 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
-import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet

@@ -9,7 +9,6 @@ log = logging.getLogger(__name__)
 import math as maths
 import numpy as np
 
-import resqpy.property
 import resqpy.time_series as rts
 import resqpy.weights_and_measures as wam
 import resqpy.olio.uuid as bu

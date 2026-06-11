@@ -2,7 +2,6 @@
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.organize
 import resqpy.organize._utils as ou
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns

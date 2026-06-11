@@ -1,7 +1,5 @@
-import pytest
 import os
 import numpy as np
-import h5py
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.grid as grr

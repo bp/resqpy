@@ -5,7 +5,6 @@ from ._utils import (equivalent_extra_metadata, extract_has_occurred_during, equ
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.organize
 import resqpy.organize.organization_feature as oof
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns

@@ -2,7 +2,6 @@
 
 import numpy as np
 
-import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.property.property_kind as pk
 import resqpy.model as rq

@@ -1,7 +1,6 @@
 # tests for resqpy.olio.fine_coarse class and functions
 
 import numpy as np
-import pytest
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.olio.fine_coarse as rqfc

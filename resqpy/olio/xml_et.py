@@ -10,9 +10,7 @@ import uuid
 
 # import xml element tree parse method and classes here to allow single point for switching between lxml and etree
 # alternative to lxml.etree: xml.etree.ElementTree
-from lxml.etree import (  # type: ignore
-    Element, ElementTree, SubElement, _Element,  # noqa
-    parse)
+from lxml.etree import Element, SubElement, ElementTree, _Element  # noqa  # type: ignore
 
 import resqpy.olio.uuid as bu
 from resqpy.olio.xml_namespaces import curly_namespace as cns

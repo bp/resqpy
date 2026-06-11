@@ -6,7 +6,6 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 
-import resqpy.olio.xml_et as rqet
 import resqpy.weights_and_measures as bwam
 import resqpy.crs as rqc
 import resqpy.olio.vector_utilities as vec

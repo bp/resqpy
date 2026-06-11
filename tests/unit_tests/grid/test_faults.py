@@ -1,6 +1,5 @@
 import resqpy.grid._faults as f
 import numpy as np
-from resqpy.model import Model
 
 
 # yapf: disable

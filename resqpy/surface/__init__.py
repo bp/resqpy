@@ -2,7 +2,7 @@
 
 __all__ = [
     'BaseSurface', 'CombinedSurface', 'Mesh', 'TriangulatedPatch', 'PointSet', 'Surface', 'TriMesh', 'TriMeshStencil',
-    'distill_triangle_points', '_adjust_flange_z'
+    'distill_triangle_points', 'nan_removed_triangles_and_points', '_adjust_flange_z'
 ]
 
 from ._base_surface import BaseSurface

@@ -9,7 +9,6 @@ log = logging.getLogger(__name__)
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
-import resqpy.strata
 import resqpy.strata._strata_common as rqstc
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns

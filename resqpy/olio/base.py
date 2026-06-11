@@ -4,7 +4,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import warnings
 from abc import ABCMeta, abstractmethod
 
 import resqpy.olio.uuid as bu

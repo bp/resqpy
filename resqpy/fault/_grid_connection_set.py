@@ -8,11 +8,9 @@ log = logging.getLogger(__name__)
 
 import math as maths
 import numpy as np
-import pandas as pd
 
 from typing import Optional
 import resqpy.grid as grr
-import resqpy.fault
 import resqpy.olio.read_nexus_fault as rnf
 import resqpy.olio.trademark as tm
 import resqpy.olio.uuid as bu
@@ -21,7 +19,6 @@ import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.property as rqp
 import resqpy.surface as rqs
-import resqpy.crs as rqc
 import resqpy.fault._gcs_functions as rqf_gf
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns

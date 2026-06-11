@@ -8,7 +8,6 @@ import os
 import numpy as np
 
 import resqpy.crs as rcrs
-import resqpy.lines
 import resqpy.property as rqp
 import resqpy.olio.simple_lines as rsl
 import resqpy.olio.uuid as bu

@@ -14,7 +14,6 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
-import resqpy.well
 import resqpy.well._trajectory as rqt
 import resqpy.well._wellbore_marker as rqwbm
 import resqpy.well.well_utils as rqwu

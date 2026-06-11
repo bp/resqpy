@@ -1,6 +1,5 @@
 """High level add edges per column property array function."""
 
-import resqpy.derived_model
 import resqpy.property as rqp
 
 import resqpy.derived_model._add_one_grid_property_array as rqdm_aogp

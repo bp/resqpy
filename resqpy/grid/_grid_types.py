@@ -1,7 +1,5 @@
 """functions to handle different grid types"""
 
-import warnings
-
 import resqpy.grid as grr
 import resqpy.unstructured as rug
 import resqpy.olio.xml_et as rqet

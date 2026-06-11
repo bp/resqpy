@@ -14,7 +14,7 @@ import math as maths
 import numpy as np
 import numba  # type: ignore
 from numba import njit, prange  # type: ignore
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional
 
 
 def radians_from_degrees(deg):

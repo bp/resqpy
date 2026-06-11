@@ -1,4 +1,3 @@
-import pytest
 import math as maths
 
 import resqpy.well as rqw

@@ -16,7 +16,6 @@ import resqpy.olio.uuid as bu
 import resqpy.olio.write_hdf5 as whdf5
 import resqpy.olio.xml_et as rqet
 from resqpy.olio.xml_namespaces import curly_namespace as ns
-from resqpy.olio.xml_namespaces import namespace as ns_url
 
 
 def _add_to_object_parts(model, part):

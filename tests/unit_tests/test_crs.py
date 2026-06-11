@@ -3,7 +3,6 @@
 import os
 import math as maths
 import numpy as np
-import pytest
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.crs as rqc

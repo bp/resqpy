@@ -6,9 +6,7 @@ log = logging.getLogger(__name__)
 
 import getpass
 import os
-import warnings
 
-import resqpy.crs as rqc
 import resqpy.olio.time as time
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet

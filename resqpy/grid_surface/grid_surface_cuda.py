@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 import math as maths
 import numpy as np
-from typing import Tuple, Optional, Dict
+from typing import Tuple
 import threading
 
 import numba  # type: ignore

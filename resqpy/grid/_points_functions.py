@@ -7,13 +7,11 @@ log = logging.getLogger(__name__)
 import numpy as np
 import numpy.ma as ma
 
-import resqpy.grid as grr
 import resqpy.olio.point_inclusion as pip
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
-import resqpy.weights_and_measures as wam
 import resqpy.grid._defined_geometry as grr_dg
 
 

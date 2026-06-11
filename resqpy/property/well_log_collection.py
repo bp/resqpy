@@ -9,7 +9,6 @@ import pandas as pd
 import lasio
 from datetime import datetime
 
-import resqpy.property
 import resqpy.weights_and_measures as bwam
 
 import resqpy.property.property_collection as rqp_pc

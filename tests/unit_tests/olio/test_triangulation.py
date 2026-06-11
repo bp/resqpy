@@ -1,6 +1,5 @@
 import math as maths
 import numpy as np
-import pytest
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.crs as rqc
@@ -8,7 +7,6 @@ import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.triangulation as tri
 import resqpy.olio.vector_utilities as vec
-import resqpy.surface as rqs
 from resqpy.olio.random_seed import seed
 
 

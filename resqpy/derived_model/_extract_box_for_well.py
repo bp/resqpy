@@ -8,11 +8,9 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
-import resqpy.derived_model
 import resqpy.grid_surface as rgs
 import resqpy.model as rq
 import resqpy.olio.box_utilities as bx
-import resqpy.olio.xml_et as rqet
 import resqpy.well as rqw
 
 import resqpy.derived_model._add_one_grid_property_array as rqdm_aogp
