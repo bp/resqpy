@@ -394,7 +394,7 @@ def bisector_from_faces_cuda(
     a_k_sum = 0
     not_a_k_sum = 0
     for k in range(grid_extent_kji[0]):
-        a_layer_count = np.count_nonzero(a[k])
+        a_layer_count = int(np.count_nonzero(a[k]))
         a_k_sum += (k + 1) * a_layer_count
         not_a_k_sum += (k + 1) * (layer_cell_count - a_layer_count)
     a_mean_k = float(a_k_sum) / float(a_count)

@@ -49,7 +49,6 @@ def ensemble_vdb_list(run_dir, sort_list = True):
     ensemble_list = []
 
     def recursive_vdb_list(dir):
-        nonlocal ensemble_list
         for entry in os.scandir(dir):
             if not entry.is_dir():
                 continue
