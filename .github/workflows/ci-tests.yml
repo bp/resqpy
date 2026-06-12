@@ -15,12 +15,12 @@ jobs:
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       # Post in-line comments for any issues found
       # Do not run if coming from a forked repo
@@ -52,10 +52,10 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
@@ -67,13 +67,13 @@ jobs:
     
       - name: Upload pytest artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Unit Test Results (Python ${{ matrix.python-version }})
           path: pytest.xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
@@ -87,12 +87,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
         with:
-          python-version: 3.9
+          python-version: "3.10"
 
       - name: Downgrade numpy and pandas
         # Use caret-style requirements (~) to fix minor version but allow patches
