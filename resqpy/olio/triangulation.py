@@ -4,7 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 import math as maths
 import numpy as np
 from scipy.spatial import Delaunay  # type: ignore
@@ -22,6 +22,8 @@ import resqpy.olio.vector_utilities as vec
 #    if vec.clockwise(p[t[0]], p[t[1]], p[t[2]]) > 0.0:
 #       t[1], t[2] = t[2], t[1]
 
+if TYPE_CHECKING:
+    import rql.Polyline as Polyline
 
 def _dt_scipy(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Calculates the Delaunay triangulation for an array of points and the convex hull indices.
@@ -302,7 +304,7 @@ def ccc(p1, p2, p3):
     return meet.line_line_intersect(m12[0], m12[1], o12[0], o12[1], m13[0], m13[1], o13[0], o13[1])
 
 
-def voronoi(p, t, b, aoi: rql.Polyline):
+def voronoi(p, t, b, aoi: Polyline):
     """Returns dual Voronoi diagram for a Delaunay triangulation.
 
     arguments:
