@@ -51,7 +51,6 @@ class Model():
         """Create an empty model; load it from epc_file if given.
 
         Note:
-
            if epc_file is given and the other arguments indicate that it will be a new dataset (new_epc is True
            or copy_from is given) then any existing .epc and .h5 file(s) with this name will be deleted
            immediately
@@ -873,7 +872,6 @@ class Model():
            list of strings being the part names for external part references
 
         Note:
-
            in practice, external part references are only used for hdf5 files;
            furthermore, all current datasets have adopted the practice of using
            a single hdf5 file for a given epc file
@@ -2211,7 +2209,6 @@ class Model():
         """Iterate over all available objects of given resqpy class within the model.
 
         note:
-
            The resqpy class must expose a class attribute `resqml_type`, and must support
            being created with the signature: `obj = cls(model, uuid=uuid)`.
 

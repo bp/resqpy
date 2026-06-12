@@ -180,7 +180,7 @@ def valid_uoms(quantity = None, return_attributes = False):
           attributes, such as the full name and dimension. Else, simply return
           the set of valid uoms.
 
-    returns
+    returns:
        set or dict
     """
     uoms = _properties_data()['units']
@@ -203,7 +203,7 @@ def valid_quantities(return_attributes = False):
           attributes, such as the supported units of measure. Else, simply return
           the set of valid properties.
 
-    returns
+    returns:
        set or dict
     """
     quantities = _properties_data()['quantities']

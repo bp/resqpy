@@ -123,7 +123,6 @@ class BaseResqpy(metaclass = ABCMeta):
         """Write citation block to XML.
 
         Note:
-
             `add_as_part` is False by default in this base method. Derived classes should typically
             extend this method to complete the XML representation, and then finally ensure the node
             is added as a part to the model.

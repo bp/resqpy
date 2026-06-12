@@ -56,8 +56,7 @@ pre-commit = "^4.6.0"
 pytest = "^9.0.3"
 pytest-cov = "^7.1.0"
 pytest-mock = "^3.10"
-flake8 = "^7.3"
-flake8-docstrings = "^1.6"
+ruff = "^0.15"
 yapf = "^0.43"
 packaging = "^26.2"
 Sphinx = "^5.3"
@@ -97,6 +96,35 @@ ignore_patterns = [
   ".venv/**/*",
   ".dist/**/*"
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# error code reference: https://docs.astral.sh/ruff/rules/
+select = [
+    "F",                         # Pyflakes (logical errors)
+    "E101", "W19",               # Indentation (E112/E113 are preview-only in ruff)
+    "E71", "E72", "E73", "E74",  # Statements
+    "E9",                        # Runtime / syntax errors
+    "W60",                       # Deprecation (invalid escape sequences)
+    "D",                         # pydocstyle (Google-style docstrings)
+]
+ignore = [
+    "F401",  # module imported but unused: low-priority
+    "F841",  # local variable assigned but never used: sometimes deliberate
+    # pydocstyle exceptions for Google-style docstrings:
+    "D203", "D204", "D213", "D215", "D400", "D401", "D404", "D406", "D407",
+    "D408", "D409", "D413",
+    # Further pydocstyle exceptions for relatively unimportant issues:
+    "D202", "D210", "D402", "D405", "D415", "D417",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Do not check docstrings for the tests or docs directories.
+"tests/*" = ["D"]
+"docs/*" = ["D"]
+"resqpy/version.py" = ["D"]
 
 [[tool.mypy.overrides]]
 module = [

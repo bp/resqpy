@@ -1498,7 +1498,7 @@ class Surface(rqsb.BaseSurface):
         Each edge forming a tear or outer edge in the surface will have 3 additional points added, with 2 additional points
         on each edge of the original triangle. The output surface is re-triangulated using these new points (tears will be filled)
 
-        returns: 
+        returns:
             new Surface object with extra_metadata ('unique edges resampled from surface': uuid), where uuid is for the original surface uuid
             
         note:
