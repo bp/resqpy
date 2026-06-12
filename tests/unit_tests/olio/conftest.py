@@ -486,7 +486,7 @@ def test_well_dataframe_last_data_only() -> pd.DataFrame:
 @pytest.fixture()
 def test_well_dataframe_all_data() -> pd.DataFrame:
 
-    return pd.DataFrame({
+    df = pd.DataFrame({
         "IW": {
             0: np.int32(18),
             1: np.int32(18),
@@ -565,15 +565,17 @@ def test_well_dataframe_all_data() -> pd.DataFrame:
             2: 9165.28,
             3: 9165.28
         },
-        "DATE": {
-            0: None,
-            1: None,
-            2: "1994-03-12",
-            3: "1994-03-12",
-        },
     }).astype({
         "IW": np.int32,
         "JW": np.int32,
         "L": np.int32,
         "STAT": np.int8
     })
+    # Ensure this series is an object dtype, even with pandas 3.X which can infer string types.
+    df["DATE"] = pd.Series({
+        0: None,
+        1: None,
+        2: "1994-03-12",
+        3: "1994-03-12",
+    }, dtype = object)
+    return df
