@@ -278,7 +278,7 @@ def text_to_relperm_dict(relperm_data, is_file = True):
     data = [list(filter(None, x)) for x in string_formatted]
     # get indices of start of each new relperm table based on Nexus keywords
     table_start_positions = [
-        i for i, l in enumerate(data) if len({'WOTABLE', 'GOTABLE', 'GWTABLE'}.intersection(set(l))) == 1
+        i for i, row in enumerate(data) if len({'WOTABLE', 'GOTABLE', 'GWTABLE'}.intersection(set(row))) == 1
     ]
     df_cols_dict = {
         'SW': 'Sw',
@@ -295,17 +295,17 @@ def text_to_relperm_dict(relperm_data, is_file = True):
     }
     relperm_table_idx = 1
     rel_perm_dict = {}
-    for i, l in enumerate(table_start_positions):
+    for i, start_pos in enumerate(table_start_positions):
         key = 'relperm_table' + str(relperm_table_idx)
         rel_perm_dict[key] = {}
         relperm_table_idx += 1
-        if 'WOTABLE' in data[l]:
+        if 'WOTABLE' in data[start_pos]:
             phase_combo = 'water-oil'
             rel_perm_dict[key]['phase_combo'] = phase_combo
-        elif 'GOTABLE' in data[l]:
+        elif 'GOTABLE' in data[start_pos]:
             phase_combo = 'gas-oil'
             rel_perm_dict[key]['phase_combo'] = phase_combo
-        elif 'GWTABLE' in data[l]:
+        elif 'GWTABLE' in data[start_pos]:
             phase_combo = 'gas-water'
             rel_perm_dict[key]['phase_combo'] = phase_combo
         else:
@@ -314,8 +314,8 @@ def text_to_relperm_dict(relperm_data, is_file = True):
             table_end = table_start_positions[i + 1]
         else:
             table_end = len(data)
-        table_cols = data[l + 1]
-        table_rows = data[l + 2:table_end]
+        table_cols = data[start_pos + 1]
+        table_rows = data[start_pos + 2:table_end]
         df = pd.DataFrame(table_rows, columns = table_cols)
         df.columns = df.columns.map(df_cols_dict)
         sat_col = [x for x in df.columns if 'S' in x][0]
