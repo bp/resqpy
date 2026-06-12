@@ -52,6 +52,7 @@ numba = ">=0.59"
 joblib = ">=1.2"
 
 [tool.poetry.group.dev.dependencies]
+pre-commit = "^4.6.0"
 pytest = "^9.0.3"
 pytest-cov = "^7.1.0"
 pytest-mock = "^3.10"
