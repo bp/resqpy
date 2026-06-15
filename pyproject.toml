@@ -138,7 +138,8 @@ module = [
     "numpy",
     "lasio",
     "h5py",
-    "lxml"
+    "lxml",
+    "numba"
 ]
 ignore_missing_imports = true
 
