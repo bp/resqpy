@@ -64,6 +64,11 @@ sphinx-rtd-theme = "^1.1"
 mypy = "^2.1"
 autoclasstoc = "^1.2"
 toml = "^0.10.2"
+# Type stubs for better type checking
+types-lxml = "^2026.2.16"
+h5py-stubs = "^0.1.2"
+pandas-stubs = {version = "^3.0.3", python = ">=3.11"}
+scipy-stubs = {version = "^1.17.1", python = ">=3.11"}
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -126,6 +131,8 @@ ignore = [
 "resqpy/version.py" = ["D"]
 
 [[tool.mypy.overrides]]
+# Note: pandas and scipy stubs are not available on python 3.10,
+# so mypy should be run on 3.11+ to make full use of 3rd party stubs.
 module = [
     "pandas",
     "numpy",
