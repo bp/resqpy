@@ -6,7 +6,7 @@ log = logging.getLogger(__name__)
 
 import numpy as np
 import warnings
-from numba import njit, prange  # type: ignore
+from numba import prange
 from typing import Tuple, Union, Dict
 
 import resqpy.crs as rqc
@@ -18,6 +18,7 @@ import resqpy.olio.box_utilities as bx
 import resqpy.olio.intersection as meet
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
+from resqpy.olio.numba_compat import njit
 
 # note: resqpy.grid_surface._grid_surface_cuda will be imported by the find_faces_to_represent_surface() function if needed
 

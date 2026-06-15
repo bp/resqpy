@@ -5,10 +5,10 @@ import logging
 log = logging.getLogger(__name__)
 
 import numpy as np
-from numba import njit  # type: ignore
 from typing import Union
 
 import resqpy.olio.vector_utilities as vec
+from resqpy.olio.numba_compat import njit
 
 
 def line_plane_intersect(line_p, line_v, triangle):

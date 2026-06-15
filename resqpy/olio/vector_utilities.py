@@ -11,10 +11,13 @@ import logging
 log = logging.getLogger(__name__)
 
 import math as maths
-import numpy as np
-import numba  # type: ignore
-from numba import njit, prange  # type: ignore
 from typing import Tuple, Optional
+
+import numba  
+import numpy as np
+from numba import prange  
+
+from resqpy.olio.numba_compat import njit
 
 
 def radians_from_degrees(deg):
