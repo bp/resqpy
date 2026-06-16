@@ -6,6 +6,13 @@ import resqpy.surface as rqs
 import resqpy.grid_surface as rqgs
 import resqpy.property as rqp
 
+# Suppress our internal deprecation warnings when testing those functions.
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:DEPRECATED. grid_surface.find_faces_to_represent_surface_regular_dense_optimised"),
+    pytest.mark.filterwarnings("ignore:DEPRECATED. grid_surface.bisector_from_faces"),
+]
+
 
 def test_find_faces_to_represent_surface_regular_optimised(small_grid_and_surface):
     # Arrange
