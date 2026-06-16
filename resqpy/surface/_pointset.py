@@ -15,7 +15,6 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.olio.write_hdf5 as rwh5
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rqp
-import resqpy.surface
 import resqpy.surface._base_surface as rqsb
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 

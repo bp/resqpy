@@ -10,7 +10,6 @@ import os
 import numpy as np
 
 import resqpy.olio.ab_toolbox as abt
-import resqpy.olio.box_utilities as box
 import resqpy.olio.grid_functions as gf
 import resqpy.olio.keyword_files as kf
 import resqpy.olio.write_data as wd

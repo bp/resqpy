@@ -9,10 +9,8 @@ log = logging.getLogger(__name__)
 import numpy as np
 import numpy.ma as ma
 
-import resqpy
 import resqpy.property as rqp
 import resqpy.olio.xml_et as rqet
-import resqpy.olio.uuid as bu
 import resqpy.property.property_kind as rqpk
 
 

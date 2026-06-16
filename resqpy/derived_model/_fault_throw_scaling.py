@@ -8,7 +8,6 @@ import os
 import math as maths
 import numpy as np
 
-import resqpy.derived_model
 import resqpy.fault as rqf
 import resqpy.model as rq
 import resqpy.olio.uuid as bu

@@ -8,7 +8,6 @@ import resqpy.olio.fine_coarse as fc
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
 import resqpy.property as rprop
-import resqpy.grid
 import resqpy.grid._intervals_info as grr_ii
 import resqpy.grid._defined_geometry as grr_dg
 

@@ -8,7 +8,6 @@ import math as maths
 import numpy as np
 
 import resqpy.crs as rqc
-import resqpy.grid
 import resqpy.olio.transmission as rqtr
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec

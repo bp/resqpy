@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 
 import resqpy.olio.uuid as bu
 import resqpy.olio.xml_et as rqet
-import resqpy.strata
 import resqpy.strata._strata_common as rqstc
 import resqpy.strata._geologic_unit_interpretation as rqsgui
 import resqpy.strata._stratigraphic_unit_feature as rqsui

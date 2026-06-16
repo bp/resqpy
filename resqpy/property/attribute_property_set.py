@@ -6,9 +6,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import numpy as np
-import numpy.ma as ma
-
 import resqpy.property as rqp
 
 

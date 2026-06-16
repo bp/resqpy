@@ -1,8 +1,5 @@
-import pytest
-
 import resqpy.olio.uuid as uuid
 import resqpy.organize as rqo
-from resqpy.model import Model
 
 
 def test_is_equivalent_no_other(tmp_model):

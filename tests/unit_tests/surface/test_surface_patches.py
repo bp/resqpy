@@ -1,12 +1,10 @@
 import math as maths
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-import os
 import resqpy.model as rq
 import resqpy.crs as rqc
 import resqpy.surface as rqs
 import resqpy.weights_and_measures as wam
-import resqpy.olio.uuid as bu
 
 import pytest
 

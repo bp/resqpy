@@ -12,7 +12,6 @@ import resqpy.olio.grid_functions as gf
 import resqpy.olio.xml_et as rqet
 import resqpy.olio.trademark as tm
 import resqpy.olio.write_data as wd
-import resqpy.crs as rqc
 import resqpy.weights_and_measures as wam
 
 

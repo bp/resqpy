@@ -9,7 +9,6 @@ log = logging.getLogger(__name__)
 import os
 
 import resqpy.model as rq
-import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 import resqpy.surface as rqs
 

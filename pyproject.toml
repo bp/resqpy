@@ -111,7 +111,6 @@ select = [
     "D",                         # pydocstyle (Google-style docstrings)
 ]
 ignore = [
-    "F401",  # module imported but unused: low-priority
     "F841",  # local variable assigned but never used: sometimes deliberate
     # pydocstyle exceptions for Google-style docstrings:
     "D203", "D204", "D213", "D215", "D400", "D401", "D404", "D406", "D407",

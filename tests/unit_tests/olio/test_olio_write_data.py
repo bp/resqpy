@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 import resqpy.olio.write_data as wd
 from pytest_mock import MockerFixture
 

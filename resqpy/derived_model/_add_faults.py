@@ -8,7 +8,6 @@ import os
 import numpy as np
 
 import resqpy.crs as rqc
-import resqpy.derived_model
 import resqpy.grid as grr
 import resqpy.lines as rql
 import resqpy.model as rq

@@ -9,7 +9,6 @@ log = logging.getLogger(__name__)
 import datetime as dt
 import os
 
-import resqpy.time_series
 import resqpy.time_series._time_series as rqts
 import resqpy.weights_and_measures as wam
 

@@ -17,7 +17,6 @@ import resqpy.grid as grr
 import resqpy.model as rq
 import resqpy.olio.uuid as bu
 import resqpy.olio.vector_utilities as vec
-import resqpy.olio.xml_et as rqet
 import resqpy.rq_import as rqi
 import resqpy.well as rqw
 

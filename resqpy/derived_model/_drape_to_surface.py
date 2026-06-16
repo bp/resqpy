@@ -9,9 +9,7 @@ import numpy as np
 import copy
 
 import resqpy.crs as rqc
-import resqpy.derived_model
 import resqpy.grid_surface as rgs
-import resqpy.model as rq
 import resqpy.olio.intersection as meet
 import resqpy.olio.xml_et as rqet
 

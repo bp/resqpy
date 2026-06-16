@@ -16,7 +16,6 @@ import resqpy.olio.vector_utilities as vec
 import resqpy.property as rqp
 import resqpy.surface as rqs
 import resqpy.weights_and_measures as wam
-import resqpy.unstructured
 import resqpy.unstructured._unstructured_grid as rug
 
 

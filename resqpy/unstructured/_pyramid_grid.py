@@ -8,7 +8,6 @@ import numpy as np
 
 import resqpy.grid as grr
 import resqpy.olio.volume as vol
-import resqpy.unstructured
 import resqpy.unstructured._unstructured_grid as rug
 
 
