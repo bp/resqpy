@@ -13,9 +13,9 @@ log = logging.getLogger(__name__)
 import math as maths
 from typing import Tuple, Optional
 
-import numba  
+import numba
 import numpy as np
-from numba import prange  
+from numba import prange
 
 from resqpy.olio.numba_compat import njit
 
