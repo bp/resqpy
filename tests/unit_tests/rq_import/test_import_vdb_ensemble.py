@@ -21,6 +21,7 @@ def test_default_args(tmp_path):
     parts_expected = [('ContinuousProperty', 123), ('DiscreteProperty', 15), ('EpcExternalPartReference', 1),
                       ('IjkGridRepresentation', 1), ('LocalDepth3dCrs', 1), ('PropertyKind', 2), ('PropertySet', 7),
                       ('TimeSeries', 1)]
+    # yapf: disable
     pk_list_expected = [
         'IGRID', 'TNSC', 'cell length', 'code', 'depth', 'fluid volume', 'index', 'permeability thickness',
         'pore volume', 'pressure', 'rock volume', 'saturation', 'thickness', 'transmissibility'
@@ -29,6 +30,7 @@ def test_default_args(tmp_path):
         'MDEP', 'DEADCELL', 'SG', 'IGRID', 'OIP', 'SO', 'WIP', 'KID', 'GIP', 'DAD', 'DZN', 'TX', 'KH', 'SW', 'UID',
         'DXC', 'DZC', 'BV', 'TZ', 'P', 'PVR', 'UNPACK', 'DYC', 'TNSC', 'TY'
     }
+    # yapf: enable
 
     # Act
     import_vdb_ensemble(epc_file, ensemble_dir)

@@ -305,9 +305,11 @@ class PropertyCollection():
                                              maximum, facet, facet_type, points)
         null_value, const_value = pcap._add_part_to_dict_get_null_constvalue_points(xml_node, continuous, points)
 
+        # yapf: disable
         self.dict[part] = (realization, support_uuid, uuid, xml_node, continuous, count, indexable, property_kind,
                            facet_type, facet, citation_title, time_series_uuid, time_index, minimum, maximum, uom,
                            string_lookup_uuid, property_kind_uuid, extra_metadata, null_value, const_value, points)
+        # yapf: enable
 
     def add_parts_list_to_dict(self, parts_list):
         """Add all the parts named in the parts list to the dictionary for this collection.

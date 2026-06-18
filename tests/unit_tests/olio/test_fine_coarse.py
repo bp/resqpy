@@ -62,8 +62,10 @@ def test_fine_coarse_functions():
         (1.0, 0.5, 0.5, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5, 1.0),
         dtype = float)
     assert_array_almost_equal(fct.proportions_for_axis(1), ep)
+    # yapf: disable
     ep = np.array((0.5, 0.5, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
                    0.25, 0.25, 1.0 / 3, 1.0 / 3, 1.0 / 3, 0.5, 0.5),
                   dtype = float)
+    # yapf: enable
     assert_array_almost_equal(fct.proportions_for_axis(2), ep)
     # todo: add test of tartan refinement in exponential mode

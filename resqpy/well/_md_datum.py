@@ -14,11 +14,13 @@ import resqpy.olio.xml_et as rqet
 from resqpy.olio.base import BaseResqpy
 from resqpy.olio.xml_namespaces import curly_namespace as ns
 
+# yapf: disable
 valid_md_reference_list = [
     "ground level", "kelly bushing", "mean sea level", "derrick floor", "casing flange", "arbitrary point",
     "crown valve", "rotary bushing", "rotary table", "sea floor", "lowest astronomical tide", "mean higher high water",
     "mean high water", "mean lower low water", "mean low water", "mean tide level", "kickoff point"
 ]
+# yapf: enable
 
 # todo: could require/maintain DeviationSurvey mds in same units as md datum object's crs vertical units?
 

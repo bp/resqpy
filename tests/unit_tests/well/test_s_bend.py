@@ -247,12 +247,14 @@ def test_s_bend_fn(tmp_path, epc = None):
     bw_4.create_xml()
     assert bw_4.cell_count == 26
     assert len(bw_4.cell_indices) == bw_4.cell_count
+    # yapf: disable
     np.testing.assert_array_equal(
         bw_4.cell_indices,
         np.array([
             2402, 1802, 1852, 652, 52, 153, 753, 803, 2003, 2603, 2653, 2703, 2103, 903, 904, 304, 354, 454, 1054, 2254,
             2304, 2904, 2905, 2955, 2355, 1155
         ]))
+    # yapf: enable
 
     # derive a faulted version of the grid
 

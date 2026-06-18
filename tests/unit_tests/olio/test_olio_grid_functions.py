@@ -102,11 +102,13 @@ def test_left_right_foursome_error_handling():
 def test_resequence_nexus_corp():
 
     # --------- Arrange ----------
+    # yapf: disable
     corner_points = np.array([[[[[[[0., 0., 0.], [10., 0., 0.]], [[10., -10., 0.], [0., -10., 0.]]],
                                  [[[0., 0., 10.], [10., 0., 10.]], [[10., -10., 10.], [0., -10., 10.]]]]]]])
 
     expected_result = np.array([[[[[[[0., 0., 0.], [10., 0., 0.]], [[0., -10., 0.], [10., -10., 0.]]],
                                    [[[0., 0., 10.], [10., 0., 10.]], [[0., -10., 10.], [10., -10., 10.]]]]]]])
+    # yapf: enable
 
     # --------- Act ----------
     resequence_nexus_corp(corner_points = corner_points)
@@ -171,8 +173,10 @@ def test_random_cell(tmp_path):
 
 def test_triangles_for_cell_faces():
     # --------- Arrange----------
+    # yapf: disable
     corner_points = np.array([[[[0., 0., 0.], [10., 0., 0.]], [[0., -10., 0.], [10., -10., 0.]]],
                               [[[0., 0., 10.], [10., 0., 10.]], [[0., -10., 10.], [10., -10., 10.]]]])
+    # yapf: enable
     # --------- Act----------
     tri = triangles_for_cell_faces(cp = corner_points)
     # face centre points
@@ -238,11 +242,13 @@ def test_actual_pillar_shape(tmp_path):
 def test_determine_corp_ijk_handedness():
 
     # --------- Arrange----------
+    # yapf: disable
     corner_points_right = np.array([[[[[[[0., 0., 0.], [10., 0., 0.]], [[0., -10., 0.], [10., -10., 0.]]],
                                        [[[0., 0., 10.], [10., 0., 10.]], [[0., -10., 10.], [10., -10., 10.]]]]]]])
 
     corner_points_left = np.array([[[[[[[0., 0., 0.], [10., 0., 0.]], [[0., 10., 0.], [10., 10., 0.]]],
                                       [[[0., 0., 10.], [10., 0., 10.]], [[0., 10., 10.], [10., 10., 10.]]]]]]])
+    # yapf: enable
 
     # --------- Act----------
     handedness_right = determine_corp_ijk_handedness(corner_points = corner_points_right)
@@ -272,8 +278,8 @@ def test_determine_corp_extent(tmp_path):
     assert [nk, nj, ni] == [4, 3, 2]
 
 
+# yapf: disable
 @pytest.mark.parametrize(
-    # yapf: disable
     'x_shift, y_shift, expected_result',
     [(2, 0,
       np.array([[[[[[[2.001, 0.001, 0.001], [12.001, 0.001, 0.001]], [[2.001, -10.001, 0.001], [12.001, -10.001, 0.001]]

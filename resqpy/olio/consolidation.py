@@ -14,6 +14,7 @@ import resqpy.time_series as rqt
 # the following list contains those RESQML classes with equivalence methods in their resqpy class
 # it is lightly ordered with earlier classes having no dependence on classes later in the list
 
+# yapf: disable
 consolidatable_list = [
     'OrganizationFeature', 'GeobodyFeature', 'BoundaryFeature', 'FrontierFeature', 'GeologicUnitFeature',
     'FluidBoundaryFeature', 'RockFluidUnitFeature', 'TectonicBoundaryFeature', 'GeneticBoundaryFeature',
@@ -27,6 +28,7 @@ ordering_list = consolidatable_list + [
     'IjkGridRepresentation', 'BlockedWellboreRepresentation', 'TriangulatedSetRepresentation', 'Grid2dRepresentation',
     'PointSetRepresentation'
 ]
+# yapf: enable
 # todo: add to this list as other classes gain an is_equivalent() method
 
 
