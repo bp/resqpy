@@ -4,11 +4,13 @@ from resqpy.olio.base import BaseResqpy
 
 valid_ordering_criteria = ('age', 'apparent depth', 'measured depth')
 
+# yapf: disable
 valid_contact_relationships = ("frontier feature to frontier feature", "genetic boundary to frontier feature",
                                "genetic boundary to genetic boundary", "genetic boundary to tectonic boundary",
                                "stratigraphic unit to frontier feature", "stratigraphic unit to stratigraphic unit",
                                "tectonic boundary to frontier feature", "tectonic boundary to genetic boundary",
                                "tectonic boundary to tectonic boundary")
+# yapf: enable
 
 
 class StructuralOrganizationInterpretation(BaseResqpy):

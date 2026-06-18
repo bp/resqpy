@@ -36,10 +36,12 @@ def nexus_uom_for_quantity(nexus_unit_system, quantity, english_volume_flavour =
     nexus_unit_system = nexus_unit_system.upper()
     assert nexus_unit_system in ['METRIC', 'METKG/CM2', 'METBAR', 'LAB', 'ENGLISH']
     # todo: add other quantities as needed
+    # yapf: disable
     assert quantity in [
         'length', 'area', 'volume', 'volume per volume', 'permeability rock', 'rock permeability', 'time',
         'thermodynamic temperature', 'mass per volume', 'pressure', 'volume per time'
     ]
+    # yapf: enable
     if quantity == 'permeability rock':
         quantity = 'rock permeability'
 

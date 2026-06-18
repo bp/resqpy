@@ -524,9 +524,11 @@ def test_mesh_points_in_triangle():
 
 def test_points_in_polygons():
     # note: order of returned rows is not specified and could change, causing this (and other) tests to wrongly fail
+    # yapf: disable
     polygons = np.array([[(0.0, 4.0), (0.0, 8.0), (4.0, 8.0), (4.0, 4.0),
                           (2.0, 6.0)], [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (2.0, 2.0), (0.0, 4.0)]],
                         dtype = float)
+    # yapf: enable
     points = np.array([(1.0, 2.5), (2.0, 2.5), (1.0, 1.0), (-1.0, 1.0), (3.5, 3.0), (0.1, -0.1)], dtype = float)
     within = vec.points_in_polygons(points, polygons, 3)
     assert len(within) == 3

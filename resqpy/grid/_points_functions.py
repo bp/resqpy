@@ -103,12 +103,14 @@ def set_cached_points_from_property(grid,
     # invalidate anything cached that is derived from geometry
     grid.geometry_defined_for_all_pillars_cached = None
     grid.geometry_defined_for_all_cells_cached = None
+    # yapf: disable
     for attr in ('array_unsplit_points', 'array_corner_points', 'array_centre_point', 'array_thickness', 'array_volume',
                  'array_half_cell_t', 'array_k_transmissibility', 'array_j_transmissibility',
                  'array_i_transmissibility', 'fgcs', 'array_fgcs_transmissibility', 'pgcs',
                  'array_pgcs_transmissibility', 'kgcs', 'array_kgcs_transmissibility'):
         if hasattr(grid, attr):
             delattr(grid, attr)
+    # yapf: enable
 
     if set_inactive:
         if active_property_uuid is None:
@@ -967,16 +969,20 @@ def centre_point(grid, cell_kji0 = None, cache_centre_array = False):
                                                                  points[1:, grid.pillars_for_column[j, i, 1, 1], :])
         else:
             if grid.k_gaps:
+                # yapf: disable
                 grid.array_centre_point[:, :, :, :] = 0.125 * (
                     points[grid.k_raw_index_array, :-1, :-1, :] + points[grid.k_raw_index_array, :-1, 1:, :] +
                     points[grid.k_raw_index_array, 1:, :-1, :] + points[grid.k_raw_index_array, 1:, 1:, :] +
                     points[grid.k_raw_index_array + 1, :-1, :-1, :] + points[grid.k_raw_index_array + 1, :-1, 1:, :] +
                     points[grid.k_raw_index_array + 1, 1:, :-1, :] + points[grid.k_raw_index_array + 1, 1:, 1:, :])
+                # yapf: enable
             else:
+                # yapf: disable
                 grid.array_centre_point[:, :, :, :] = 0.125 * (points[:-1, :-1, :-1, :] + points[:-1, :-1, 1:, :] +
                                                                points[:-1, 1:, :-1, :] + points[:-1, 1:, 1:, :] +
                                                                points[1:, :-1, :-1, :] + points[1:, :-1, 1:, :] +
                                                                points[1:, 1:, :-1, :] + points[1:, 1:, 1:, :])
+                # yapf: enable
         if cell_kji0 is None:
             return grid.array_centre_point
         return grid.array_centre_point[cell_kji0[0], cell_kji0[1],

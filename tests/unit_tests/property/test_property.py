@@ -1521,10 +1521,12 @@ def test_basic_static_property_parts_perm_multiple_facet(example_model_with_prop
             assert pc.citation_title_for_part(actual) == name
 
 
+# yapf: disable
 @pytest.mark.parametrize('name_list,expected_none', [(['KI', 'KJ', 'KK'], [False, False, False]),
                                                      (['KX', 'KY', 'KZ'], [False, False, False]),
                                                      (['PERMI', 'PERMJ', 'PERMK'], [False, False, False]),
                                                      (['PERMX', 'PERMY', 'PERMZ'], [False, False, False])])
+# yapf: enable
 def test_basic_static_property_parts_perm_multiple_name(example_model_with_properties, name_list, expected_none):
     # Arrange
     model = example_model_with_properties

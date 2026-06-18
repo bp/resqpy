@@ -55,10 +55,12 @@ def test_gaussian_pattern():
         pattern,
         (1.0, 0.97197327, 0.89251862, 0.77426368, 0.6345548, 0.49131274, 0.35938137, 0.24834861, 0.16213491, 0.1))
     pattern = tms._gaussian_pattern(15, 5.0)
+    # yapf: disable
     assert_array_almost_equal(
         pattern,
         (1.0, 9.38215596e-1, 7.74837429e-1, 5.63279351e-1, 3.60447789e-1, 2.03032796e-1, 1.00668900e-1, 4.39369336e-2,
          1.68798841e-2, 5.70840102e-3, 1.69927937e-3, 4.45266876e-4, 1.02702565e-4, 2.08519889e-5, 3.72665317e-6))
+    # yapf: enable
 
 
 def test_tri_mesh_stencil_init_normalize_none():

@@ -65,10 +65,12 @@ class WellboreMarker():
         """
         # verify that marker type is valid
         if marker_type is not None:
+            # yapf: disable
             assert marker_type in ([
                 "fault", "geobody", "horizon", "gas down to", "oil down to", "water down to", "gas up to", "oil up to",
                 "water up to", "free water contact", "gas oil contact", "gas water contact", "water oil contact", "seal"
             ]), "invalid marker type specified"
+            # yapf: enable
 
         self.model = parent_model
         self.wellbore_frame = parent_frame

@@ -2517,10 +2517,12 @@ class BlockedWell(BaseResqpy):
 
         if extra_columns_list:
             for extra in extra_columns_list:
+                # yapf: disable
                 assert extra.upper() in [
                     'GRID', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'PPERF', 'RADB',
                     'WI', 'WBC', 'STAT'
                 ]
+                # yapf: enable
                 column_list.append(extra.upper())
         else:
             add_as_properties = use_properties = False
@@ -3212,10 +3214,12 @@ class BlockedWell(BaseResqpy):
                                             cell_kji0, row_ci_list, ci):
         """Append the row of data corresponding to the interval to the dataframe."""
 
+        # yapf: disable
         column_names = [
             'GRID', 'RADW', 'SKIN', 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'STAT', 'PPERF', 'RADB',
             'WI', 'WBC'
         ]
+        # yapf: enable
         column_values = [
             grid_name, radw, skin, angla, anglv, length, kh, xyz[2], md, xyz[0], xyz[1], stat, part_perf_fraction, radb,
             wi, wbc
@@ -3341,10 +3345,12 @@ class BlockedWell(BaseResqpy):
 
     @staticmethod
     def __is_float_column(col_name):
+        # yapf: disable
         if col_name.upper() in [
                 'ANGLA', 'ANGLV', 'LENGTH', 'KH', 'DEPTH', 'MD', 'X', 'Y', 'SKIN', 'RADW', 'RADB', 'PPERF'
         ]:
             return True
+        # yapf: enable
         return False
 
     @staticmethod
