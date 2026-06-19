@@ -94,7 +94,8 @@ Development environment setup
 Code Style
 ----------
 
-We use the yapf auto-formatter with the style configured in the repository. 
+We use the pre-commit framework to run linting and formatting checks.
+
 Most IDEs allow you to configure a formatter to run automatically when you save
 a file. Alternatively, you can run the following command before commiting any
 changes:
@@ -102,7 +103,7 @@ changes:
 .. code-block:: bash
 
    # Reformat all python files in the repository
-   yapf -ir .
+   pre-commit run --all-files
 
 Please try to write code according to the
 `PEP8 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_, which
@@ -176,29 +177,21 @@ There are several command line options that can be appended, for example:
 Static analysis
 ^^^^^^^^^^^^^^^
 
-We use `flake8 <https://flake8.pycqa.org/en/latest/user/invocation.html>`_ to
-scan for obvious code errors. This is automatically run part as part of the CI
+We use `ruff>` to scan for obvious code errors. This is automatically run part as part of the CI
 tests, and can also be run locally with:
 
 .. code:: bash
 
-    flake8 .
+    ruff check
 
 The configuration of which
 `error codes <https://gist.github.com/sharkykh/c76c80feadc8f33b129d846999210ba3>`_
-are checked by default is configured in the repo in
-`setup.cfg <https://github.com/bp/resqpy/blob/master/setup.cfg>`_.
+are checked by default is configured in the repo in `pyproject.toml``
 
 By default in resqpy:
 
 * ``F-`` Logical errors (i.e. bugs) are enabled
 * ``E-`` Style checks (i.e. PEP8 compliance) are disabled
-
-You can test for PEP8 compliance by running flake8 with further error codes:
-
-.. code:: bash
-
-    flake8 . –select=F,E2,E3,E4,E7
 
 Documentation
 -------------

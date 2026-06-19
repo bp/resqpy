@@ -48,7 +48,7 @@ autosummary_generate_overwrite = True
 napoleon_use_rtype = False  # More legible
 autodoc_member_order = 'bysource'
 # napoleon_numpy_docstring = False  # Force consistency, leave only Google
-
+autodoc_mock_imports = ['cupy']
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -97,8 +97,6 @@ html_theme = 'sphinx_rtd_theme'
 # Override table width restrictions
 # See https://rackerlabs.github.io/docs-rackspace/tools/rtd-tables.html
 html_static_path = ['_static']
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-    ],
-}
+html_css_files = [
+    'theme_overrides.css',  # override wide tables in RTD theme
+]
