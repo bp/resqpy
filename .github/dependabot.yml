@@ -7,7 +7,7 @@ updates:
     directory: "/"
     versioning-strategy: lockfile-only
     schedule:
-      interval: "daily"  # Initial high freq for testing, will reset to "monthly" once we confirm it works
+      interval: "monthly"
     open-pull-requests-limit: 5
     groups:
       python-dependencies:
