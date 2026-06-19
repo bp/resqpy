@@ -8,7 +8,6 @@ from typing import Tuple
 import math as maths
 import numpy as np
 from scipy.spatial import Delaunay  # type: ignore
-from numba import njit  # type: ignore
 from typing import Optional
 
 import resqpy.crs as rqc
@@ -16,6 +15,7 @@ import resqpy.lines as rql
 import resqpy.model as rq
 import resqpy.olio.intersection as meet
 import resqpy.olio.vector_utilities as vec
+from resqpy.olio.numba_compat import njit
 
 # _ccw_t() no longer needed: triangle vertices maintained in anti-clockwise order throughout
 # def _ccw_t(p, t):   # puts triangle vertex indices into anti-clockwise order, in situ
