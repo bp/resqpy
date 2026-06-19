@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/prepare-poetry
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: mypy
         run: poetry run mypy resqpy

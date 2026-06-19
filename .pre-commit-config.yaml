@@ -1,4 +1,10 @@
 repos:
+  - repo: https://github.com/python-poetry/poetry
+    rev: '2.4.1'
+    hooks:
+    -   id: poetry-check
+    -   id: poetry-lock
+
   - repo: https://github.com/google/yapf
     rev: v0.43.0
     hooks:
