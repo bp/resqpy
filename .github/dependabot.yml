@@ -8,7 +8,6 @@ updates:
     versioning-strategy: lockfile-only
     schedule:
       interval: "daily"  # Initial high freq for testing, will reset to "monthly" once we confirm it works
-      day: "tuesday"
     open-pull-requests-limit: 5
     groups:
       python-dependencies:
