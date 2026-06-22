@@ -1,4 +1,6 @@
 from typing import Tuple
+from pathlib import Path
+
 import numpy as np
 
 import resqpy.property as rqp
@@ -12,7 +14,8 @@ from resqpy.olio.random_seed import seed
 seed(83469613)
 
 
-def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface: Tuple[RegularGrid, Surface]):
+def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface: Tuple[RegularGrid, Surface],
+                                                         tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -25,7 +28,7 @@ def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface:
 
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(input_index,
-                                                                                          "tmp_dir",
+                                                                                          tmp_path,
                                                                                           use_index_as_realisation,
                                                                                           grid_epc,
                                                                                           grid_uuid,
@@ -50,7 +53,8 @@ def test_find_faces_to_represent_surface_regular_wrapper(small_grid_and_surface:
     assert len(uuid_list) == 7
 
 
-def test_find_faces_to_represent_surface_regular_wrapper_point_set(small_grid_and_surface: Tuple[RegularGrid, Surface]):
+def test_find_faces_to_represent_surface_regular_wrapper_point_set(small_grid_and_surface: Tuple[RegularGrid, Surface],
+                                                                   tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -68,7 +72,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_point_set(small_grid_an
 
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(input_index,
-                                                                                          "tmp_dir",
+                                                                                          tmp_path,
                                                                                           use_index_as_realisation,
                                                                                           grid_epc,
                                                                                           grid_uuid,
@@ -95,7 +99,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_point_set(small_grid_an
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_random_agitation(small_grid_and_surface: Tuple[RegularGrid,
-                                                                                                        Surface]):
+                                                                                                        Surface],
+                                                                          tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -108,7 +113,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_random_agitation(small_
 
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(input_index,
-                                                                                          "tmp_dir",
+                                                                                          tmp_path,
                                                                                           use_index_as_realisation,
                                                                                           grid_epc,
                                                                                           grid_uuid,
@@ -133,8 +138,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_random_agitation(small_
     assert len(uuid_list) == 7
 
 
-def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_and_surface: Tuple[RegularGrid,
-                                                                                                  Surface]):
+def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_and_surface: Tuple[RegularGrid, Surface],
+                                                                    tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -149,7 +154,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -176,8 +181,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties(small_grid_a
     assert len(uuid_list) == 9
 
 
-def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extended_surface: Tuple[RegularGrid,
-                                                                                                  Surface]):
+def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extended_surface: Tuple[RegularGrid, Surface],
+                                                           tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_extended_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -192,7 +197,7 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -219,7 +224,8 @@ def test_find_faces_to_represent_surface_extended_bisector(small_grid_and_extend
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small_grid_and_surface: Tuple[RegularGrid,
-                                                                                                         Surface]):
+                                                                                                         Surface],
+                                                                           tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -234,7 +240,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -262,7 +268,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_flange(small
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_flange_radius(small_grid_and_surface: Tuple[RegularGrid,
-                                                                                                     Surface]):
+                                                                                                     Surface],
+                                                                       tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -277,7 +284,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius(small_gri
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -306,7 +313,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius(small_gri
 
 
 def test_find_faces_to_represent_surface_extended_bisector_use_pack(small_grid_and_extended_surface: Tuple[RegularGrid,
-                                                                                                           Surface]):
+                                                                                                           Surface],
+                                                                    tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_extended_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -321,7 +329,7 @@ def test_find_faces_to_represent_surface_extended_bisector_use_pack(small_grid_a
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -354,7 +362,7 @@ def test_find_faces_to_represent_surface_extended_bisector_use_pack(small_grid_a
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_noreorient(
-        small_grid_and_surface: Tuple[RegularGrid, Surface]):
+        small_grid_and_surface: Tuple[RegularGrid, Surface], tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -369,7 +377,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_no
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -400,7 +408,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_no
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_reorient(
-        small_grid_and_surface: Tuple[RegularGrid, Surface]):
+        small_grid_and_surface: Tuple[RegularGrid, Surface], tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -415,7 +423,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_re
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -445,7 +453,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_flange_radius_saucer_re
     assert len(uuid_list) == 10
 
 
-def test_find_faces_to_represent_surface_regular_wrapper_patchwork(small_grid_and_surface: Tuple[RegularGrid, Surface]):
+def test_find_faces_to_represent_surface_regular_wrapper_patchwork(small_grid_and_surface: Tuple[RegularGrid, Surface],
+                                                                   tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_surface
     grid_epc = surface_epc = grid.model.epc_file
@@ -502,7 +511,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_patchwork(small_grid_an
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -535,7 +544,8 @@ def test_find_faces_to_represent_surface_regular_wrapper_patchwork(small_grid_an
 
 
 def test_find_faces_to_represent_surface_extended_patchwork(small_grid_and_extended_surface: Tuple[RegularGrid,
-                                                                                                   Surface]):
+                                                                                                   Surface],
+                                                            tmp_path: Path):
     # Arrange
     grid, surface = small_grid_and_extended_surface
     assert surface.model is grid.model
@@ -592,7 +602,7 @@ def test_find_faces_to_represent_surface_extended_patchwork(small_grid_and_exten
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
@@ -622,7 +632,7 @@ def test_find_faces_to_represent_surface_extended_patchwork(small_grid_and_exten
 
 
 def test_find_faces_to_represent_surface_regular_wrapper_properties_triangles(
-        small_grid_and_surface_nonrandom: Tuple[RegularGrid, Surface]):
+        small_grid_and_surface_nonrandom: Tuple[RegularGrid, Surface], tmp_path):
     # Arrange
     grid, surface = small_grid_and_surface_nonrandom
     grid_epc = surface_epc = grid.model.epc_file
@@ -637,7 +647,7 @@ def test_find_faces_to_represent_surface_regular_wrapper_properties_triangles(
     # Act
     index, success, epc_file, uuid_list = find_faces_to_represent_surface_regular_wrapper(
         input_index,
-        "tmp_dir",
+        tmp_path,
         use_index_as_realisation,
         grid_epc,
         grid_uuid,
