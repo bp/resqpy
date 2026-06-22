@@ -67,7 +67,7 @@ def import_vdb_all_grids(resqml_file_root,
         - vdb_recurrent_properties (bool, default False): if True, recurrent vdb properties are imported;
           only relevant if vdb_file is not None; see also vdb_property_list
         - decoarsen (bool, default True): where ICOARSE is present, redistribute data to uncoarse cells
-        - timestep_selection (str, default 'all): 'first', 'last', 'first and last', 'all', or list of ints
+        - timestep_selection (str, default 'all'): 'first', 'last', 'first and last', 'all', or list of ints
           being reporting timestep numbers to include; ignored if vdb_recurrent_properties is False
         - create_property_set (bool, default False): if True a resqml PropertySet is created
         - vdb_property_list (list of str, optional): list of vdb static and/or recurrent properties to

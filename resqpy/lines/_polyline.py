@@ -221,7 +221,7 @@ class Polyline(rql_c._BasePolyline):
 
     @classmethod
     def for_regular_polygon(cls, model, n, radius, centre_xyz, crs_uuid, title):
-        """`Returns a closed polyline representing a regular polygon in xy plane.
+        """Returns a closed polyline representing a regular polygon in xy plane.
 
         arguments:
            model (Model): the model for which the new polyline is intended
@@ -234,7 +234,7 @@ class Polyline(rql_c._BasePolyline):
         returns:
            a new closed Polyline representing a regular polygon in the xy plane
 
-        notee:
+        notes:
            z values are all set to the z value of the centre point;
            one vertex will have an x value identical to the centre and a positive y offset (due north usually);
            this method does not write to hdf5 nor create xml for the new polyline

@@ -114,7 +114,7 @@ def import_nexus(
           only relevant if vdb_file is not None; see also vdb_property_list
         - vdb_recurrent_properties (bool, default False): if True, recurrent vdb properties are imported;
           only relevant if vdb_file is not None; see also vdb_property_list
-        - timestep_selection (str, default 'all): 'first', 'last', 'first and last', 'all',
+        - timestep_selection (str, default 'all'): 'first', 'last', 'first and last', 'all',
           or list of ints being reporting timestep numbers; ignored if vdb_recurrent_properties is False
         - use_compressed_time_series (bool, default True): generates reduced time series containing
           timesteps with recurrent properties from vdb, rather than full nexus summary time series

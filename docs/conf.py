@@ -47,6 +47,14 @@ autosummary_generate_overwrite = True
 
 napoleon_use_rtype = False  # More legible
 autodoc_member_order = 'bysource'
+
+# Tell napolean to treat names like `uuid` as literals, rather than a cross-references
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    'uuid': '``uuid``',
+    'UUID': '``uuid``',
+    'root': '``root``',
+}
 # napoleon_numpy_docstring = False  # Force consistency, leave only Google
 autodoc_mock_imports = ['cupy']
 extensions = [
@@ -89,6 +97,25 @@ autoclasstoc_sections = [
     "common-methods",
     "other-methods",
 ]
+
+# ---- Patch autoclasstoc to fix a sphinx warning ------------------------------
+
+# autoclasstoc 1.7.0 appends a trailing decorative `transition` node to every class (see autoclasstoc.utils.make_toc)
+# this is rejected by recent Sphinx/docutils, as transition nodes must be a direct child of <document> or <section> nodes.
+# So, patch autoclasstoc to remove this problematic node.
+
+import autoclasstoc.utils as _autoclasstoc_utils
+from docutils import nodes as _docutils_nodes
+
+_orig_make_toc = _autoclasstoc_utils.make_toc
+
+
+def _make_toc_without_transition(*args, **kwargs):
+    toc_nodes = _orig_make_toc(*args, **kwargs)
+    return [n for n in toc_nodes if not isinstance(n, _docutils_nodes.transition)]
+
+
+_autoclasstoc_utils.make_toc = _make_toc_without_transition
 
 # -- Options for HTML output -------------------------------------------------
 

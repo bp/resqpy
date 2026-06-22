@@ -202,7 +202,7 @@ class DeviationSurvey(BaseResqpy):
                         represented_interp = None):
         """Load MD, aximuth & inclination data from an ascii deviation survey file.
 
-        qrguments:
+        arguments:
            parent_model (model.Model): the parent resqml model
            deviation_survey_file (string): the filename of an ascii file holding the deviation survey data
            comment_character (string): the character to be treated as introducing comments
