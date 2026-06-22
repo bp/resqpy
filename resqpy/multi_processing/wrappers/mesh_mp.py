@@ -17,7 +17,7 @@ import resqpy.multi_processing as rqmp
 
 def mesh_from_regular_grid_column_property_wrapper(
     index: int,
-    parent_tmp_dir: str,
+    parent_tmp_dir: str | Path,
     grid_epc: str,
     grid_uuid: Union[UUID, str],
     prop_uuids: List[Union[UUID, str]],
@@ -26,7 +26,7 @@ def mesh_from_regular_grid_column_property_wrapper(
 
     arguments:
         index (int): the index of the function call from the multiprocessing function
-        parent_tmp_dir (str): the parent temporary directory path from the multiprocessing function
+        parent_tmp_dir (str or Path): the parent temporary directory path from the multiprocessing function
         grid_epc (str): epc file path where the grid is saved
         grid_uuid (UUID or str): UUID (universally unique identifier) of the regular grid object
         prop_uuids (list of UUID or str): a list of the property uuids used to create each Mesh

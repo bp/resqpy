@@ -43,9 +43,13 @@ runs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-1
-     
+    
+    - name: Verify lockfile
+      run: poetry check --lock
+      shell: bash
+
     - name: Install dependencies and library
       # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction
+      run: poetry sync --no-interaction
       shell: bash
   
