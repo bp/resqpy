@@ -98,24 +98,46 @@ autoclasstoc_sections = [
     "other-methods",
 ]
 
-# ---- Patch autoclasstoc to fix a sphinx warning ------------------------------
-
-# autoclasstoc 1.7.0 appends a trailing decorative `transition` node to every class (see autoclasstoc.utils.make_toc)
-# this is rejected by recent Sphinx/docutils, as transition nodes must be a direct child of <document> or <section> nodes.
-# So, patch autoclasstoc to remove this problematic node.
+# ---- Patch autoclasstoc -------------------------------------------------------
 
 import autoclasstoc.utils as _autoclasstoc_utils
 from docutils import nodes as _docutils_nodes
 
-_orig_make_toc = _autoclasstoc_utils.make_toc
+
+def _skip_node(self, node):
+    pass
 
 
-def _make_toc_without_transition(*args, **kwargs):
-    toc_nodes = _orig_make_toc(*args, **kwargs)
-    return [n for n in toc_nodes if not isinstance(n, _docutils_nodes.transition)]
+def setup(app):
 
+    # autoclasstoc appends a trailing decorative `transition` node to every
+    # class (see autoclasstoc.utils.make_toc). Recent Sphinx/docutils reject
+    # this, as transition nodes must be a direct child of a <document> or
+    # <section> node, so strip it out.
+    _orig_make_toc = _autoclasstoc_utils.make_toc
 
-_autoclasstoc_utils.make_toc = _make_toc_without_transition
+    def _make_toc_without_transition(*args, **kwargs):
+        toc_nodes = _orig_make_toc(*args, **kwargs)
+        return [n for n in toc_nodes if not isinstance(n, _docutils_nodes.transition)]
+
+    _autoclasstoc_utils.make_toc = _make_toc_without_transition
+
+    # autoclasstoc registers two custom nodes "details" & "details_summary",
+    # which are only implemented for HTML. Tell the LaTex builder to ignore
+    # them.
+    from autoclasstoc.nodes import details, details_summary
+
+    for _node in (details, details_summary):
+        app.add_node(
+            _node,
+            override = True,
+            html = _node.html,
+            latex = (_skip_node, _skip_node),
+            text = (_skip_node, _skip_node),
+            man = (_skip_node, _skip_node),
+            texinfo = (_skip_node, _skip_node),
+        )
+
 
 # -- Options for HTML output -------------------------------------------------
 
