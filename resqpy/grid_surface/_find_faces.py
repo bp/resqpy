@@ -508,7 +508,7 @@ def find_faces_to_represent_surface_regular_dense_optimised(grid,
                                                             n_batches = 20):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
-    argumants:
+    arguments:
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
            must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
         surface (Surface): the surface to be intersected with the grid
@@ -887,7 +887,7 @@ def find_faces_to_represent_surface_regular_optimised(grid,
                                                       direction = 'IJK'):
     """Returns a grid connection set containing those cell faces which are deemed to represent the surface.
 
-    argumants:
+    arguments:
         grid (RegularGrid): the grid for which to create a grid connection set representation of the surface;
            must be aligned, ie. I with +x, J with +y, K with +z and local origin of (0.0, 0.0, 0.0)
         surface (Surface): the surface to be intersected with the grid

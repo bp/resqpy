@@ -18,6 +18,7 @@ pytest.xml
 docs/_build
 docs/_autosummary
 docs/html
+docs/pdf
 
 # Build artifacts
 build

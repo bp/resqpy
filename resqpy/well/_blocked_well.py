@@ -346,8 +346,8 @@ class BlockedWell(BaseResqpy):
         """Returns numpy int array of shape (N, 2, 2) being pairs of face (axis, polarity) pairs, to go with cell_kji0_array().
 
         notes:
-           each of the N rows in the returned array is of the form:
-              ((entry_face_axis, entry_face_polarity), (exit_face_axis, exit_face_polarity))
+           each of the N rows in the returned array is of the form
+           ((entry_face_axis, entry_face_polarity), (exit_face_axis, exit_face_polarity));
            where the axis values are in the range 0 to 2 for k, j & i respectively, and
            the polarity values are zero for the 'negative' face and 1 for the 'positive' face;
            exit values may be -1 to indicate TD within the cell (ie. no exit point)
@@ -973,7 +973,7 @@ class BlockedWell(BaseResqpy):
            - the min_length and min_kh limits apply to individual cell intervals and thus depend on cell size;
            - the water and oil saturation limits are for saturations at a single time and affect whether the interval
              is included in the dataframe
-           – to turn perforations off and on over time create a time series dependent bunch of boolean properties on
+           - to turn perforations off and on over time create a time series dependent bunch of boolean properties on
              the blocked well, with title 'STAT' or local property kind 'well connection open';
            - the saturation limits do not stop deeper intervals with qualifying saturations from being included;
            - the k0_list, perforation_list and region_list arguments should be set to None to disable the

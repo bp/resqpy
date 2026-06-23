@@ -1,5 +1,6 @@
 ci:
   skip: [poetry-lock]  # Often fails on pre-commit.ci due to network issues
+  autoupdate_schedule: quarterly
 
 repos:
   - repo: https://github.com/python-poetry/poetry

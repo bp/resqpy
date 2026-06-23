@@ -725,13 +725,14 @@ class RegularGrid(grr_g.Grid):
 
         see docstring for Grid.create_xml()
 
-        additional argument:
+        arguments:
            add_cell_length_properties (boolean, default True): if True, 3 constant property arrays with cells as
               indexable element are created to hold the lengths of the primary axes of the cells; the xml is
               created for the properties and they are added to the model (no hdf5 write needed)
-           use_lattice (boolean, default True): if True, a geometry node is created with a Point3dLatticeArray;
+           use_lattice (boolean, default True): if True, a geometry node is created with a Point3dLatticeArray
 
-        note:
+        notes:
+           this method has additional arguments beyond those of Grid.create_xml();
            if the regular grid has been instatiated using the as_irregular_grid mode, a lattice will not be used,
            regardless of the use_lattice argument;
            if using a lattice representation, the write_geomety argument is ignored and a lattice geometry will

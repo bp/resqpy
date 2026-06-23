@@ -47,8 +47,16 @@ autosummary_generate_overwrite = True
 
 napoleon_use_rtype = False  # More legible
 autodoc_member_order = 'bysource'
-# napoleon_numpy_docstring = False  # Force consistency, leave only Google
 
+# Tell napolean to treat names like `uuid` as literals, rather than a cross-references
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    'uuid': '``uuid``',
+    'UUID': '``uuid``',
+    'root': '``root``',
+}
+# napoleon_numpy_docstring = False  # Force consistency, leave only Google
+autodoc_mock_imports = ['cupy']
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -90,6 +98,47 @@ autoclasstoc_sections = [
     "other-methods",
 ]
 
+# ---- Patch autoclasstoc -------------------------------------------------------
+
+import autoclasstoc.utils as _autoclasstoc_utils
+from docutils import nodes as _docutils_nodes
+
+
+def _skip_node(self, node):
+    pass
+
+
+def setup(app):
+
+    # autoclasstoc appends a trailing decorative `transition` node to every
+    # class (see autoclasstoc.utils.make_toc). Recent Sphinx/docutils reject
+    # this, as transition nodes must be a direct child of a <document> or
+    # <section> node, so strip it out.
+    _orig_make_toc = _autoclasstoc_utils.make_toc
+
+    def _make_toc_without_transition(*args, **kwargs):
+        toc_nodes = _orig_make_toc(*args, **kwargs)
+        return [n for n in toc_nodes if not isinstance(n, _docutils_nodes.transition)]
+
+    _autoclasstoc_utils.make_toc = _make_toc_without_transition
+
+    # autoclasstoc registers two custom nodes "details" & "details_summary",
+    # which are only implemented for HTML. Tell the LaTex builder to ignore
+    # them.
+    from autoclasstoc.nodes import details, details_summary
+
+    for _node in (details, details_summary):
+        app.add_node(
+            _node,
+            override = True,
+            html = _node.html,
+            latex = (_skip_node, _skip_node),
+            text = (_skip_node, _skip_node),
+            man = (_skip_node, _skip_node),
+            texinfo = (_skip_node, _skip_node),
+        )
+
+
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
@@ -97,8 +146,6 @@ html_theme = 'sphinx_rtd_theme'
 # Override table width restrictions
 # See https://rackerlabs.github.io/docs-rackspace/tools/rtd-tables.html
 html_static_path = ['_static']
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-    ],
-}
+html_css_files = [
+    'theme_overrides.css',  # override wide tables in RTD theme
+]

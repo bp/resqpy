@@ -358,10 +358,10 @@ class Surface(rqsb.BaseSurface):
               arrays are returned
 
         returns:
-           tuple (triangles, points):
-              triangles (int array of shape[:, 3]): integer indices into points array,
-                 being the nodes of the corners of the triangles;
-              points (float array of shape[:, 3]): flat array of xyz points, indexed by triangles
+           tuple (triangles, points) where
+           triangles is an int array of shape (N, 3) holding integer indices into the points array,
+           being the nodes of the corners of the triangles, and
+           points is a float array of shape (M, 3) being a flat array of xyz points, indexed by triangles
 
         :meta common:
         """

@@ -657,7 +657,7 @@ class Grid(BaseResqpy):
 
         notes:
            this code has the concept of a 'main' grid for a model, which resqml does not; it is vaguely
-              equivalent to a 'root' grid in a simulation model
+           equivalent to a 'root' grid in a simulation model;
            the write_active argument should generally be set to the same value as that passed to the write_hdf5... method;
            the RESQML standard allows the geometry to be omitted for a grid, controlled here by the write_geometry argument;
            the explicit geometry may be omitted for regular grids, in which case the arrays should not be written to the hdf5
