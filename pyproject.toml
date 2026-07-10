@@ -151,9 +151,15 @@ module = [
     "lasio",
     "h5py",
     "lxml",
-    "numba"
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# numba ships a py.typed marker in recent releases, but mypy reports many false-postives.
+# Skip these imports for now, treating numba as untyped. 
+module = ["numba", "numba.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 
 [tool.pytest.ini_options]
 addopts = "-ra"
