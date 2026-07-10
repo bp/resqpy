@@ -3,18 +3,8 @@
 version: 2
 updates:
 
-  - package-ecosystem: "pip"
-    directory: "/"
-    versioning-strategy: lockfile-only
-    schedule:
-      interval: "monthly"
-    open-pull-requests-limit: 5
-    groups:
-      python-dependencies:
-        patterns:
-          - "*"
-    commit-message:
-      prefix: "deps"
+  # Note: Dependabot doesn't properly handle updating poetry lockfiles,
+  # so the poetry lockfile is updated with GH actions instead.
 
   - package-ecosystem: "github-actions"
     directory: "/"

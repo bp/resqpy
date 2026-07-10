@@ -1,0 +1,58 @@
+---
+
+name: Update lockfile
+
+on:
+  schedule:
+    - cron: "30 10 1 * *"  # 10:30 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-lockfile:
+    name: Regenerate poetry.lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        uses: ./.github/actions/prepare-poetry
+        with:
+          python-version: "3.14"
+
+      - name: Regenerate lockfile and summarise changes
+        run: |
+          # poetry show reads the lockfile (no venv sync needed); column 2 is
+          # the version. Capture before/after, then join to list changed,
+          # added and removed packages as "pkg: old -> new".
+          poetry show 2>/dev/null | awk '{print $1, $2}' | sort > /tmp/deps-before.txt
+          poetry lock --regenerate --no-interaction
+          poetry show 2>/dev/null | awk '{print $1, $2}' | sort > /tmp/deps-after.txt
+
+          {
+            echo "Automated monthly re-resolution of \`poetry.lock\` via \`poetry lock --regenerate\`."
+            echo
+            changes=$(join -a1 -a2 -e '(none)' -o '0,1.2,2.2' \
+              /tmp/deps-before.txt /tmp/deps-after.txt \
+              | awk '$2 != $3 {printf "- **%s**: %s → %s\n", $1, $2, $3}')
+            if [ -n "$changes" ]; then
+              echo "### Dependency changes"
+              echo
+              echo "$changes"
+            else
+              echo "_No dependency versions changed._"
+            fi
+          } > /tmp/pr-body.md
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "deps: re-resolve poetry.lock to latest compatible versions"
+          branch: auto/update-lockfile
+          delete-branch: true
+          title: "deps: update poetry.lock to latest compatible versions"
+          body-path: /tmp/pr-body.md
+          labels: dependencies
