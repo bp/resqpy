@@ -171,7 +171,7 @@ def _derive_from_wellspec_verify_col_list(add_properties):
         else:
             col_list = []
     else:
-        col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV']
+        col_list = ['IW', 'JW', 'L', 'ANGLA', 'ANGLV', 'DTOP', 'DBOT']
     return col_list
 
 
