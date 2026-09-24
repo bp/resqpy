@@ -124,7 +124,7 @@ class Property(BaseResqpy):
                    expand_const_arrays = False,
                    dtype = None,
                    use_pack = False,
-                   extra_metadata = {},
+                   extra_metadata = None,
                    chunks = None,
                    compression = None):
         """Populates a new Property from a numpy array and metadata; NB. Writes data to hdf5 and adds part to model.
@@ -190,6 +190,8 @@ class Property(BaseResqpy):
         :meta common:
         """
         # Validate
+        if extra_metadata is None:
+            extra_metadata = {}
         assert parent_model is not None
         assert cached_array is not None or const_value is not None
 
@@ -448,7 +450,7 @@ class Property(BaseResqpy):
                    property_kind_uuid = None,
                    find_local_property_kind = True,
                    expand_const_arrays = False,
-                   extra_metadata = {}):
+                   extra_metadata = None):
         """Creates an xml tree for the property and adds it as a part to the model; not usually called directly.
 
         note:
@@ -456,6 +458,8 @@ class Property(BaseResqpy):
            NB. this method has the deliberate side effect of modifying the uuid and title of self to match those
            of the property collection part!
         """
+        if extra_metadata is None:
+            extra_metadata = {}
         if not self.collection.imported_list:
             log.warning('no imported Property array to create xml for')
             return

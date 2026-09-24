@@ -228,7 +228,7 @@ def length_unit_conversion_applicable(keyword):  # pragma: no cover
 
 def load_wellspecs(wellspec_file: str,
                    well: Optional[str] = None,
-                   column_list: Union[List[str], None] = [],
+                   column_list: Union[List[str], None] = None,
                    keep_duplicate_cells: bool = False,
                    keep_null_columns: bool = True,
                    last_data_only: bool = True,
@@ -267,6 +267,8 @@ def load_wellspecs(wellspec_file: str,
         that applied to any entry, regardless of the well and last_data_only arguments; the dates list
         will not include a null entry, even if there are wellspec data before the first timestamp
     """
+    if column_list is None:
+        column_list = []
     assert wellspec_file, "No wellspec file specified."
 
     if column_list is not None:
@@ -367,8 +369,8 @@ def get_well_pointers(
                     well_pointers[well_name].append((file.tell(), None))
                 else:
                     well_pointers[well_name] = [(file.tell(), None)]
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The file {wellspec_file} can't be found.")
+    except FileNotFoundError as err:
+        raise FileNotFoundError(f"The file {wellspec_file} can't be found.") from err
 
     time_pointers = {}
     with open(wellspec_file, "r") as file:
@@ -389,9 +391,9 @@ def get_well_pointers(
                     date_obj = datetime.datetime.strptime(date, "%m/%d/%Y").date()
                 else:
                     date_obj = datetime.datetime.strptime(date, "%d/%m/%Y").date()
-            except ValueError:
+            except ValueError as err:
                 raise ValueError(f"The date found '{date}' does not match the correct format (usa_date_format "
-                                 f"is {usa_date_format}).")
+                                 f"is {usa_date_format}).") from err
             if no_date_replacement is not None and date_obj < no_date_replacement:
                 raise ValueError(
                     f"The Zero Date {no_date_replacement} must be before the first wellspec TIME {date_obj}.")
@@ -417,7 +419,7 @@ def get_well_data(
     file: TextIO,
     well_name: str,
     pointer: int,
-    column_list: List[str] = [],
+    column_list: List[str] = None,
     selecting: bool = False,
     keep_duplicate_cells: bool = True,
     keep_null_columns: bool = True,
@@ -449,6 +451,8 @@ def get_well_data(
     Returns:
         Pandas dataframe of the well data or None if all the data are NA.
     """
+    if column_list is None:
+        column_list = []
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
     line = kf.strip_trailing_comment(file.readline()).upper()
@@ -537,7 +541,7 @@ def get_all_well_data(
     file: TextIO,
     well_name: str,
     pointers: List[Tuple[int, Union[None, str]]],
-    column_list: List[str] = [],
+    column_list: List[str] = None,
     selecting: bool = False,
     keep_duplicate_cells: bool = False,
     keep_null_columns: bool = True,
@@ -571,6 +575,8 @@ def get_all_well_data(
     returns:
         Pandas dataframe of all well data for a specific well name or None if all the data are NA.
     """
+    if column_list is None:
+        column_list = []
     if last_data_only:
         if column_list is None:
             return None

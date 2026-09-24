@@ -217,7 +217,9 @@ def abstract_types(complex_types):
 def max_sizes_for_rst(flattened_types, complex_types, key = None):
     """Returns a list of 3 integers being the required column widths for rst format tables."""
 
-    def _max_sizes(flattened_types, complex_types, key, indent = 0, max_so_far = [0, 0, 0]):
+    def _max_sizes(flattened_types, complex_types, key, indent = 0, max_so_far = None):
+        if max_so_far is None:
+            max_so_far = [0, 0, 0]
         for e in flattened_types[key]:
             s0 = 3 * indent + len(e[0])
             if s0 > max_so_far[0]:

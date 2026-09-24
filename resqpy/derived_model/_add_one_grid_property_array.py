@@ -32,7 +32,7 @@ def add_one_grid_property_array(epc_file,
                                 const_value = None,
                                 expand_const_arrays = False,
                                 points = False,
-                                extra_metadata = {},
+                                extra_metadata = None,
                                 use_int32 = True,
                                 new_epc_file = None):
     """Adds a grid property from a numpy array to an existing resqml dataset.
@@ -79,6 +79,8 @@ def add_one_grid_property_array(epc_file,
        uuid.UUID of newly created property object
     """
 
+    if extra_metadata is None:
+        extra_metadata = {}
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):

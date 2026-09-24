@@ -17,14 +17,18 @@ def _parts(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
-           metadata = {},
-           extra = {},
+           metadata = None,
+           extra = None,
            related_uuid = None,
            related_mode = None,
            epc_subdir = None,
            sort_by = None):
     """Returns a list of parts matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     if not parts_list:
         parts_list = _list_of_parts(model)
     if uuid is not None:
@@ -64,14 +68,18 @@ def _part(model,
           title = None,
           title_mode = 'is',
           title_case_sensitive = False,
-          metadata = {},
-          extra = {},
+          metadata = None,
+          extra = None,
           related_uuid = None,
           related_mode = None,
           epc_subdir = None,
           multiple_handling = 'exception'):
     """Returns the name of a part matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     pl = _parts(model,
                 parts_list = parts_list,
                 obj_type = obj_type,
@@ -106,14 +114,18 @@ def _uuids(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
-           metadata = {},
-           extra = {},
+           metadata = None,
+           extra = None,
            related_uuid = None,
            related_mode = None,
            epc_subdir = None,
            sort_by = None):
     """Returns a list of uuids of parts matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     sort_by_uuid = (sort_by == 'uuid')
     if sort_by_uuid:
         sort_by = None
@@ -147,14 +159,18 @@ def _uuid(model,
           title = None,
           title_mode = 'is',
           title_case_sensitive = False,
-          metadata = {},
-          extra = {},
+          metadata = None,
+          extra = None,
           related_uuid = None,
           related_mode = None,
           epc_subdir = None,
           multiple_handling = 'exception'):
     """Returns the uuid of a part matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     part = _part(model,
                  parts_list = parts_list,
                  obj_type = obj_type,
@@ -180,14 +196,18 @@ def _roots(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
-           metadata = {},
-           extra = {},
+           metadata = None,
+           extra = None,
            related_uuid = None,
            related_mode = None,
            epc_subdir = None,
            sort_by = None):
     """Returns a list of xml root nodes of parts matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     pl = _parts(model,
                 parts_list = parts_list,
                 obj_type = obj_type,
@@ -214,14 +234,18 @@ def _root(model,
           title = None,
           title_mode = 'is',
           title_case_sensitive = False,
-          metadata = {},
-          extra = {},
+          metadata = None,
+          extra = None,
           related_uuid = None,
           related_mode = None,
           epc_subdir = None,
           multiple_handling = 'exception'):
     """Returns the xml root node of a part matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     part = _part(model,
                  parts_list = parts_list,
                  obj_type = obj_type,
@@ -247,14 +271,18 @@ def _titles(model,
             title = None,
             title_mode = 'is',
             title_case_sensitive = False,
-            metadata = {},
-            extra = {},
+            metadata = None,
+            extra = None,
             related_uuid = None,
             related_mode = None,
             epc_subdir = None,
             sort_by = None):
     """Returns a list of citation titles of parts matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     pl = _parts(model,
                 parts_list = parts_list,
                 obj_type = obj_type,
@@ -281,14 +309,18 @@ def _title(model,
            title = None,
            title_mode = 'is',
            title_case_sensitive = False,
-           metadata = {},
-           extra = {},
+           metadata = None,
+           extra = None,
            related_uuid = None,
            related_mode = None,
            epc_subdir = None,
            multiple_handling = 'exception'):
     """Returns the citation title of a part matching all of the arguments passed."""
 
+    if extra is None:
+        extra = {}
+    if metadata is None:
+        metadata = {}
     part = _part(model,
                  parts_list = parts_list,
                  obj_type = obj_type,
