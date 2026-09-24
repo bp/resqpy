@@ -205,6 +205,7 @@ class VerticalPrismGrid(PrismGrid):
 
         if extra_metadata is None:
             extra_metadata = {}
+
         def find_pair(a, pair):
             # for sorted array a of shape (N, 2) returns index in first axis of a pair
 

@@ -181,6 +181,7 @@ class TetraGrid(rug.UnstructuredGrid):
 
         if extra_metadata is None:
             extra_metadata = {}
+
         def _min_max(a, b):
             if a < b:
                 return (a, b)
