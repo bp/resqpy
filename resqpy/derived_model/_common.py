@@ -84,7 +84,7 @@ def _write_grid(epc_file,
                 geometry = True,
                 time_series_uuid = None,
                 string_lookup_uuid = None,
-                extra_metadata = None,
+                extra_metadata = {},
                 use_int32 = None):
     """Append to or create epc and h5 files, with grid and optionally property collection.
 
@@ -118,8 +118,6 @@ def _write_grid(epc_file,
        this function is not usually called directly by application code
     """
 
-    if extra_metadata is None:
-        extra_metadata = {}
     log.debug('write_grid(): epc_file: ' + str(epc_file) + '; mode: ' + str(mode) + '; grid extent: ' +
               str(grid.extent_kji))
 

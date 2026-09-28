@@ -26,7 +26,7 @@ def add_one_blocked_well_property(epc_file,
                                   local_property_kind_uuid = None,
                                   count_per_element = 1,
                                   points = False,
-                                  extra_metadata = None,
+                                  extra_metadata = {},
                                   new_epc_file = None):
     """Adds a blocked well property from a numpy array to an existing resqml dataset.
 
@@ -65,8 +65,6 @@ def add_one_blocked_well_property(epc_file,
        uuid.UUID of newly created property object
     """
 
-    if extra_metadata is None:
-        extra_metadata = {}
     if new_epc_file and epc_file and (
         (new_epc_file == epc_file) or
         (os.path.exists(new_epc_file) and os.path.exists(epc_file) and os.path.samefile(new_epc_file, epc_file))):

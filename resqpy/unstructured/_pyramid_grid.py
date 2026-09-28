@@ -21,7 +21,7 @@ class PyramidGrid(rug.UnstructuredGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = None,
+                 extra_metadata = {},
                  load_inactive = True):
         """Creates a new resqpy PyramidGrid object (RESQML UnstructuredGrid with cell shape pyramidal)
 
@@ -45,8 +45,6 @@ class PyramidGrid(rug.UnstructuredGrid):
            a newly created PyramidGrid object
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
                          find_properties = find_properties,

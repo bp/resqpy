@@ -359,15 +359,17 @@ def _store_epc(model, epc_file = None, main_xml_name = '[Content_Types].xml', on
             if part_tree is None:
                 log.warning('No xml tree present to write for part: ' + part_name)
                 continue
-            clean_part_name = part_name[1:] if part_name[0] == '/' else part_name
-            with epc.open(clean_part_name, mode = 'w') as part_xml:
+            if part_name[0] == '/':
+                part_name = part_name[1:]
+            with epc.open(part_name, mode = 'w') as part_xml:
                 rqet.write_xml(part_xml, part_tree, standalone = None)
         for part_name, (_, part_tree) in model.other_forest.items():
             if part_tree is None:
                 log.warning('No xml tree present to write for other part: ' + part_name)
                 continue
-            clean_part_name = part_name[1:] if part_name[0] == '/' else part_name
-            with epc.open(clean_part_name, mode = 'w') as part_xml:
+            if part_name[0] == '/':
+                part_name = part_name[1:]
+            with epc.open(part_name, mode = 'w') as part_xml:
                 rqet.write_xml(part_xml, part_tree, standalone = 'yes')
         if model.rels_present:
             for part_name, (_, part_tree) in model.rels_forest.items():

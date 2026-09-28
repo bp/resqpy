@@ -1041,8 +1041,8 @@ def fault_connection_set(grid, skip_inactive = False):
                     fa_m_worst_scaling = fa_m_total
                     # log.warning(f'downscaling fractional areas on minus side of fault by factor of {fa_m_total} in layer {km}')
                 for i in range(km_start_index, len(juxta_list)):
-                    (_km, kp, fa_m, fa_p) = juxta_list[i]
-                    juxta_list[i] = (_km, kp, fa_m / fa_m_total, fa_p)
+                    (km, kp, fa_m, fa_p) = juxta_list[i]
+                    juxta_list[i] = (km, kp, fa_m / fa_m_total, fa_p)
         any_p_scaling = False
         fa_p_worst_scaling = np.nanmax(fa_p_totals)
         fa_p_downscaling_count = 0

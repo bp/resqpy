@@ -286,7 +286,7 @@ def grid_columns_property_from_gcs_property(model,
             multiple_handling = 'mean'
     else:
         dtype = int
-        if isinstance(null_value, float) and np.isnan(null_value):
+        if null_value == np.nan:
             null_value = -1
         elif type(null_value) is float:
             null_value = int(null_value)

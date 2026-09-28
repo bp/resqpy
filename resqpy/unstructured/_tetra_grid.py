@@ -23,7 +23,7 @@ class TetraGrid(rug.UnstructuredGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = None,
+                 extra_metadata = {},
                  load_inactive = True):
         """Creates a new resqpy TetraGrid object (RESQML UnstructuredGrid with cell shape tetrahedral)
 
@@ -47,8 +47,6 @@ class TetraGrid(rug.UnstructuredGrid):
            a newly created TetraGrid object
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
                          find_properties = find_properties,
@@ -176,11 +174,8 @@ class TetraGrid(rug.UnstructuredGrid):
         self.cell_face_is_right_handed = handedness.flatten()
 
     @classmethod
-    def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = None, set_handedness = False):
+    def from_unstructured_cell(cls, u_grid, cell, title = None, extra_metadata = {}, set_handedness = False):
         """Instantiates a small TetraGrid representing a single cell from an UnstructuredGrid as a set of tetrahedra."""
-
-        if extra_metadata is None:
-            extra_metadata = {}
 
         def _min_max(a, b):
             if a < b:
