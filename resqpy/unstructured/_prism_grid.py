@@ -33,7 +33,7 @@ class PrismGrid(rug.UnstructuredGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = None,
+                 extra_metadata = {},
                  load_inactive = True):
         """Creates a new resqpy PrismGrid object (RESQML UnstructuredGrid with cell shape trisngular prism)
 
@@ -57,8 +57,6 @@ class PrismGrid(rug.UnstructuredGrid):
            a newly created PrismGrid object
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
                          find_properties = find_properties,
@@ -115,7 +113,7 @@ class VerticalPrismGrid(PrismGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = None,
+                 extra_metadata = {},
                  load_inactive = True):
         """Creates a new resqpy VerticalPrismGrid object.
 
@@ -139,8 +137,6 @@ class VerticalPrismGrid(PrismGrid):
            a newly created VerticalPrismGrid object
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         self.nk = None  #: number of layers when constructed as a layered grid
 
         super().__init__(parent_model = parent_model,
@@ -168,7 +164,7 @@ class VerticalPrismGrid(PrismGrid):
                       column_triangles = None,
                       title = None,
                       originator = None,
-                      extra_metadata = None,
+                      extra_metadata = {},
                       set_handedness = False):
         """Create a layered vertical prism grid from an ordered list of untorn surfaces.
 
@@ -202,9 +198,6 @@ class VerticalPrismGrid(PrismGrid):
            class is written for ColumnLayerGridRepresentation, a method will be added to that class to
            convert from a resqpy VerticalPrismGrid
         """
-
-        if extra_metadata is None:
-            extra_metadata = {}
 
         def find_pair(a, pair):
             # for sorted array a of shape (N, 2) returns index in first axis of a pair
@@ -368,7 +361,7 @@ class VerticalPrismGrid(PrismGrid):
                                       area_of_interest,
                                       title = None,
                                       originator = None,
-                                      extra_metadata = None,
+                                      extra_metadata = {},
                                       set_handedness = False):
         """Create a layered vertical prism grid from seed points and an ordered list of untorn surfaces.
 
@@ -398,8 +391,6 @@ class VerticalPrismGrid(PrismGrid):
            Grid2dRepresentation), or for a horizontal plane
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         assert seed_xy.ndim == 2 and seed_xy.shape[1] in [2, 3]
         assert area_of_interest.isclosed and area_of_interest.is_convex()
 

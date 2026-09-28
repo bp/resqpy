@@ -54,9 +54,9 @@ def load_nexus_fault_mult_table_from_list(file_as_list):
     for line in file_as_list:
         if len(line.strip()):
             if (not line.strip()[0] == '!') & (not line.strip()[0] == 'C'):
-                clean_line = line.partition('!')[0]  # removing trailing comments
+                line = line.partition('!')[0]  # removing trailing comments
                 # line = line.partition('C')[0]  # removing trailing comments
-                tokens = clean_line.split()
+                tokens = line.split()
                 if ISTABLE:
                     if is_number(tokens[0]):
                         ISRECORD = True

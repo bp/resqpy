@@ -127,7 +127,6 @@ select = [
     "E9",                        # Runtime / syntax errors
     "W60",                       # Deprecation (invalid escape sequences)
     "D",                         # pydocstyle (Google-style docstrings)
-    "PLW0177", "B006", "B904", "PLW2901", # Logical rules enabled for #924
 ]
 ignore = [
     "F841",  # local variable assigned but never used: sometimes deliberate

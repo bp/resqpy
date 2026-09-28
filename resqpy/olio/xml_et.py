@@ -670,10 +670,8 @@ def creation_date_for_node(node):
     return find_nested_tags_text(node, ['Citation', 'Creation'])
 
 
-def write_xml_node(xml_fp, root, level = 0, namespace_keys = None):
+def write_xml_node(xml_fp, root, level = 0, namespace_keys = []):
     """Recursively write an xml node to an open file; return number of nodes written."""
-    if namespace_keys is None:
-        namespace_keys = []
     if root is None:
         return 0
     ns_keys = namespace_keys.copy()

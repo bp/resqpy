@@ -833,7 +833,7 @@ class BlockedWell(BaseResqpy):
                   j_col = 'JW',
                   k_col = 'L',
                   one_based = True,
-                  extra_columns_list = None,
+                  extra_columns_list = [],
                   ntg_uuid = None,
                   perm_i_uuid = None,
                   perm_j_uuid = None,
@@ -985,8 +985,6 @@ class BlockedWell(BaseResqpy):
         :meta common:
         """
 
-        if extra_columns_list is None:
-            extra_columns_list = []
         assert length_mode in ['MD', 'straight']
         assert length_uom is None or length_uom in ['m', 'ft']
 
@@ -1533,7 +1531,7 @@ class BlockedWell(BaseResqpy):
                        wellspec_file,
                        well_name = None,
                        mode = 'a',
-                       extra_columns_list = None,
+                       extra_columns_list = [],
                        ntg_uuid = None,
                        perm_i_uuid = None,
                        perm_j_uuid = None,
@@ -1583,8 +1581,6 @@ class BlockedWell(BaseResqpy):
            align_columns and float_format arguments are deprecated and no longer used
         """
 
-        if extra_columns_list is None:
-            extra_columns_list = []
         assert wellspec_file, 'no output file specified to write WELLSPEC to'
 
         col_width_dict = {
@@ -3338,10 +3334,11 @@ class BlockedWell(BaseResqpy):
         nexus_friendly = ''
         previous_underscore = False
         for ch in well_name:
-            clean_ch = '_' if (not 32 <= ord(ch) < 128 or ch in ' ,!*#') else ch
-            if not (previous_underscore and clean_ch == '_'):
-                nexus_friendly += clean_ch
-            previous_underscore = (clean_ch == '_')
+            if not 32 <= ord(ch) < 128 or ch in ' ,!*#':
+                ch = '_'
+            if not (previous_underscore and ch == '_'):
+                nexus_friendly += ch
+            previous_underscore = (ch == '_')
         if not nexus_friendly:
             well_name = 'WELL_X'
         return nexus_friendly

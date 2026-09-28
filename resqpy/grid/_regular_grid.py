@@ -45,7 +45,7 @@ class RegularGrid(grr_g.Grid):
                  find_properties = True,
                  title = None,
                  originator = None,
-                 extra_metadata = None,
+                 extra_metadata = {},
                  load_inactive = True):
         """Creates a regular grid object based on dxyz, or derived from a Mesh object.
 
@@ -104,8 +104,6 @@ class RegularGrid(grr_g.Grid):
         :meta common:
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         if as_irregular_grid:
             set_points_cached = True
             self.is_aligned = False
@@ -719,7 +717,7 @@ class RegularGrid(grr_g.Grid):
                    originator = None,
                    write_active = True,
                    write_geometry = None,
-                   extra_metadata = None,
+                   extra_metadata = {},
                    expand_const_arrays = False,
                    add_cell_length_properties = True,
                    use_lattice = True):
@@ -743,8 +741,6 @@ class RegularGrid(grr_g.Grid):
         :meta common:
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         if extra_metadata is None:
             extra_metadata = {}
 

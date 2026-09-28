@@ -19,7 +19,7 @@ def add_zone_by_layer_property(epc_file,
                                null_value = -1,
                                title = 'ZONE',
                                realization = None,
-                               extra_metadata = None):
+                               extra_metadata = {}):
     """Adds a discrete zone property (and local property kind) with indexable element of layers.
 
     arguments:
@@ -47,8 +47,6 @@ def add_zone_by_layer_property(epc_file,
        numpy vector of zone numbers (by layer), uuid of newly created property
     """
 
-    if extra_metadata is None:
-        extra_metadata = {}
     assert zone_by_layer_vector is not None or zone_by_cell_property_uuid is not None
     assert zone_by_layer_vector is None or zone_by_cell_property_uuid is None
 

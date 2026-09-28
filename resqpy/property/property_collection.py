@@ -2187,7 +2187,7 @@ class PropertyCollection():
             discrete_cycle, p_array, min_value, max_value)
         min_value, max_value = pcga._normalized_part_array_nan_if_masked(min_value, max_value, masked)
 
-        if np.isnan(min_value) or np.isnan(max_value):
+        if min_value == np.nan or max_value == np.nan:
             return None, min_value, max_value
         if max_value < min_value:
             return None, min_value, max_value
@@ -2196,7 +2196,7 @@ class PropertyCollection():
         # todo: for discrete p_array, set n_prop to nan where p_array == null value
         if use_logarithm:
             n_prop, min_value, max_value = pcga._normalized_part_array_use_logarithm(min_value, n_prop, masked)
-            if np.isnan(min_value) or np.isnan(max_value):
+            if min_value == np.nan or max_value == np.nan:
                 return None, min_value, max_value
 
         if fix_zero_at is not None:
@@ -2551,7 +2551,7 @@ class PropertyCollection():
                                                             property_kind_uuid = None,
                                                             find_local_property_kinds = True,
                                                             expand_const_arrays = False,
-                                                            extra_metadata = None):
+                                                            extra_metadata = {}):
         """Add imported or generated grid property arrays as parts in parent model, creating xml.
         
         hdf5 should already have been written.
@@ -2593,8 +2593,6 @@ class PropertyCollection():
         :meta common:
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         if self.imported_list is None:
             return []
         if ext_uuid is None:
@@ -2642,7 +2640,7 @@ class PropertyCollection():
                    indexable_element = None,
                    count = 1,
                    points = False,
-                   extra_metadata = None,
+                   extra_metadata = {},
                    const_value = None,
                    expand_const_arrays = False,
                    pre_packed = False):
@@ -2721,8 +2719,6 @@ class PropertyCollection():
            between the properties and the supporting representation
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         assert title, 'missing title when creating xml for property'
 
         #      log.debug('creating property node for ' + title)

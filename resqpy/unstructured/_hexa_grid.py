@@ -22,7 +22,7 @@ class HexaGrid(rug.UnstructuredGrid):
                  cache_geometry = False,
                  title = None,
                  originator = None,
-                 extra_metadata = None,
+                 extra_metadata = {},
                  load_inactive = True):
         """Creates a new resqpy HexaGrid object (RESQML UnstructuredGrid with cell shape hexahedral)
 
@@ -46,8 +46,6 @@ class HexaGrid(rug.UnstructuredGrid):
            a newly created HexaGrid object
         """
 
-        if extra_metadata is None:
-            extra_metadata = {}
         super().__init__(parent_model = parent_model,
                          uuid = uuid,
                          find_properties = find_properties,
@@ -71,7 +69,7 @@ class HexaGrid(rug.UnstructuredGrid):
                           grid_uuid,
                           inherit_properties = True,
                           title = None,
-                          extra_metadata = None,
+                          extra_metadata = {},
                           write_active = None):
         """Creates a new (unstructured) HexaGrid from an existing resqpy unsplit (IJK) Grid without K gaps.
 
@@ -94,8 +92,6 @@ class HexaGrid(rug.UnstructuredGrid):
         import resqpy.grid as grr
 
         # establish existing IJK grid
-        if extra_metadata is None:
-            extra_metadata = {}
         ijk_grid = grr.Grid(parent_model, uuid = grid_uuid, find_properties = inherit_properties)
         assert ijk_grid is not None
         assert not ijk_grid.has_split_coordinate_lines, 'IJK grid has split coordinate lines (faults)'
