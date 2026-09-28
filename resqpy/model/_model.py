@@ -180,8 +180,8 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
-              metadata = {},
-              extra = {},
+              metadata = None,
+              extra = None,
               related_uuid = None,
               related_mode = None,
               epc_subdir = None,
@@ -235,6 +235,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._parts(self,
                           parts_list = parts_list,
                           obj_type = obj_type,
@@ -261,8 +265,8 @@ class Model():
              title = None,
              title_mode = 'is',
              title_case_sensitive = False,
-             metadata = {},
-             extra = {},
+             metadata = None,
+             extra = None,
              related_uuid = None,
              related_mode = None,
              epc_subdir = None,
@@ -286,6 +290,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._part(self,
                          parts_list = parts_list,
                          obj_type = obj_type,
@@ -307,8 +315,8 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
-              metadata = {},
-              extra = {},
+              metadata = None,
+              extra = None,
               related_uuid = None,
               related_mode = None,
               epc_subdir = None,
@@ -324,6 +332,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._uuids(self,
                           parts_list = parts_list,
                           obj_type = obj_type,
@@ -345,8 +357,8 @@ class Model():
              title = None,
              title_mode = 'is',
              title_case_sensitive = False,
-             metadata = {},
-             extra = {},
+             metadata = None,
+             extra = None,
              related_uuid = None,
              related_mode = None,
              epc_subdir = None,
@@ -362,6 +374,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._uuid(self,
                          parts_list = parts_list,
                          obj_type = obj_type,
@@ -383,8 +399,8 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
-              metadata = {},
-              extra = {},
+              metadata = None,
+              extra = None,
               related_uuid = None,
               related_mode = None,
               epc_subdir = None,
@@ -400,6 +416,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._roots(self,
                           parts_list = parts_list,
                           obj_type = obj_type,
@@ -421,8 +441,8 @@ class Model():
              title = None,
              title_mode = 'is',
              title_case_sensitive = False,
-             metadata = {},
-             extra = {},
+             metadata = None,
+             extra = None,
              related_uuid = None,
              related_mode = None,
              epc_subdir = None,
@@ -438,6 +458,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._root(self,
                          parts_list = parts_list,
                          obj_type = obj_type,
@@ -459,8 +483,8 @@ class Model():
                title = None,
                title_mode = 'is',
                title_case_sensitive = False,
-               metadata = {},
-               extra = {},
+               metadata = None,
+               extra = None,
                related_uuid = None,
                related_mode = None,
                epc_subdir = None,
@@ -476,6 +500,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._titles(self,
                            parts_list = parts_list,
                            obj_type = obj_type,
@@ -497,8 +525,8 @@ class Model():
               title = None,
               title_mode = 'is',
               title_case_sensitive = False,
-              metadata = {},
-              extra = {},
+              metadata = None,
+              extra = None,
               related_uuid = None,
               related_mode = None,
               epc_subdir = None,
@@ -514,6 +542,10 @@ class Model():
         :meta common:
         """
 
+        if extra is None:
+            extra = {}
+        if metadata is None:
+            metadata = {}
         return m_c._title(self,
                           parts_list = parts_list,
                           obj_type = obj_type,

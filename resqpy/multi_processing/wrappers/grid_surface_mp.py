@@ -379,10 +379,9 @@ def find_faces_to_represent_surface_regular_wrapper(
             elif p_name == "depth":
                 # convert values to global z inc down
                 array[:] += grid.crs.z_offset
-                if not grid.crs.z_inc_down:
-                    array = -array
+                _array = -array if not grid.crs.z_inc_down else array
                 property_collection.add_cached_array_to_imported_list(
-                    array,
+                    _array,
                     f"from find_faces function for {surface.title}",
                     f'{surface.title} {p_name}',
                     discrete = False,
@@ -392,12 +391,12 @@ def find_faces_to_represent_surface_regular_wrapper(
                     indexable_element = "faces",
                 )
             elif p_name == 'grid bisector':
-                array, is_curtain = array
+                bisector_array, is_curtain = array
                 if grid_pc is None:
                     grid_pc = rqp.PropertyCollection()
                     grid_pc.set_support(support = grid)
-                assert array.ndim == (2 if is_curtain else 3)
-                grid_pc.add_cached_array_to_imported_list(array,
+                assert bisector_array.ndim == (2 if is_curtain else 3)
+                grid_pc.add_cached_array_to_imported_list(bisector_array,
                                                           f"from find_faces function for {surface.title}",
                                                           f'{surface.title} {p_name}',
                                                           discrete = True,

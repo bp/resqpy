@@ -195,11 +195,11 @@ class PolylineSet(rql_c._BasePolyline):
         if not self.title:
             self.title = os.path.basename(charisma_file).split(".")[0]
         for i, line in enumerate(inpoints):
-            line = line.split()
-            coord_entry = np.array([[float(line[3]), float(line[4]), float(line[5])]])
+            line_parts = line.split()
+            coord_entry = np.array([[float(line_parts[3]), float(line_parts[4]), float(line_parts[5])]])
             if i == 0:
                 self.coordinates = coord_entry
-                stick = line[7]
+                stick = line_parts[7]
                 count = 1
             else:
                 self.coordinates = np.concatenate((self.coordinates, coord_entry))

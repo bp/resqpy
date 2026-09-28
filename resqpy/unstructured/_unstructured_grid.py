@@ -35,7 +35,7 @@ class UnstructuredGrid(BaseResqpy):
                  cell_shape = 'polyhedral',
                  title = None,
                  originator = None,
-                 extra_metadata = {},
+                 extra_metadata = None,
                  load_inactive = True):
         """Create an Unstructured Grid object and optionally populate from xml tree.
 
@@ -72,6 +72,8 @@ class UnstructuredGrid(BaseResqpy):
         :meta common:
         """
 
+        if extra_metadata is None:
+            extra_metadata = {}
         if cell_shape is not None:
             assert cell_shape in valid_cell_shapes, f'invalid cell shape {cell_shape} for unstructured grid'
 
@@ -604,10 +606,9 @@ class UnstructuredGrid(BaseResqpy):
         edge_list = []
         for face_index in self.face_indices_for_cell(cell):
             for a, b in self.edges_for_face(face_index):
-                if b < a:
-                    a, b = b, a
-                if (a, b) not in edge_list:
-                    edge_list.append((a, b))
+                node1, node2 = (b, a) if b < a else (a, b)
+                if (node1, node2) not in edge_list:
+                    edge_list.append((node1, node2))
         return np.array(edge_list, dtype = int)
 
     def cell_face_centre_points(self, cell):
@@ -961,7 +962,7 @@ class UnstructuredGrid(BaseResqpy):
                    originator = None,
                    write_active = True,
                    write_geometry = True,
-                   extra_metadata = {}):
+                   extra_metadata = None):
         """Creates an unstructured grid node and optionally adds as a part in the model.
 
         arguments:
@@ -992,6 +993,8 @@ class UnstructuredGrid(BaseResqpy):
         :meta common:
         """
 
+        if extra_metadata is None:
+            extra_metadata = {}
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
         if title:

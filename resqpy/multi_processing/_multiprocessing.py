@@ -138,9 +138,9 @@ def function_multiprocessing(function: Callable,
             try:
                 model = rq.Model(epc_file = epc, quiet = True)
                 break
-            except FileNotFoundError:
+            except FileNotFoundError as err:
                 if attempt >= 10:
-                    raise FileNotFoundError(f'timeout waiting for mp epc {epc}')
+                    raise FileNotFoundError(f'timeout waiting for mp epc {epc}') from err
                 time.sleep(1)
         uuids = cons.sort_uuids_list(model, uuids_list[i])
         if uuids is None:

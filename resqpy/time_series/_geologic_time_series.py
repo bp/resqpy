@@ -43,7 +43,7 @@ class GeologicTimeSeries(ats.AnyTimeSeries):
             raise ValueError('attempt to instantiate a geologic time series for a human timeframe time series')
 
     @classmethod
-    def from_year_list(cls, parent_model, year_list, title = None, originator = None, extra_metadata = {}):
+    def from_year_list(cls, parent_model, year_list, title = None, originator = None, extra_metadata = None):
         """Creates a new GeologicTimeSeries from a list of large integers representing years before present.
 
         note:
@@ -53,6 +53,8 @@ class GeologicTimeSeries(ats.AnyTimeSeries):
         :meta common:
         """
 
+        if extra_metadata is None:
+            extra_metadata = {}
         assert isinstance(year_list, list) and len(year_list) > 0
         negative_list = []
         for year in year_list:

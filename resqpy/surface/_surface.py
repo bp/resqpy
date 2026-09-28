@@ -46,7 +46,7 @@ class Surface(rqsb.BaseSurface):
                  surface_role = 'map',
                  crs_uuid = None,
                  originator = None,
-                 extra_metadata = {}):
+                 extra_metadata = None):
         """Create an empty Surface object (RESQML TriangulatedSetRepresentation).
 
         Optionally populates from xml, point set or mesh.
@@ -97,6 +97,8 @@ class Surface(rqsb.BaseSurface):
         :meta common:
         """
 
+        if extra_metadata is None:
+            extra_metadata = {}
         assert surface_role in ['map', 'pick']
 
         self.surface_role = surface_role

@@ -21,7 +21,7 @@ def add_edges_per_column_property_array(epc_file,
                                         facet = None,
                                         realization = None,
                                         local_property_kind_uuid = None,
-                                        extra_metadata = {},
+                                        extra_metadata = None,
                                         new_epc_file = None):
     """Adds an edges per column grid property from a numpy array to an existing resqml dataset.
 
@@ -64,6 +64,8 @@ def add_edges_per_column_property_array(epc_file,
        reformat_column_edges_to_resqml_format() to convert between the protocols if needed
     """
 
+    if extra_metadata is None:
+        extra_metadata = {}
     assert a.ndim in [3, 4]
     if a.ndim == 4:  # resqpy protocol
         assert a.shape[2] == 2 and a.shape[3] == 2, 'Wrong shape! Expected shape (nj, ni, 2, 2)'

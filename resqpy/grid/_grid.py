@@ -74,7 +74,7 @@ class Grid(BaseResqpy):
                  geometry_required = True,
                  title = None,
                  originator = None,
-                 extra_metadata = {},
+                 extra_metadata = None,
                  load_inactive = True):
         """Create a Grid object and optionally populate from xml tree.
 
@@ -104,6 +104,8 @@ class Grid(BaseResqpy):
         """
 
         # note: currently only handles IJK grids
+        if extra_metadata is None:
+            extra_metadata = {}
         self.parent_grid_uuid = None  #: parent grid when this is a local grid
         self.parent_window = None  #: FineCoarse cell index mapping info between self and parent grid
         self.is_refinement = None  #: True indicates self is a refinement wrt. parent; False means coarsening
@@ -626,7 +628,7 @@ class Grid(BaseResqpy):
                    write_active = True,
                    write_geometry = True,
                    use_lattice = False,
-                   extra_metadata = {},
+                   extra_metadata = None,
                    use_parametric_lines = False):
         """Creates an IJK grid node from a grid object and optionally adds to parts forest.
 
@@ -666,6 +668,8 @@ class Grid(BaseResqpy):
         :meta common:
         """
 
+        if extra_metadata is None:
+            extra_metadata = {}
         if ext_uuid is None:
             ext_uuid = self.model.h5_uuid()
         if title:

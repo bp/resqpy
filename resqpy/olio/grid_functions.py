@@ -585,12 +585,12 @@ def left_right_foursome(full_pillar_list, p_index):
     # yapf: enable
     try:
         list_index = entry_tuples_list.index(entry)
-    except ValueError:
+    except ValueError as err:
         log.debug(f'entry pair: {entry}')
-        raise Exception('code failure whilst taking entry sides from dubious full pillar list')
+        raise Exception('code failure whilst taking entry sides from dubious full pillar list') from err
     try:
         result_array_index = exit_tuples_list[list_index].index(exit)
         result_array = result_arrays_list[list_index][result_array_index]
         return result_array
-    except ValueError:
-        raise Exception('code failure whilst taking exit sides from dubious full pillar list')
+    except ValueError as err:
+        raise Exception('code failure whilst taking exit sides from dubious full pillar list') from err
