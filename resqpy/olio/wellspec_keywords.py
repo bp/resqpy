@@ -417,7 +417,7 @@ def get_well_data(
     file: TextIO,
     well_name: str,
     pointer: int,
-    column_list: List[str] = [],
+    column_list: Union[List[str], None] = None,
     selecting: bool = False,
     keep_duplicate_cells: bool = True,
     keep_null_columns: bool = True,
@@ -432,9 +432,8 @@ def get_well_data(
         well_name (str): name of the well.
         pointer (int): the file object's start position of the well data represented as number of
             bytes from the beginning of the file.
-        column_list (List[str]): if present, each dataframe returned contains these
-            columns, in this order. If None, the resulting dictionary contains only well names as
-            keys (each mapping to None rather than a dataframe). If an empty list (default), each
+        column_list (Union[List[str], None], optional): if present and selecting is True, each dataframe
+            returned contains these columns, in this order. If None (default) or an empty list, each
             dataframe contains the columns listed in the corresponding wellspec header, in the order
             found in the file.
         selecting (bool): True if the column_list contains at least one column name, False otherwise
@@ -449,6 +448,8 @@ def get_well_data(
     Returns:
         Pandas dataframe of the well data or None if all the data are NA.
     """
+    if column_list is None:
+        column_list = []
     file.seek(pointer)
     kf.skip_blank_lines_and_comments(file)
     line = kf.strip_trailing_comment(file.readline()).upper()
