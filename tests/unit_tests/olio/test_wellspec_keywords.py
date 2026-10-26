@@ -1,3 +1,4 @@
+import inspect
 import pytest
 import pandas as pd
 import resqpy.olio.wellspec_keywords as wk
@@ -262,6 +263,42 @@ def test_get_well_data_keep_null_columns_false(wellspec_file_one_well, test_well
 
     # Assert
     pd.testing.assert_frame_equal(well_data, test_well_dataframe_null_columns_dropped)
+
+
+def test_get_well_data_default_column_list():
+    # Arrange & Act
+    sig = inspect.signature(wk.get_well_data)
+    param = sig.parameters["column_list"]
+
+    # Assert
+    assert param.default is None
+
+
+def test_get_well_data_column_list_none(wellspec_file_one_well, test_well_dataframe):
+    # Arrange
+    well_name = "TEST_WELL"
+    pointer = 20
+
+    # Act
+    with open(wellspec_file_one_well, "r") as file:
+        well_data = wk.get_well_data(file, well_name, pointer, column_list = None)
+
+    # Assert
+    pd.testing.assert_frame_equal(well_data, test_well_dataframe)
+
+
+def test_get_well_data_column_list_selecting(wellspec_file_one_well, test_well_dataframe):
+    # Arrange
+    well_name = "TEST_WELL"
+    pointer = 20
+    column_list = ["IW", "JW", "L"]
+
+    # Act
+    with open(wellspec_file_one_well, "r") as file:
+        well_data = wk.get_well_data(file, well_name, pointer, column_list = column_list, selecting = True)
+
+    # Assert
+    pd.testing.assert_frame_equal(well_data, test_well_dataframe[column_list])
 
 
 def test_get_all_well_data_single_well(wellspec_file_one_well, test_well_dataframe):
