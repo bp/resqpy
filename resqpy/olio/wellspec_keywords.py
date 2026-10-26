@@ -509,11 +509,11 @@ def get_well_data(
     df = pd.DataFrame(data)
 
     if not keep_null_columns:
-        df.drop(columns = df.columns[df.isna().all()], inplace = True)
+        df = df.drop(columns = df.columns[df.isna().all()])
 
     if not keep_duplicate_cells and any(df.duplicated(subset = ["IW", "JW", "L"])):
         log.warning(f"There are duplicate cells for well {well_name}.")
-        df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last", inplace = True)
+        df = df.drop_duplicates(subset = ["IW", "JW", "L"], keep = "last")
 
     def stat_tranformation(row):
         if row["STAT"] == "ON":
@@ -609,6 +609,6 @@ def get_all_well_data(
         df_combined = pd.concat(df_list, ignore_index = True)
 
         if not keep_null_columns:
-            df_combined.drop(columns = df_combined.columns[df_combined.isna().all()], inplace = True)
+            df_combined = df_combined.drop(columns = df_combined.columns[df_combined.isna().all()])
 
         return df_combined

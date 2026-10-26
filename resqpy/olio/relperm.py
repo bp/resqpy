@@ -217,13 +217,13 @@ class RelPerm(DataFrame):
                 table_name_keyword = 'WOTABLE (LOW_SAL)\n'
             else:
                 table_name_keyword = 'WOTABLE\n'
-            df.rename(columns = {'SW': 'SW', 'KRW': 'KRW', 'KRO': 'KROW', 'PC': 'PCWO'}, inplace = True)
+            df = df.rename(columns = {'SW': 'SW', 'KRW': 'KRW', 'KRO': 'KROW', 'PC': 'PCWO'})
         elif {'KRG', 'KRO'}.issubset(set(df.columns)):
             table_name_keyword = 'GOTABLE\n'
-            df.rename(columns = {'SG': 'SG', 'KRG': 'KRG', 'KRO': 'KROG', 'PC': 'PCGO'}, inplace = True)
+            df = df.rename(columns = {'SG': 'SG', 'KRG': 'KRG', 'KRO': 'KROG', 'PC': 'PCGO'})
         elif {'KRW', 'KRW'}.issubset(set(df.columns)):
             table_name_keyword = 'GWTABLE\n'
-            df.rename(columns = {'SG': 'SG', 'KRG': 'KRG', 'KRW': 'KRWG', 'PC': 'PCGW'}, inplace = True)
+            df = df.rename(columns = {'SG': 'SG', 'KRG': 'KRG', 'KRW': 'KRWG', 'PC': 'PCGW'})
         else:
             raise Exception('incorrect rel. perm. column combination encountered')
 
@@ -315,7 +315,8 @@ def text_to_relperm_dict(relperm_data, is_file = True):
         else:
             table_end = len(data)
         table_cols = data[start_pos + 1]
-        table_rows = data[start_pos + 2:table_end]
+        # pad rows with missing trailing values (eg. blank Pc) to the number of columns
+        table_rows = [row + [None] * (len(table_cols) - len(row)) for row in data[start_pos + 2:table_end]]
         df = pd.DataFrame(table_rows, columns = table_cols)
         df.columns = df.columns.map(df_cols_dict)
         sat_col = [x for x in df.columns if 'S' in x][0]
