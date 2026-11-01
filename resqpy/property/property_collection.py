@@ -1788,9 +1788,9 @@ class PropertyCollection():
            the same cached array so calling code should copy if duplication is needed
 
         notes:
-           this function is the usual way to get at the actual property array; at present, the funtion only works
-           if the entire array is stored as a single patch in the hdf5 file (resqml allows multiple patches per
-           array); the masked functionality can be used to apply a common mask, stored in the supporting
+           this function is the usual way to get at the actual property array; if the array is stored as multiple
+           patches in the hdf5 file, the patches are read in RepresentationPatchIndex order and concatenated;
+           the masked functionality can be used to apply a common mask, stored in the supporting
            representation object with the attribute name 'inactive', to multiple properties (this will only work
            if the indexable element is set to the typical value for the class of supporting representation, eg.
            'cells' for grid objects); if exclude_null is set True then null value elements will also be masked out
