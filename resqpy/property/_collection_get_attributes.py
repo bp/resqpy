@@ -295,28 +295,34 @@ def _part_direction(collection, part):
     return collection.facet_for_part(part)
 
 
+def _sorted_patch_list(part_node, patch_tag):
+    patch_list = rqet.list_of_tag(part_node, patch_tag)
+    assert len(patch_list) > 0, f'no {patch_tag} found for property'
+    # order patches to match the patches of the supporting representation
+    patch_list.sort(key = lambda patch: rqet.find_tag_int(patch, 'RepresentationPatchIndex') or 0)
+    return patch_list
+
+
 def _cached_part_array_ref_get_node_points(part_node, dtype):
-    patch_list = rqet.list_of_tag(part_node, 'PatchOfPoints')
-    assert len(patch_list) == 1  # todo: handle more than one patch of points
-    first_values_node = rqet.find_tag(patch_list[0], 'Points')
-    if first_values_node is None:
+    patch_list = _sorted_patch_list(part_node, 'PatchOfPoints')
+    values_nodes = [rqet.find_tag(patch, 'Points') for patch in patch_list]
+    if any(node is None for node in values_nodes):
         return None  # could treat as fatal error
     if dtype is None:
         dtype = 'float'
     else:
         assert dtype in ['float', float, np.float32, np.float64]
     tag = 'Coordinates'
-    return first_values_node, tag, dtype
+    return values_nodes, tag, dtype
 
 
 def _cached_part_array_ref_get_node_values(part_node, dtype):
-    patch_list = rqet.list_of_tag(part_node, 'PatchOfValues')
-    assert len(patch_list) == 1  # todo: handle more than one patch of values
-    first_values_node = rqet.find_tag(patch_list[0], 'Values')
-    if first_values_node is None:
+    patch_list = _sorted_patch_list(part_node, 'PatchOfValues')
+    values_nodes = [rqet.find_tag(patch, 'Values') for patch in patch_list]
+    if any(node is None for node in values_nodes):
         return None  # could treat as fatal error
     if dtype is None:
-        array_type = rqet.node_type(first_values_node)
+        array_type = rqet.node_type(values_nodes[0])
         assert array_type is not None
         if array_type == 'DoubleHdf5Array':
             dtype = 'float'
@@ -327,7 +333,7 @@ def _cached_part_array_ref_get_node_values(part_node, dtype):
         else:
             raise ValueError('array type not catered for: ' + str(array_type))
     tag = 'Values'
-    return first_values_node, tag, dtype
+    return values_nodes, tag, dtype
 
 
 def _process_imported_property_get_add_min_max(points, property_kind, string_lookup_uuid, local_property_kind_uuid,
@@ -605,9 +611,14 @@ def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_arr
     if part_node is None:
         return None
     if collection.points_for_part(part):
-        first_values_node, tag, dtype = _cached_part_array_ref_get_node_points(part_node, dtype)
+        values_nodes, tag, dtype = _cached_part_array_ref_get_node_points(part_node, dtype)
     else:
-        first_values_node, tag, dtype = _cached_part_array_ref_get_node_values(part_node, dtype)
+        values_nodes, tag, dtype = _cached_part_array_ref_get_node_values(part_node, dtype)
+
+    if len(values_nodes) > 1:
+        _cached_part_array_ref_multiple_patches(collection, model, values_nodes, tag, dtype, cached_array_name)
+        return
+    first_values_node = values_nodes[0]
 
     # the required shape is required if a bool array may need to be unpacked from bits
     required_shape = None
@@ -626,6 +637,17 @@ def _cached_part_array_ref_const_none(collection, part, dtype, model, cached_arr
                            array_attribute = cached_array_name,
                            required_shape = required_shape,
                            dtype = dtype)
+
+
+def _cached_part_array_ref_multiple_patches(collection, model, values_nodes, tag, dtype, cached_array_name):
+    # note: packed boolean arrays are not unpacked here, as resqpy only writes a single patch of values
+    patch_arrays = []
+    for values_node in values_nodes:
+        h5_key_pair = model.h5_uuid_and_path_for_node(values_node, tag = tag)
+        if h5_key_pair is None:
+            return None
+        patch_arrays.append(model.h5_array_slice(h5_key_pair, (slice(None),)))
+    setattr(collection, cached_array_name, np.concatenate(patch_arrays).astype(dtype))
 
 
 def _cached_part_array_ref_const_notnone(collection, part, const_value, cached_array_name):
