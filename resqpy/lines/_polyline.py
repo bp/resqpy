@@ -33,6 +33,7 @@ class Polyline(rql_c._BasePolyline):
                  is_closed = None,
                  title = None,
                  rep_int_root = None,
+                 line_role = None,
                  originator = None,
                  extra_metadata = None):
         """Initialises a new polyline object.
@@ -50,6 +51,9 @@ class Polyline(rql_c._BasePolyline):
             title (str, optional): the citation title to use for a new polyline;
                 ignored if uuid is not None
             rep_int_root
+            line_role (str, optional): the RESQML LineRole of a new polyline, one of: 'fault center line', 'pick',
+                'inner ring', 'outer ring', 'trajectory', 'interpretation line', 'contact', 'depositional line',
+                'erosion line', 'contouring', 'pillar'; ignored if uuid is not None
             originator (str, optional): the name of the person creating the polyline, defaults to login id;
                 ignored if uuid is not None
             extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the polyline;
@@ -68,6 +72,7 @@ class Polyline(rql_c._BasePolyline):
         self.coordinates = None
         self.centre = None
         self.rep_int_root = rep_int_root  # Optional represented interpretation xml root node
+        self.line_role = line_role  # Optional RESQML LineRole string
         self.property_collection = None
         super().__init__(model = parent_model,
                          uuid = uuid,
@@ -90,7 +95,6 @@ class Polyline(rql_c._BasePolyline):
             assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
 
         # TODO: Add SeismicCoordinates later - optional field
-        # TODO: Add LineRole later - optional field
 
     def _load_from_xml(self):
 
@@ -121,6 +125,7 @@ class Polyline(rql_c._BasePolyline):
         assert not any(map(lambda x: x is None, self.nodepatch))  # Required fields - assert neither are None
 
         self.rep_int_root = self.model.referenced_node(rqet.find_tag(poly_root, 'RepresentedInterpretation'))
+        self.line_role = rqet.find_tag_text(poly_root, 'LineRole')
 
     @property
     def rep_int_uuid(self):
@@ -159,6 +164,7 @@ class Polyline(rql_c._BasePolyline):
                        set_crs = original.crs_uuid,
                        is_closed = original.isclosed,
                        title = title if title else original.title,
+                       line_role = original.line_role,
                        originator = originator if originator else original.originator,
                        extra_metadata = extra_metadata)
 
@@ -207,6 +213,7 @@ class Polyline(rql_c._BasePolyline):
                        set_crs = original.crs_uuid,
                        is_closed = False,
                        title = title if title else original.title,
+                       line_role = original.line_role,
                        originator = originator if originator else original.originator,
                        extra_metadata = extra_metadata)
 
@@ -782,7 +789,8 @@ class Polyline(rql_c._BasePolyline):
                         set_coord = spline_coords,
                         set_crs = self.crs_uuid,
                         title = title,
-                        rep_int_root = rep_int_root)
+                        rep_int_root = rep_int_root,
+                        line_role = self.line_role)
 
     def area(self):
         """Returns the area in the xy plane of a closed convex polygon."""
@@ -868,6 +876,12 @@ class Polyline(rql_c._BasePolyline):
                                        rep_int.attrib['uuid'],
                                        content_type = content_type,
                                        root = polyline)
+
+        if self.line_role is not None:
+            assert self.line_role in rql_c.valid_line_roles, f'illegal line role value for polyline: {self.line_role}'
+            role_node = rqet.SubElement(polyline, ns['resqml2'] + 'LineRole')
+            role_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LineRole')
+            role_node.text = self.line_role
 
         isclosed = rqet.SubElement(polyline, ns['resqml2'] + 'IsClosed')
         isclosed.set(ns['xsi'] + 'type', ns['xsd'] + 'boolean')

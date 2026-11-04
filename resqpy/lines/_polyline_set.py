@@ -31,6 +31,7 @@ class PolylineSet(rql_c._BasePolyline):
                  charisma_file = None,
                  crs_uuid = None,
                  title = None,
+                 line_role = None,
                  originator = None,
                  extra_metadata = None):
         """Initialises a new PolylineSet object.
@@ -45,6 +46,10 @@ class PolylineSet(rql_c._BasePolyline):
             crs_uuid (UUID, optional): required if loading from an IRAP or Charisma file
             title (str, optional): the citation title to use for a new polyline set;
                 ignored if uuid is not None
+            line_role (str, optional): the RESQML LineRole of a new polyline set, one of: 'fault center line',
+                'pick', 'inner ring', 'outer ring', 'trajectory', 'interpretation line', 'contact',
+                'depositional line', 'erosion line', 'contouring', 'pillar'; if None and polylines is given,
+                a line role shared by all the polylines is inherited; ignored if uuid is not None
             originator (str, optional): the name of the person creating the polyline set, defaults to login id;
                 ignored if uuid is not None
             extra_metadata (dict, optional): string key, value pairs to add as extra metadata for the polyline set;
@@ -65,6 +70,7 @@ class PolylineSet(rql_c._BasePolyline):
         self.count_perpol = None
         self.polys = []
         self.rep_int_root = None
+        self.line_role = line_role  # Optional RESQML LineRole string
         self.save_polys = False
         self.boolnotconstant = None
         self.boolvalue = None
@@ -94,6 +100,10 @@ class PolylineSet(rql_c._BasePolyline):
                 if self.crs_uuid is not None:
                     break
             self.polys = polylines
+            if self.line_role is None:
+                role_set = set(poly.line_role for poly in polylines)
+                if len(role_set) == 1:
+                    self.line_role = role_set.pop()
             # Setting the title of the first polyline given as the PolylineSet title
             if not self.title:
                 if len(polylines) > 1:
@@ -117,6 +127,7 @@ class PolylineSet(rql_c._BasePolyline):
         root = self.root
 
         self.rep_int_root = self.model.referenced_node(rqet.find_tag(root, 'RepresentedInterpretation'))
+        self.line_role = rqet.find_tag_text(root, 'LineRole')
         self.closed_array = np.empty((0,), dtype = bool)
 
         for patch_node in rqet.list_of_tag(root, 'LinePatch'):  # Loop over all LinePatches - likely just the one
@@ -151,7 +162,7 @@ class PolylineSet(rql_c._BasePolyline):
             assert np.sum(self.count_perpol) == len(self.coordinates)
 
             subpolys = self.convert_to_polylines(closed_array, self.count_perpol, self.coordinates, self.crs_uuid,
-                                                 self.rep_int_root)
+                                                 self.rep_int_root, self.line_role)
             # Check we have the right number of polygons
             assert len(subpolys) == len(self.count_perpol)
 
@@ -276,6 +287,13 @@ class PolylineSet(rql_c._BasePolyline):
                                        rep_int.attrib['uuid'],
                                        content_type = content_type,
                                        root = polyset)
+
+        if self.line_role is not None:
+            assert self.line_role in rql_c.valid_line_roles,  \
+                f'illegal line role value for polyline set: {self.line_role}'
+            role_node = rqet.SubElement(polyset, ns['resqml2'] + 'LineRole')
+            role_node.set(ns['xsi'] + 'type', ns['resqml2'] + 'LineRole')
+            role_node.text = self.line_role
 
         # We convert all Polylines to the CRS of the first Polyline in the set, so set this as crs_uuid
 
@@ -437,7 +455,8 @@ class PolylineSet(rql_c._BasePolyline):
                              count_perpol = None,
                              coordinates = None,
                              crs_uuid = None,
-                             rep_int_root = None):
+                             rep_int_root = None,
+                             line_role = None):
         """Returns a list of Polylines objects from a PolylineSet.
 
         note:
@@ -449,6 +468,7 @@ class PolylineSet(rql_c._BasePolyline):
             coordinates: array containing coordinates for all the polygons
             crs_uuid: crs_uuid for polylineset
             rep_int_root: represented interpretation root (optional)
+            line_role: RESQML LineRole string to apply to each polyline (optional)
 
         returns:
             list of polyline objects
@@ -473,6 +493,8 @@ class PolylineSet(rql_c._BasePolyline):
             crs_uuid = self.crs_uuid
         if rep_int_root is None:
             rep_int_root = self.rep_int_root
+        if line_role is None:
+            line_role = self.line_role
 
         polys = []
         count = 0
@@ -496,7 +518,8 @@ class PolylineSet(rql_c._BasePolyline):
                          set_coord = subset,
                          set_crs = crs_uuid,
                          title = subtitle,
-                         rep_int_root = rep_int_root))
+                         rep_int_root = rep_int_root,
+                         line_role = line_role))
 
         return polys
 

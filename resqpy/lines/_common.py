@@ -15,6 +15,9 @@ import resqpy.olio.xml_et as rqet
 import resqpy.organize as rqo
 from resqpy.olio.base import BaseResqpy
 
+valid_line_roles = ('fault center line', 'pick', 'inner ring', 'outer ring', 'trajectory', 'interpretation line',
+                    'contact', 'depositional line', 'erosion line', 'contouring', 'pillar')
+
 
 class _BasePolyline(BaseResqpy):
     """Base class to implement shared methods for other classes in this module."""
