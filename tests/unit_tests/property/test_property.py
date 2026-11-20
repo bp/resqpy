@@ -1,5 +1,7 @@
+import copy
 import math as maths
 import os
+import h5py
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
@@ -2565,6 +2567,62 @@ def test_surface_support(example_model_and_crs):
     assert_array_almost_equal(tpf2_reload, t_prop_float)
     assert np.all(tpi_reload == t_prop_int)
     assert_array_almost_equal(ppf_reload, p_prop_float)
+
+
+def test_surface_support_multiple_patches(example_model_and_crs):
+    # Arrange
+    model, crs = example_model_and_crs
+
+    p0 = np.array([(-10.0, -10.0, 0.0), (0.0, -10.0, 0.1), (10.0, -10.0, -0.1), (-10.0, 0.0, 0.2), (0.0, 0.0, -0.2),
+                   (-10.0, 10.0, 0.3)],
+                  dtype = float)
+    p1 = p0 + np.array((30.0, 0.0, 0.5), dtype = float)
+    t = np.array([(0, 1, 3), (1, 4, 3), (1, 2, 4), (3, 4, 5)], dtype = int)
+    surf = rqs.Surface(model, crs_uuid = crs.uuid, title = 'two patch surface')
+    surf.set_multi_patch_from_triangles_and_points([(t, p0), (t, p1)])
+    surf.write_hdf5()
+    surf.create_xml()
+    assert surf.triangle_count() == 8
+
+    t_prop_int = np.arange(8, dtype = int) + 27
+    pc = rqp.PropertyCollection()
+    pc.set_support(support = surf)
+    pc.add_cached_array_to_imported_list(t_prop_int,
+                                         source_info = '',
+                                         keyword = 'test int',
+                                         discrete = True,
+                                         property_kind = 'discrete test pk',
+                                         indexable_element = 'triangles',
+                                         null_value = -1)
+    pc.write_hdf5_for_imported_list()
+    pc.create_xml_for_imported_list_and_add_parts_to_model()
+
+    # split the single patch of values into one patch per surface patch, listed in reverse order
+    p_root = model.root(obj_type = 'DiscreteProperty', title = 'test int')
+    patch_0 = rqet.find_tag(p_root, 'PatchOfValues')
+    patch_1 = copy.deepcopy(patch_0)
+    rqet.find_tag(patch_1, 'RepresentationPatchIndex').text = '1'
+    path_node = rqet.find_nested_tags(patch_1, ['Values', 'Values', 'PathInHdfFile'])
+    h5_path_0 = path_node.text
+    h5_path_1 = h5_path_0[:-1] + '1'
+    path_node.text = h5_path_1
+    patch_0.addprevious(patch_1)
+    model.h5_release()
+    with h5py.File(model.h5_file_name(), 'r+') as fp:
+        del fp[h5_path_0]
+        fp[h5_path_0] = t_prop_int[:4]
+        fp[h5_path_1] = t_prop_int[4:]
+    model.store_epc()
+
+    # Act
+    model = rq.Model(model.epc_file)
+    surf_reload = rqs.Surface(model, uuid = surf.uuid)
+    pc_reload = rqp.PropertyCollection(support = surf_reload)
+    tpi_reload = pc_reload.single_array_ref(continuous = False, indexable = 'triangles')
+
+    # Assert
+    assert tpi_reload is not None
+    assert np.all(tpi_reload == t_prop_int)
 
 
 def test_point_set_support(example_model_and_crs):
