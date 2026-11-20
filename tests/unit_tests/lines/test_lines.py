@@ -1,12 +1,14 @@
 import os
 import math as maths
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
 import resqpy.lines
 import resqpy.model as rq
 import resqpy.organize
 import resqpy.olio.vector_utilities as vec
+import resqpy.olio.xml_et as rqet
 
 
 def test_lines(example_model_and_crs):
@@ -454,3 +456,91 @@ def __square(model, crs):
                                  is_closed = True,
                                  set_coord = coords)
     return line
+
+
+def test_polyline_line_role(example_model_and_crs):
+
+    model, crs = example_model_and_crs
+    line = resqpy.lines.Polyline(parent_model = model,
+                                 title = 'contour',
+                                 set_crs = crs.uuid,
+                                 is_closed = False,
+                                 set_coord = np.array([[0.0, 0.0, 10.0], [1.0, 1.0, 10.0], [2.0, 1.0, 10.0]]),
+                                 line_role = 'contouring')
+    assert line.line_role == 'contouring'
+    line.write_hdf5()
+    line.create_xml()
+    assert rqet.find_tag_text(line.root, 'LineRole') == 'contouring'
+
+    model.store_epc()
+    model = rq.Model(epc_file = model.epc_file)
+    reload = resqpy.lines.Polyline(parent_model = model, uuid = line.uuid)
+    assert reload.line_role == 'contouring'
+
+    # the line role is inherited by derived polylines
+    assert resqpy.lines.Polyline.from_scaled_polyline(reload, 2.0).line_role == 'contouring'
+    assert resqpy.lines.Polyline.from_trimmed_polyline(reload, 0, 0).line_role == 'contouring'
+    assert reload.splined().line_role == 'contouring'
+
+    # a polyline without a line role has no LineRole element
+    plain = resqpy.lines.Polyline(parent_model = model,
+                                  title = 'plain',
+                                  set_crs = crs.uuid,
+                                  is_closed = False,
+                                  set_coord = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]]))
+    plain.write_hdf5()
+    plain.create_xml()
+    assert plain.line_role is None
+    assert rqet.find_tag(plain.root, 'LineRole') is None
+
+    # an invalid line role is rejected when writing xml
+    bad = resqpy.lines.Polyline(parent_model = model,
+                                title = 'bad',
+                                set_crs = crs.uuid,
+                                is_closed = False,
+                                set_coord = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]]),
+                                line_role = 'centre line')
+    bad.write_hdf5()
+    with pytest.raises(AssertionError):
+        bad.create_xml()
+
+
+def test_polyline_set_line_role(example_model_and_crs):
+
+    model, crs = example_model_and_crs
+    line1 = resqpy.lines.Polyline(parent_model = model,
+                                  title = 'pick 1',
+                                  set_crs = crs.uuid,
+                                  is_closed = False,
+                                  set_coord = np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]]),
+                                  line_role = 'pick')
+    line2 = resqpy.lines.Polyline(parent_model = model,
+                                  title = 'pick 2',
+                                  set_crs = crs.uuid,
+                                  is_closed = False,
+                                  set_coord = np.array([[2.0, 2.0, 2.0], [3.0, 3.0, 3.0]]),
+                                  line_role = 'pick')
+
+    # a role shared by all the polylines is inherited by the set
+    lines = resqpy.lines.PolylineSet(parent_model = model, title = 'picks', polylines = [line1, line2])
+    assert lines.line_role == 'pick'
+    lines.write_hdf5()
+    lines.create_xml()
+    assert rqet.find_tag_text(lines.root, 'LineRole') == 'pick'
+
+    model.store_epc()
+    model = rq.Model(epc_file = model.epc_file)
+    reload = resqpy.lines.PolylineSet(parent_model = model, uuid = lines.uuid)
+    assert reload.line_role == 'pick'
+    assert all(poly.line_role == 'pick' for poly in reload.polys)
+    assert all(poly.line_role == 'pick' for poly in reload.convert_to_polylines())
+
+    # an explicit role takes precedence over the polylines' roles; mixed roles are not inherited
+    line2.line_role = 'contouring'
+    mixed = resqpy.lines.PolylineSet(parent_model = model, title = 'mixed', polylines = [line1, line2])
+    assert mixed.line_role is None
+    explicit = resqpy.lines.PolylineSet(parent_model = model,
+                                        title = 'explicit',
+                                        polylines = [line1, line2],
+                                        line_role = 'interpretation line')
+    assert explicit.line_role == 'interpretation line'
